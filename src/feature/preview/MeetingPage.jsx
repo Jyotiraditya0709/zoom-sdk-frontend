@@ -196,7 +196,7 @@ const MeetingPage = () => {
     const getSignature = async () => {
       try {
         const response = await axios.post(
-          "https://zoom-sdk-be-1.onrender.com/generateSignature",
+          "http://localhost:4000/generateSignature",
           { sessionName, role }
         );
         return response.data.signature;
