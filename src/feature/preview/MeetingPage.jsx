@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ZoomVideo from "@zoom/videosdk";
 import { useZoom } from "../preview/ZoomContext";
 import MeetingLeft from "./MeetingLeft";
@@ -56,7 +55,133 @@ const MeetingPage = () => {
   const [permissionError, setPermissionError] = useState("");
   const [activeSpeakerId, setActiveSpeakerId] = useState(null);
   const [notifications, setNotifications] = useState([]);
+
+  const notifyUserJoined = async () => {
+    try {
+      console.log("�� Calling userJoined webhook with:", {
+        meetingId: meetingId,
+        userId: userName,
+        userType: isHost ? "mentor" : "mentee",
+      });
+
+      const response = await fetch("http://localhost:4000/api/userJoined", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          meetingId: meetingId,
+          userId: userName,
+          userType: isHost ? "mentor" : "mentee",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ User joined webhook sent:", data);
+    } catch (err) {
+      console.error("❌ Failed to send user joined webhook:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        status: err.status,
+      });
+    }
+  };
+
+  const notifyUserLeft = async () => {
+    try {
+      console.log("🎯 Calling userLeft webhook with:", {
+        meetingId: meetingId,
+        userId: userName,
+      });
+
+      const response = await fetch("http://localhost:4000/api/userLeft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          meetingId: meetingId,
+          userId: userName,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ User left webhook sent:", data);
+    } catch (err) {
+      console.error("❌ Failed to send user left webhook:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        status: err.status,
+      });
+    }
+  };
+
+  const notifyMeetingEnd = async () => {
+    try {
+      console.log("🏁 Calling meetingEnd webhook with:", {
+        meetingId: meetingId,
+        userId: userName,
+      });
+
+      const response = await fetch("http://localhost:4000/api/meetingEnd", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          meetingId: meetingId,
+          userId: userName,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ Meeting end webhook sent:", data);
+    } catch (err) {
+      console.error("❌ Failed to send meeting end webhook:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        status: err.status,
+      });
+    }
+  };
   // Notification helper (move this above useEffect)
+
   const addNotification = useCallback((msg) => {
     const id = Date.now() + Math.random();
     setNotifications((prev) => {
@@ -82,14 +207,25 @@ const MeetingPage = () => {
   const VIDEO_QUALITY = 3; // 1: 360p, 3: 720p
 
   // Parse URL Params
+  const { meetingId, userId } = useParams();
   const { sessionName, userName, role } = React.useMemo(() => {
     const params = new URLSearchParams(location.search);
+
+    // Debug logging
+    console.log("🔍 URL Parameters Debug:", {
+      meetingId,
+      userId,
+      searchParams: Object.fromEntries(params.entries()),
+      pathname: location.pathname,
+      fullUrl: location.href,
+    });
+
     return {
-      sessionName: params.get("session") || "default-session",
-      userName: params.get("user") || "Guest",
+      sessionName: meetingId || "default-session",
+      userName: userId || "Guest",
       role: parseInt(params.get("role") || "1", 10),
     };
-  }, [location.search]);
+  }, [location.search, meetingId, userId]);
   const isHost = role === 1;
 
   const attachVideo = useCallback(
@@ -195,11 +331,23 @@ const MeetingPage = () => {
 
     const getSignature = async () => {
       try {
-        const response = await axios.post(
+        const response = await fetch(
           "http://localhost:4000/generateSignature",
-          { sessionName, role }
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ sessionName, role }),
+          }
         );
-        return response.data.signature;
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.signature;
       } catch (err) {
         setError("Failed to get a valid signature.");
         return null;
@@ -263,6 +411,9 @@ const MeetingPage = () => {
         if (!signature) return;
 
         await client.join(sessionName, signature, userName);
+
+        // notify backend that user joined
+        await notifyUserJoined();
         // Leave on page unload
         if (client.leaveOnPageUnload) client.leaveOnPageUnload();
         mediaStreamRef.current = client.getMediaStream();
@@ -519,6 +670,9 @@ const MeetingPage = () => {
     // Connection status handling
     client.on("connection-change", (payload) => {
       if (payload.state === "Closed") {
+        notifyUserLeft().catch((err) =>
+          console.error("failed to notify user left: ", err)
+        );
         addNotification(
           payload.reason === "ended by host"
             ? "The host has ended the meeting."
@@ -530,6 +684,10 @@ const MeetingPage = () => {
       } else if (payload.state === "Connected") {
         addNotification(`Connected to session.`);
       } else if (payload.state === "Fail") {
+        notifyUserLeft().catch((err) =>
+          console.error("Failed to notify user left:", err)
+        );
+
         addNotification(
           `Session failed: ${payload.reason || payload.errorCode}`
         );
@@ -896,6 +1054,8 @@ const MeetingPage = () => {
     setShowEndMeetingConfirm(false);
     if (clientRef.current) {
       try {
+        // Notify backend that host is ending the meeting
+        await notifyMeetingEnd();
         await clientRef.current.leave(true); // Host ends session for all
       } catch (err) {
         setError("Failed to end meeting for all.");
@@ -905,6 +1065,9 @@ const MeetingPage = () => {
   const handleLeave = async () => {
     if (clientRef.current) {
       try {
+        // notify backend that user is leaving
+        await notifyUserLeft();
+
         await clientRef.current.leave(); // Participant leaves session
       } catch (err) {
         setError("Failed to leave meeting.");

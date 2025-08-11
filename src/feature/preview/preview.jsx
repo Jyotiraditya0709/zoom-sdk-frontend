@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import ZoomVideo from "@zoom/videosdk";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./Preview.css";
 import { useZoom } from "./ZoomContext";
 
@@ -9,6 +9,40 @@ let localVideoTrack = null;
 let localAudioTrack = null;
 
 const Preview = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const meetingId = params.get("meetingId");
+    const userId = params.get("userId");
+    const agenda = params.get("agenda");
+    const status = params.get("status");
+    const userTypeParam = params.get("userType");
+    const roleParam = params.get("role");
+
+    if (meetingId && userId) {
+      setSessionName(meetingId);
+      setUserName(userId);
+
+      if (userTypeParam) {
+        setUserType(userTypeParam);
+      }
+
+      if (roleParam) {
+        setRole(roleParam);
+      }
+
+      console.log("�� Pre-filled meeting data:", {
+        meetingId,
+        userId,
+        agenda,
+        status,
+        userType: userTypeParam,
+        role: roleParam,
+      });
+    }
+  }, [location.search]);
+
   const videoRef = useRef(null);
   const navigate = useNavigate();
   const {
@@ -28,6 +62,7 @@ const Preview = () => {
   } = useZoom();
   // Add local state for role
   const [role, setRole] = useState("1"); // 1 = host, 0 = attendee
+  const [userType, setUserType] = useState(""); // mentor or mentee
 
   // ========== State for selected options ==========
   const [videoDevices, setVideoDevices] = useState([]);
@@ -240,11 +275,22 @@ const Preview = () => {
     // The context will be updated with the latest user/session name from the input fields
     await contextCleanup(); // Clean up any other context-related resources
 
-    navigate(
-      `/meeting?session=${encodeURIComponent(
-        sessionName
-      )}&user=${encodeURIComponent(userName)}&role=${role}`
-    );
+    // Get meeting data from URL parameters
+    const params = new URLSearchParams(location.search);
+    const meetingId = params.get("meetingId");
+    const userId = params.get("userId");
+
+    if (meetingId && userId) {
+      // Navigate to meeting with URL parameters
+      navigate(`/meeting/${meetingId}/${userId}?role=${role}`);
+    } else {
+      // Fallback to old format
+      navigate(
+        `/meeting?session=${encodeURIComponent(
+          sessionName
+        )}&user=${encodeURIComponent(userName)}&role=${role}`
+      );
+    }
   };
 
   // ========== Mic Testing Feature ==========
@@ -422,11 +468,21 @@ const Preview = () => {
           </label>
 
           <label>
-            Role:
+            Role:{" "}
+            <strong style={{ color: role === "1" ? "#007bff" : "#28a745" }}>
+              {userType
+                ? role === "1"
+                  ? "Host (Mentor)"
+                  : "Attendee (Mentee)"
+                : role === "1"
+                  ? "Host"
+                  : "Attendee"}
+            </strong>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               style={{ marginLeft: 8 }}
+              disabled={!!userType} // Disable if userType is set (from URL)
             >
               <option value="1">Host</option>
               <option value="0">Attendee</option>
@@ -450,6 +506,7 @@ const Preview = () => {
               onChange={(e) => setSessionName(e.target.value)}
               placeholder="Enter session name"
               style={{ marginLeft: 8 }}
+              disabled={!!userType} // Disable if userType is set (from URL)
             />
           </label>
 
@@ -461,6 +518,7 @@ const Preview = () => {
               onChange={(e) => setUserName(e.target.value)}
               placeholder="Enter your name"
               style={{ marginLeft: 8 }}
+              disabled={!!userType} // Disable if userType is set (from URL)
             />
           </label>
 
