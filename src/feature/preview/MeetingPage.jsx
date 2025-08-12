@@ -4,6 +4,7 @@ import ZoomVideo from "@zoom/videosdk";
 import { useZoom } from "../preview/ZoomContext";
 import MeetingLeft from "./MeetingLeft";
 import "./MeetingPage.css";
+import config from "../../config/config.js";
 import {
   FaMicrophone,
   FaMicrophoneSlash,
@@ -64,17 +65,20 @@ const MeetingPage = () => {
         userType: isHost ? "mentor" : "mentee",
       });
 
-      const response = await fetch("http://localhost:4000/api/userJoined", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          meetingId: meetingId,
-          userId: userName,
-          userType: isHost ? "mentor" : "mentee",
-        }),
-      });
+      const response = await fetch(
+        config.getApiUrl(config.API_ENDPOINTS.USER_JOINED),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            meetingId: meetingId,
+            userId: userName,
+            userType: isHost ? "mentor" : "mentee",
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -106,16 +110,19 @@ const MeetingPage = () => {
         userId: userName,
       });
 
-      const response = await fetch("http://localhost:4000/api/userLeft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          meetingId: meetingId,
-          userId: userName,
-        }),
-      });
+      const response = await fetch(
+        config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            meetingId: meetingId,
+            userId: userName,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -147,16 +154,19 @@ const MeetingPage = () => {
         userId: userName,
       });
 
-      const response = await fetch("http://localhost:4000/api/meetingEnd", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          meetingId: meetingId,
-          userId: userName,
-        }),
-      });
+      const response = await fetch(
+        config.getApiUrl(config.API_ENDPOINTS.MEETING_END),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            meetingId: meetingId,
+            userId: userName,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -332,7 +342,7 @@ const MeetingPage = () => {
     const getSignature = async () => {
       try {
         const response = await fetch(
-          "http://localhost:4000/generateSignature",
+          config.getApiUrl(config.API_ENDPOINTS.GENERATE_SIGNATURE),
           {
             method: "POST",
             headers: {

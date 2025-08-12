@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import config from "../../config/config.js";
 
 const MeetingValidator = () => {
   const { meetingId, userId } = useParams();
@@ -16,7 +17,9 @@ const MeetingValidator = () => {
         console.log("🔍 Validating meeting:", meetingId, "for user:", userId);
 
         const response = await axios.get(
-          `http://localhost:4000/api/getMeetingInfo/${meetingId}/${userId}`
+          config.getApiUrl(
+            `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${userId}`
+          )
         );
 
         if (response.data.IsSuccess) {
