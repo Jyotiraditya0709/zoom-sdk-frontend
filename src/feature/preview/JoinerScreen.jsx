@@ -1133,46 +1133,37 @@ function JoinerScreen() {
     const handleShareStarted = () => setIsSharingScreen(true);
     const handleShareStopped = () => {
       setIsSharingScreen(false);
-      if (shareRenderVideoRef.current)
-        shareRenderVideoRef.current.style.display = "none";
-      if (shareCanvasRef.current) shareCanvasRef.current.style.display = "none";
+      setIsRemoteSharing(false);
     };
 
     // For viewers: always use canvas for incoming share (like MeetingPage.jsx)
     const handleActiveShareChange = ({ userId, state }) => {
       if (!mediaStreamRef.current) return;
       if (state === "Active") {
-        if (shareCanvasRef.current) {
-          mediaStreamRef.current.startShareView(shareCanvasRef.current, userId);
-          shareCanvasRef.current.style.display = "block";
-          if (shareRenderVideoRef.current)
-            shareRenderVideoRef.current.style.display = "none";
+        if (remoteShareContainerRef.current) {
+          mediaStreamRef.current.startShareView(
+            remoteShareContainerRef.current,
+            userId
+          );
         }
         setIsRemoteSharing(true);
         addNotification(`Screen sharing started by ${userId}`);
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
-        if (shareCanvasRef.current)
-          shareCanvasRef.current.style.display = "none";
-        if (shareRenderVideoRef.current)
-          shareRenderVideoRef.current.style.display = "none";
       }
     };
 
     const handleShareReceived = ({ userId }) => {
-      if (shareCanvasRef.current) {
+      if (shareVideoRef.current) {
         mediaStreamRef.current.renderShare(
-          shareCanvasRef.current,
+          shareVideoRef.current,
           userId,
           1280,
           720,
           0,
           0
         );
-        shareCanvasRef.current.style.display = "block";
-        if (shareRenderVideoRef.current)
-          shareRenderVideoRef.current.style.display = "none";
       }
     };
 
@@ -1673,84 +1664,78 @@ function JoinerScreen() {
       return;
     }
 
+    if (!clientRef.current) {
+      console.log("[SCREEN SHARE] ERROR: clientRef.current is null");
+      return;
+    }
+
+    // Debug element availability
+    console.log("[SCREEN SHARE] Element refs:", {
+      shareRenderVideoRef: !!shareRenderVideoRef.current,
+      shareCanvasRef: !!shareCanvasRef.current,
+      webCodecsEnabled: webCodecsEnabled,
+    });
+
+    // Ensure elements are available
+    if (!shareRenderVideoRef.current || !shareCanvasRef.current) {
+      console.log("[SCREEN SHARE] ERROR: Screen share elements not available");
+      console.log(
+        "[SCREEN SHARE] shareRenderVideoRef:",
+        shareRenderVideoRef.current
+      );
+      console.log("[SCREEN SHARE] shareCanvasRef:", shareCanvasRef.current);
+      setError("Screen share elements not ready. Please try again.");
+      return;
+    }
+
     try {
       if (!isSharingScreen) {
         console.log("[SCREEN SHARE] Starting screen share...");
-        const el = shareRenderVideoRef.current;
-        if (!el) {
-          console.log("[SCREEN SHARE] ERROR: Screen share element not found");
-          setError("Screen share element not found.");
-          return;
-        }
 
-        // Ensure video element is properly configured with static values
-        const videoElement = el;
-        console.log("[SCREEN SHARE] Video element initial state:", {
-          width: videoElement.width,
-          height: videoElement.height,
-          offsetWidth: videoElement.offsetWidth,
-          offsetHeight: videoElement.offsetHeight,
-        });
+        const mediaStream = clientRef.current.getMediaStream();
 
-        // Force static dimensions for consistent behavior
-        videoElement.width = 1920;
-        videoElement.height = 1080;
-        videoElement.style.display = "block";
-        videoElement.style.width = "100%";
-        videoElement.style.height = "auto";
-        videoElement.style.visibility = "visible";
-        videoElement.style.position = "relative";
-
-        // Ensure container is visible
-        const container = videoElement.parentElement;
-        if (container) {
-          container.style.display = "block";
-          container.style.visibility = "visible";
-          container.style.position = "relative";
-        }
-
-        // Small delay for DOM update
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        console.log("[SCREEN SHARE] Video element after setup:", {
-          width: videoElement.width,
-          height: videoElement.height,
-          offsetWidth: videoElement.offsetWidth,
-          offsetHeight: videoElement.offsetHeight,
-        });
-
-        const canUseVideoElement =
-          mediaStreamRef.current.isStartShareScreenWithVideoElement();
-        console.log(
-          "[SCREEN SHARE] Can use video element:",
-          canUseVideoElement
-        );
-
-        if (canUseVideoElement) {
-          console.log("[SCREEN SHARE] Using video element for screen share");
-          await mediaStreamRef.current.startShareScreen(el);
-          console.log("[SCREEN SHARE] Screen share started successfully");
+        if (webCodecsEnabled) {
+          // Use video element for sharer if WebCodecs is enabled
+          console.log("[SCREEN SHARE] Using video element for WebCodecs");
+          // Ensure video element is properly set up
+          if (shareRenderVideoRef.current) {
+            shareRenderVideoRef.current.style.width = "1280px";
+            shareRenderVideoRef.current.style.height = "720px";
+            // Ensure video element has proper attributes
+            shareRenderVideoRef.current.autoplay = true;
+            shareRenderVideoRef.current.playsInline = true;
+            shareRenderVideoRef.current.muted = false;
+            // Small delay to ensure element is ready
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          await mediaStream.startShareScreen(shareRenderVideoRef.current);
+          shareRenderVideoRef.current.style.display = "block";
+          shareCanvasRef.current.style.display = "none";
         } else {
-          console.log("[SCREEN SHARE] Using canvas element for screen share");
-          await mediaStreamRef.current.startShareScreen(el);
-          console.log("[SCREEN SHARE] Screen share started successfully");
+          // Use canvas for sharer if WebCodecs is not enabled
+          console.log("[SCREEN SHARE] Using canvas element for non-WebCodecs");
+          // Ensure canvas element is properly set up
+          if (shareCanvasRef.current) {
+            shareCanvasRef.current.width = 1280;
+            shareCanvasRef.current.height = 720;
+            // Small delay to ensure element is ready
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          await mediaStream.startShareScreen(shareCanvasRef.current);
+          shareCanvasRef.current.style.display = "block";
+          shareRenderVideoRef.current.style.display = "none";
         }
 
         setIsSharingScreen(true);
         addNotification("Screen sharing started");
-
-        // Add a safety timeout to reset if screen sharing gets stuck
-        setTimeout(() => {
-          if (isSharingScreen) {
-            console.log(
-              "[SCREEN SHARE] Safety timeout - resetting screen share state"
-            );
-            cleanupScreenShareElements();
-          }
-        }, 30000); // 30 second timeout
       } else {
         console.log("[SCREEN SHARE] Stopping screen share...");
-        await mediaStreamRef.current.stopShareScreen();
+        const mediaStream = clientRef.current.getMediaStream();
+        await mediaStream.stopShareScreen();
+        if (shareRenderVideoRef.current)
+          shareRenderVideoRef.current.style.display = "none";
+        if (shareCanvasRef.current)
+          shareCanvasRef.current.style.display = "none";
         console.log("[SCREEN SHARE] Screen sharing stopped successfully");
         setIsSharingScreen(false);
         addNotification("Screen sharing stopped");
@@ -1763,8 +1748,8 @@ function JoinerScreen() {
         name: err?.name,
       });
 
-      // Always reset the sharing state and clean up UI elements
-      cleanupScreenShareElements();
+      // Always reset the sharing state
+      setIsSharingScreen(false);
 
       if (err?.reason === "user deny screen share" || err?.errorCode === 6200) {
         console.log("[SCREEN SHARE] User cancelled screen share");
@@ -2153,19 +2138,15 @@ function JoinerScreen() {
             ))}
           </div>
 
-          {/* Screen Share Containers - Always render but hide when not sharing */}
+          {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
           <div
-            className="screen-share-container"
             style={{
-              display: "block",
-              opacity: isSharingScreen ? 1 : 0,
-              visibility: isSharingScreen ? "visible" : "hidden",
-              position: isSharingScreen ? "relative" : "absolute",
-              top: isSharingScreen ? "auto" : "-9999px",
               width: "100%",
               display: "flex",
               justifyContent: "center",
               margin: "16px 0",
+              position: "relative",
+              zIndex: 10,
             }}
           >
             {/* Video element for screen sharing (when browser supports it) */}
@@ -2196,29 +2177,13 @@ function JoinerScreen() {
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
               }}
             />
-          </div>
-
-          {/* Remote Share Container - Always render but hide when not viewing */}
-          <div
-            className="remote-share-container"
-            style={{
-              display: "block",
-              opacity: isRemoteSharing ? 1 : 0,
-              visibility: isRemoteSharing ? "visible" : "hidden",
-              position: isRemoteSharing ? "relative" : "absolute",
-              top: isRemoteSharing ? "auto" : "-9999px",
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-              margin: "16px 0",
-            }}
-          >
             {/* Video element for viewing other users' shared content */}
             <video
               ref={shareVideoRef}
               autoPlay
               playsInline
               style={{
+                display: isRemoteSharing ? "block" : "none",
                 maxWidth: "90vw",
                 maxHeight: "60vh",
                 borderRadius: 12,
@@ -2232,7 +2197,7 @@ function JoinerScreen() {
               width="1920"
               height="1080"
               style={{
-                display: "none",
+                display: isRemoteSharing ? "block" : "none",
                 maxWidth: "90vw",
                 maxHeight: "60vh",
                 borderRadius: 12,
@@ -2249,6 +2214,7 @@ function JoinerScreen() {
                 position: "relative",
                 display: "inline-block",
                 marginRight: 8,
+                zIndex: 1000,
               }}
             >
               <button
@@ -2287,16 +2253,16 @@ function JoinerScreen() {
                   <div
                     className="video-options-menu"
                     style={{
-                      position: "fixed",
-                      bottom: 80,
-                      left: "50%",
-                      transform: "translateX(-50%)",
+                      position: "absolute",
+                      bottom: 50,
+                      left: 0,
                       background: "#222",
                       color: "#fff",
                       borderRadius: 10,
                       boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                       padding: 16,
                       minWidth: 220,
+                      maxWidth: "90vw",
                       zIndex: 9999,
                       border: "1px solid #333",
                     }}
@@ -2379,6 +2345,7 @@ function JoinerScreen() {
                 position: "relative",
                 display: "inline-block",
                 marginRight: 8,
+                zIndex: 1000,
               }}
               ref={cameraBtnRef}
             >
@@ -2427,15 +2394,16 @@ function JoinerScreen() {
                   <div
                     className="video-options-menu"
                     style={{
-                      position: "fixed",
-                      bottom: 80,
-                      right: "20px",
+                      position: "absolute",
+                      bottom: 50,
+                      right: 0,
                       background: "#222",
                       color: "#fff",
                       borderRadius: 10,
                       boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                       padding: 16,
                       minWidth: 220,
+                      maxWidth: "90vw",
                       zIndex: 9999,
                       border: "1px solid #333",
                     }}

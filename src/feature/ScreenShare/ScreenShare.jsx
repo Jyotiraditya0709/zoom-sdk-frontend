@@ -74,21 +74,34 @@ const ScreenShare = ({
       return;
     }
 
+    // Ensure elements are available
+    if (!screenShareContainerRef.current || !remoteShareContainerRef.current) {
+      console.log("[SCREEN SHARE] ERROR: Screen share elements not available");
+      console.log(
+        "[SCREEN SHARE] screenShareContainerRef:",
+        screenShareContainerRef.current
+      );
+      console.log(
+        "[SCREEN SHARE] remoteShareContainerRef:",
+        remoteShareContainerRef.current
+      );
+      setError("Screen share elements not ready. Please try again.");
+      return;
+    }
+
     try {
       if (!isScreenShare) {
         // start local screen share
+        const mediaStream = clientRef.current.getMediaStream();
+
         if (webCodecsEnabled) {
           // Use video element for sharer if WebCodecs is enabled
-          await mediaStreamRef.current.startShareScreen(
-            screenShareContainerRef.current
-          );
+          await mediaStream.startShareScreen(screenShareContainerRef.current);
           screenShareContainerRef.current.style.display = "block";
           remoteShareContainerRef.current.style.display = "none";
         } else {
           // Use canvas for sharer if WebCodecs is not enabled
-          await mediaStreamRef.current.startShareScreen(
-            remoteShareContainerRef.current
-          );
+          await mediaStream.startShareScreen(remoteShareContainerRef.current);
           remoteShareContainerRef.current.style.display = "block";
           screenShareContainerRef.current.style.display = "none";
         }
@@ -96,7 +109,8 @@ const ScreenShare = ({
         addNotification("Screen sharing started");
       } else {
         // stop screen share
-        await mediaStreamRef.current.stopShareScreen();
+        const mediaStream = clientRef.current.getMediaStream();
+        await mediaStream.stopShareScreen();
         if (screenShareContainerRef.current)
           screenShareContainerRef.current.style.display = "none";
         if (remoteShareContainerRef.current)
@@ -139,16 +153,12 @@ const ScreenShare = ({
             remoteShareContainerRef.current,
             userId
           );
-          remoteShareContainerRef.current.style.display = "block";
-          screenShareContainerRef.current.style.display = "none";
         }
         setIsRemoteSharing(true);
         addNotification(`Screen sharing started by ${userId}`);
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
-        if (remoteShareContainerRef.current)
-          remoteShareContainerRef.current.style.display = "none";
         addNotification("Screen sharing stopped");
       }
     };
@@ -163,8 +173,6 @@ const ScreenShare = ({
           0,
           0
         );
-        remoteShareContainerRef.current.style.display = "block";
-        screenShareContainerRef.current.style.display = "none";
       }
     };
 
@@ -234,61 +242,51 @@ const ScreenShare = ({
               <div className="joinerCount">+20</div>
             </div>
 
-            {/* Local screen-share video element: used to start local share */}
-            <div className="screenViewHere">
-              <div
-                className="screen-share-container"
-                style={{
-                  display: "block",
-                  opacity: isScreenShare ? 1 : 0,
-                  visibility: isScreenShare ? "visible" : "hidden",
-                  position: isScreenShare ? "relative" : "absolute",
-                  top: isScreenShare ? "auto" : "-9999px",
-                }}
-              >
-                <video
-                  ref={screenShareContainerRef}
-                  id="my-screen-share-content-video"
-                  width="1920"
-                  height="1080"
+            {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
+            {(isScreenShare || isRemoteSharing) && (
+              <div className="screenViewHere">
+                <div
                   style={{
                     width: "100%",
-                    height: "auto",
-                    display: "block",
+                    display: "flex",
+                    justifyContent: "center",
+                    margin: "16px 0",
                     position: "relative",
+                    zIndex: 10,
                   }}
-                  autoPlay
-                  muted
-                />
+                >
+                  {/* Video element for screen sharing (when browser supports it) */}
+                  <video
+                    ref={screenShareContainerRef}
+                    autoPlay
+                    playsInline
+                    id="my-screen-share-content-video"
+                    style={{
+                      display: "none",
+                      maxWidth: "90vw",
+                      maxHeight: "60vh",
+                      borderRadius: 12,
+                      boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                  {/* Canvas element for screen sharing (fallback) */}
+                  <canvas
+                    ref={remoteShareContainerRef}
+                    id="users-screen-share-content-canvas"
+                    height={720}
+                    width={1280}
+                    style={{
+                      display: "none",
+                      maxWidth: "90vw",
+                      maxHeight: "60vh",
+                      borderRadius: 12,
+                      boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                </div>
+                <div className="nameJoinerHere">Screen / Presenter</div>
               </div>
-
-              {/* Remote share canvas - always mounted but hidden when not sharing */}
-              <div
-                className="remote-share-container"
-                style={{
-                  display: "block",
-                  opacity: isRemoteSharing ? 1 : 0,
-                  visibility: isRemoteSharing ? "visible" : "hidden",
-                  position: isRemoteSharing ? "relative" : "absolute",
-                  top: isRemoteSharing ? "auto" : "-9999px",
-                }}
-              >
-                <canvas
-                  ref={remoteShareContainerRef}
-                  id="users-screen-share-content-canvas"
-                  width="1920"
-                  height="1080"
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                    display: "block",
-                    position: "relative",
-                  }}
-                />
-              </div>
-
-              <div className="nameJoinerHere">Screen / Presenter</div>
-            </div>
+            )}
           </div>
 
           <div className="joinerSettingBottom">
