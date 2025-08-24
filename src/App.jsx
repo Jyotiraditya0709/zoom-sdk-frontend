@@ -1,12 +1,13 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import Preview from "./feature/preview/preview";
+import PreJoin from "./feature/preview/previewChange";
 
-import MeetingPage from "./feature/preview/MeetingPage";
 import MeetingLeft from "./feature/preview/MeetingLeft";
 import Feedback from "./feature/preview/Feedback";
 import MeetingValidator from "./feature/preview/MeetingValidator";
+import MeetingExit from "./feature/preview/MeetingExit";
 import { ZoomProvider } from "./feature/preview/ZoomContext";
+import JoinerScreen from "./feature/preview/JoinerScreen";
 
 import "./App.css";
 
@@ -14,14 +15,17 @@ const App = () => {
   return (
     <ZoomProvider>
       <Routes>
+        <Route path="/joiner-screen" element={<JoinerScreen />} />
+        <Route path="/pre-join" element={<PreJoin />} />
         <Route
-          path="/preview/:meetingId/:userId"
+          path="/pre-join/:meetingId/:userId"
           element={<MeetingValidator />}
         />
-        <Route path="/preview" element={<Preview />} />
-        <Route path="/meeting/:meetingId/:userId" element={<MeetingPage />} />
+
+        <Route path="/meeting/:meetingId/:userId" element={<JoinerScreen />} />
         <Route path="/meeting-left" element={<MeetingLeft />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/meeting-exit" element={<MeetingExit />} />
       </Routes>
     </ZoomProvider>
   );

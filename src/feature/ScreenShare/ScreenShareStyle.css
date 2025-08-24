@@ -1,0 +1,81 @@
+.ScreenShare {
+  width: 100%;
+
+  .shareScreenBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+    padding: 20px 0;
+  }
+
+  .screenViewHere {
+    width: 100%;
+    max-width: 90%;
+    margin: 0 auto;
+    background: #1010103a;
+    height: calc(100vh - 336px);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .joinersGroupScreens {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 110px;
+  }
+
+  .joinerViewHere {
+    position: relative;
+    width: 174px;
+    height: 121px;
+    overflow: hidden;
+    background: #e0e0e0;
+    border-radius: 12px;
+  }
+
+  .nameJoinerHere {
+    border-radius: 5px;
+    background: #171717;
+    backdrop-filter: blur(10px);
+    padding: 5px 10px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    width: max-content;
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+  }
+
+  .joinerCount {
+    width: 100%;
+    max-width: 113px;
+    border-radius: 16px;
+    background: #e5e5e5;
+    padding: 41px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 16px;
+    font-weight: 400;
+  }
+
+  .joinerScreenContainer {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .joinerScreenBlock {
+    -webkit-box-flex: 1;
+    box-flex: 1;
+    -webkit-flex-grow: 1;
+    flex-grow: 1;
+    flex: 1;
+    overflow: hidden;
+  }
+}

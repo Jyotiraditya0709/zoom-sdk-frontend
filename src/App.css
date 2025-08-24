@@ -4,7 +4,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: "Poppins", sans-serif;
-  background: radial-gradient(ellipse at top left, #0d0d0d, #1a1a1a);
+  background: radial-gradient(ellipse at top left, #ffffff, #ffffff);
   color: white;
   height: 100vh;
   overflow: hidden;

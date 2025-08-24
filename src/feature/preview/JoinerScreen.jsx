@@ -1,0 +1,3599 @@
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import { useZoom } from "../preview/ZoomContext";
+import axios from "axios";
+import ZoomVideo from "@zoom/videosdk";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { createPortal } from "react-dom";
+import "./JoinerScreen.css";
+import Header from "../../Layout/Header/Header";
+import {
+  ChatIcon,
+  MicroPhone,
+  OffVideoCamera,
+  RecordingIcon,
+  ShareScreenIcon,
+  UnMicroPhone,
+  VideoCamera,
+} from "../../icon/icon";
+import config from "../../config/config";
+import ChatSidebar from "../preview/ChatSidebar/ChatSidebar";
+// Add new imports for icons
+import {
+  FaMicrophone,
+  FaMicrophoneSlash,
+  FaVideo,
+  FaVideoSlash,
+  FaChevronUp,
+  FaSignal,
+} from "react-icons/fa";
+
+// Helper functions for robust device fallback (like MeetingPage.jsx)
+async function createSafeLocalVideoTrack(selectedCamera) {
+  try {
+    return await ZoomVideo.createLocalVideoTrack({
+      cameraId: selectedCamera?.deviceId,
+    });
+  } catch (err) {
+    if (err.name === "OverconstrainedError" || err.name === "NotFoundError") {
+      return await ZoomVideo.createLocalVideoTrack();
+    }
+    throw err;
+  }
+}
+
+async function createSafeLocalAudioTrack(selectedMic) {
+  try {
+    return await ZoomVideo.createLocalAudioTrack({
+      microphoneId: selectedMic?.deviceId,
+    });
+  } catch (err) {
+    if (err.name === "OverconstrainedError" || err.name === "NotFoundError") {
+      return await ZoomVideo.createLocalAudioTrack();
+    }
+    throw err;
+  }
+}
+
+// Helper to get deviceId string (like MeetingPage.jsx)
+function getDeviceId(device) {
+  if (!device) return undefined;
+  if (typeof device === "string") return device;
+  if (typeof device === "object" && device.deviceId) return device.deviceId;
+  return undefined;
+}
+
+// Utility to safely start a video track with retries and error suppression (like MeetingPage.jsx)
+async function safeStartVideoTrack(track, videoEl, retries = 3, delay = 300) {
+  if (!track || !videoEl) return;
+  try {
+    videoEl.srcObject = null;
+    if (videoEl.load) videoEl.load();
+  } catch {}
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await new Promise((res) => setTimeout(res, delay));
+      await track.start(videoEl);
+      return;
+    } catch (err) {
+      const msg = err?.message || "";
+      if (
+        msg.includes("play() request was interrupted") ||
+        msg.includes("Timeout starting video source")
+      ) {
+        console.warn(`Attempt ${attempt} to start video failed:`, msg);
+        if (attempt === retries) throw err;
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+function JoinerScreen() {
+  //state
+  const [isMute, setIsMute] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isScreenShare, setIsScreenShare] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const [error, setError] = useState("");
+  const [participants, setParticipants] = useState([]);
+  const [isAudioOn, setIsAudioOn] = useState(true);
+  const [isVideoOn, setIsVideoOn] = useState(true);
+  const [isJoining, setIsJoining] = useState(false);
+  const [localUser, setLocalUser] = useState(null);
+  const [isTogglingVideo, setIsTogglingVideo] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const [showVideoOptions, setShowVideoOptions] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [showModals, setShowModals] = useState({
+    participants: false,
+    chat: false,
+    info: false,
+  });
+  // Add device selection states (like MeetingPage.jsx)
+  const [selectedCamera, setSelectedCamera] = useState("");
+  const [selectedMic, setSelectedMic] = useState("");
+  const [selectedSpeaker, setSelectedSpeaker] = useState("");
+  const [meetingStartTime, setMeetingStartTime] = useState(null);
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [audioDevices, setAudioDevices] = useState([]);
+  const [speakerDevices, setSpeakerDevices] = useState([]);
+  const [activeSpeakerId, setActiveSpeakerId] = useState(null);
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
+  const [isRemoteSharing, setIsRemoteSharing] = useState(false);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [showRecordingNotice, setShowRecordingNotice] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
+  const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
+  const recordingClientRef = useRef(null);
+  const remoteShareContainerRef = useRef(null);
+
+  const mediaStreamRef = useRef(null);
+  const videoContainerRefs = useRef({});
+  const selfUserIdRef = useRef(null);
+  const VIDEO_QUALITY = 3; // 1: 360p, 3: 720p
+
+  // zoom context
+  const { getClient, cleanup, bgMode, setBgMode } = useZoom();
+
+  const [networkQuality, setNetworkQuality] = useState({}); // { userId: level }
+  const aspectRatioRefs = useRef({}); // { userId: aspectRatio }
+  const [showMediaWarning, setShowMediaWarning] = useState(false);
+  const [mediaWarningMessage, setMediaWarningMessage] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [permissionError, setPermissionError] = useState("");
+
+  //refs
+  const videoRef = useRef(null);
+  const clientRef = useRef(null);
+  const localUserIdRef = useRef(null);
+  const localVideoTrackRef = useRef(null);
+  const localAudioTrackRef = useRef(null);
+  const shareVideoRef = useRef(null);
+  const shareCanvasRef = useRef(null);
+  const shareRenderVideoRef = useRef(null);
+  const cameraBtnRef = useRef(null);
+  const videoRefs = useRef({});
+  const videoCanvasRefs = useRef({});
+
+  // Utility: Clean up camera/video resources fully (like MeetingPage.jsx)
+  async function cleanupCamera(userId) {
+    const track = localVideoTrackRef.current;
+    if (track) {
+      await track.stop();
+      const m = track.mediaStreamTrack;
+      if (m?.stop) m.stop();
+      // If Zoom SDK exposes a localMediaStream, stop all tracks
+      if (
+        track.mediaStream &&
+        typeof track.mediaStream.getTracks === "function"
+      ) {
+        track.mediaStream.getTracks().forEach((t) => t.stop());
+      }
+      localVideoTrackRef.current = null;
+    }
+    // Clean up the video element
+    const el = videoRefs.current[userId];
+    if (el) {
+      el.srcObject = null;
+      if (el.load) el.load();
+    }
+  }
+
+  //function for notification
+  const notifyUserJoined = async () => {
+    try {
+      console.log("�� Calling userJoined webhook with:", {
+        meetingId: meetingId,
+        userId: userName,
+        userType: isHost ? "mentor" : "mentee",
+      });
+
+      const response = await fetch(
+        config.getApiUrl(config.API_ENDPOINTS.USER_JOINED),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            meetingId: meetingId,
+            userId: userName,
+            userType: isHost ? "mentor" : "mentee",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ User joined webhook sent:", data);
+    } catch (err) {
+      console.error("❌ Failed to send user joined webhook:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        status: err.status,
+      });
+    }
+  };
+
+  const notifyUserLeft = async () => {
+    // Prevent calling userLeft during initial join process
+    if (isJoining) {
+      console.log("🚫 Skipping userLeft webhook during join process");
+      return;
+    }
+
+    try {
+      console.log("🎯 Calling userLeft webhook with:", {
+        meetingId: meetingId,
+        userId: userName,
+      });
+
+      const response = await fetch(
+        config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            meetingId: meetingId,
+            userId: userName,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ User left webhook sent:", data);
+    } catch (err) {
+      console.error("❌ Failed to send user left webhook:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        status: err.status,
+      });
+    }
+  };
+
+  const notifyMeetingEnd = async () => {
+    try {
+      console.log("🏁 Calling meetingEnd webhook with:", {
+        meetingId: meetingId,
+        userId: userName,
+      });
+
+      const response = await fetch(
+        config.getApiUrl(config.API_ENDPOINTS.MEETING_END),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            meetingId: meetingId,
+            userId: userName,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("✅ Meeting end webhook sent:", data);
+    } catch (err) {
+      console.error("❌ Failed to send meeting end webhook:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        status: err.status,
+      });
+    }
+  };
+
+  // notification helper
+  const addNotification = useCallback((msg) => {
+    const id = Date.now() + Math.random();
+    setNotifications((prev) => {
+      const next = [...prev, { id, msg }];
+      return next.slice(-4); // Limit to last 4
+    });
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, 4000);
+  }, []);
+
+  // Parse URL Params
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { meetingId, userId } = useParams();
+  const { sessionName, userName, role } = React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+
+    // Debug logging
+    console.log("🔍 URL Parameters Debug:", {
+      meetingId,
+      userId,
+      searchParams: Object.fromEntries(params.entries()),
+      pathname: location.pathname,
+      fullUrl: location.href,
+    });
+
+    return {
+      sessionName: meetingId || "default-session",
+      userName: `User ${userId?.slice(-4) || "Guest"}`,
+      role: parseInt(params.get("role") || "1", 10),
+    };
+  }, [location.search, meetingId, userId]);
+
+  const isHost = role === 1;
+
+  const attachVideo = useCallback(
+    async (userId) => {
+      const container = videoContainerRefs.current[userId];
+      if (container && mediaStreamRef.current) {
+        try {
+          console.log(`🎥 Attaching video for user: ${userId}`);
+          console.log(`🎥 Container element:`, container);
+          console.log(`🎥 Container dimensions:`, {
+            width: container.offsetWidth,
+            height: container.offsetHeight,
+            display: container.style.display,
+            visibility: container.style.visibility,
+          });
+
+          const userVideo = await mediaStreamRef.current.attachVideo(
+            userId,
+            VIDEO_QUALITY
+          );
+          console.log(`🎥 Video element created:`, userVideo);
+
+          container.innerHTML = "";
+          container.appendChild(userVideo);
+
+          console.log(
+            `🎥 Video attached to container. Container children:`,
+            container.children.length
+          );
+
+          // Ensure container is visible
+          container.style.display = "flex";
+          container.style.visibility = "visible";
+          container.style.opacity = "1";
+
+          // Immediate check for black tile (after 500ms)
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              console.log(`🎥 Video element found:`, videoElement);
+              if (videoElement) {
+                console.log(`🎥 Video dimensions:`, {
+                  videoWidth: videoElement.videoWidth,
+                  videoHeight: videoElement.videoHeight,
+                  offsetWidth: videoElement.offsetWidth,
+                  offsetHeight: videoElement.offsetHeight,
+                  display: videoElement.style.display,
+                  visibility: videoElement.style.visibility,
+                });
+
+                // Check if video has actual content
+                if (
+                  videoElement.videoWidth === 0 ||
+                  videoElement.videoHeight === 0
+                ) {
+                  console.log(
+                    `🧹 Immediate aggressive cleanup of black tile for user: ${userId}`
+                  );
+                  container.innerHTML = "";
+                  container.style.display = "none";
+                  // Remove from DOM completely
+                  if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                  }
+                  // Remove from refs
+                  delete videoContainerRefs.current[userId];
+
+                  if (mediaStreamRef.current) {
+                    mediaStreamRef.current
+                      .detachVideo(userId)
+                      .catch((e) =>
+                        console.error(`Failed to detach video for ${userId}`, e)
+                      );
+                  }
+
+                  // Force UI update
+                  setParticipants(clientRef.current?.getAllUser() || []);
+                } else {
+                  console.log(
+                    `🎥 Video is displaying properly for user: ${userId}`
+                  );
+                }
+              }
+            }
+          }, 500); // Check after 500ms for immediate cleanup
+
+          // Additional timeout to clean up black tiles that don't load
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement && videoElement.videoWidth === 0) {
+                console.log(
+                  `🧹 Aggressive cleanup of persistent black tile for user: ${userId}`
+                );
+                container.innerHTML = "";
+                container.style.display = "none";
+                // Remove from DOM completely
+                if (container.parentNode) {
+                  container.parentNode.removeChild(container);
+                }
+                // Remove from refs
+                delete videoContainerRefs.current[userId];
+
+                // Use mediaStreamRef directly to avoid circular dependency
+                if (mediaStreamRef.current) {
+                  mediaStreamRef.current
+                    .detachVideo(userId)
+                    .catch((e) =>
+                      console.error(`Failed to detach video for ${userId}`, e)
+                    );
+                }
+
+                // Force UI update
+                setParticipants(clientRef.current?.getAllUser() || []);
+              }
+            }
+          }, 2000); // Reduced to 2 seconds for faster cleanup
+
+          // Additional check for video element that doesn't start playing
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement && !videoElement.playing) {
+                console.log(
+                  `🧹 Aggressive cleanup of non-playing video for user: ${userId}`
+                );
+                container.innerHTML = "";
+                container.style.display = "none";
+                // Remove from DOM completely
+                if (container.parentNode) {
+                  container.parentNode.removeChild(container);
+                }
+                // Remove from refs
+                delete videoContainerRefs.current[userId];
+
+                if (mediaStreamRef.current) {
+                  mediaStreamRef.current
+                    .detachVideo(userId)
+                    .catch((e) =>
+                      console.error(`Failed to detach video for ${userId}`, e)
+                    );
+                }
+
+                // Force UI update
+                setParticipants(clientRef.current?.getAllUser() || []);
+              }
+            }
+          }, 2000); // Check after 2 seconds
+        } catch (e) {
+          console.error(`Failed to attach video for ${userId}`, e);
+          // Clean up container if attachment fails
+          if (container) {
+            container.innerHTML = "";
+          }
+        }
+      }
+    },
+    [VIDEO_QUALITY]
+  );
+
+  const detachVideo = useCallback(async (userId) => {
+    if (mediaStreamRef.current) {
+      try {
+        await mediaStreamRef.current.detachVideo(userId);
+      } catch (e) {
+        console.error(`Failed to detach video for ${userId}`, e);
+      }
+    }
+  }, []);
+
+  // Complete user removal function - handles all cleanup
+  const completeUserRemoval = useCallback((userId) => {
+    console.log(`🚫 Complete user removal initiated for: ${userId}`);
+
+    // 1. Clean up video container
+    if (videoContainerRefs.current[userId]) {
+      console.log(`🧹 Complete cleanup of video container for user: ${userId}`);
+      const container = videoContainerRefs.current[userId];
+      container.innerHTML = "";
+      container.style.display = "none";
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      delete videoContainerRefs.current[userId];
+    }
+
+    // 2. Remove from participants list
+    setParticipants((prevParticipants) => {
+      const updatedParticipants = prevParticipants.filter(
+        (p) => p.userId !== userId
+      );
+      console.log(
+        `📊 Complete removal - Participants updated: ${prevParticipants.length} -> ${updatedParticipants.length}`
+      );
+      return updatedParticipants;
+    });
+
+    // 3. Force additional cleanup
+    setTimeout(() => {
+      // Final check and cleanup
+      const remainingContainer = videoContainerRefs.current[userId];
+      if (remainingContainer) {
+        console.log(
+          `🧹 Final cleanup of remaining container for user: ${userId}`
+        );
+        remainingContainer.innerHTML = "";
+        remainingContainer.style.display = "none";
+        if (remainingContainer.parentNode) {
+          remainingContainer.parentNode.removeChild(remainingContainer);
+        }
+        delete videoContainerRefs.current[userId];
+      }
+
+      // Force final participants update
+      setParticipants((prevParticipants) => {
+        const finalParticipants = prevParticipants.filter(
+          (p) => p.userId !== userId
+        );
+        console.log(
+          `🔄 Complete removal - Final participants count: ${finalParticipants.length}`
+        );
+        return finalParticipants;
+      });
+    }, 100);
+  }, []);
+
+  // Cleanup function to stop media and leave session
+  const cleanupMediaAndLeave = async () => {
+    try {
+      if (mediaStreamRef.current) {
+        await mediaStreamRef.current.stopVideo?.();
+        await mediaStreamRef.current.muteAudio?.();
+      }
+      if (clientRef.current) {
+        await clientRef.current.leave();
+      }
+    } catch (err) {
+      // Ignore errors on cleanup
+    }
+  };
+  // Handle refresh detection and automatic redirect
+  useEffect(() => {
+    // Only set up refresh detection if we have valid meeting info
+    if (!sessionName || !userName) {
+      return;
+    }
+
+    const handleBeforeUnload = () => {
+      // Store meeting info in sessionStorage for after refresh
+      sessionStorage.setItem(
+        "meetingExitInfo",
+        JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+          role: role,
+          timestamp: Date.now(),
+        })
+      );
+
+      // 🔑 CRITICAL: Force immediate client.leave() to notify Zoom
+      try {
+        if (
+          clientRef.current &&
+          clientRef.current.getCurrentUserInfo()?.userId
+        ) {
+          console.log(
+            "🔄 Page unloading - forcing immediate client.leave() to notify Zoom"
+          );
+          clientRef.current.leave(true); // true => force immediate leave
+        }
+      } catch (err) {
+        console.error("❌ Error leaving meeting on page unload:", err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Only handle visibility change if we're actually leaving the page
+      // Tab switches should NOT cause users to leave the meeting
+      if (document.visibilityState === "hidden") {
+        // Check if this is likely a page unload vs just a tab switch
+        // We'll use a small delay to differentiate between tab switch and page unload
+        setTimeout(() => {
+          // If the page is still hidden after a short delay, it might be a page unload
+          // But we won't force leave here - let the beforeunload and pagehide handlers deal with it
+          console.log(
+            "🔄 Tab hidden - but not forcing leave (likely just tab switch)"
+          );
+        }, 100);
+      } else if (document.visibilityState === "visible") {
+        console.log("🔄 Tab visible again - user returned to meeting tab");
+      }
+    };
+
+    const handlePageHide = () => {
+      // Immediately notify backend that user is leaving due to refresh/page close
+      if (clientRef.current && clientRef.current.getCurrentUserInfo()?.userId) {
+        console.log("🔄 User leaving page - immediately notifying backend");
+
+        // Try multiple methods to ensure the webhook is called
+        const data = JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+        });
+
+        // Method 1: sendBeacon (most reliable for page unload)
+        if (navigator.sendBeacon) {
+          const success = navigator.sendBeacon(
+            config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+            data
+          );
+          console.log("📡 sendBeacon result:", success);
+        }
+
+        // Method 2: Synchronous XMLHttpRequest (fallback)
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open(
+            "POST",
+            config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+            false
+          );
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.send(data);
+          console.log("📡 XMLHttpRequest status:", xhr.status);
+        } catch (err) {
+          console.error("📡 XMLHttpRequest failed:", err);
+        }
+
+        // Method 3: Store in sessionStorage for next page load
+        sessionStorage.setItem("pendingUserLeft", data);
+      }
+    };
+
+    const handleLoad = () => {
+      // Check if we have stored meeting info from a refresh
+      const storedInfo = sessionStorage.getItem("meetingExitInfo");
+      if (storedInfo) {
+        try {
+          const info = JSON.parse(storedInfo);
+          const timeDiff = Date.now() - info.timestamp;
+
+          // Only redirect if the refresh happened within the last 5 seconds
+          if (timeDiff < 5000) {
+            sessionStorage.removeItem("meetingExitInfo");
+            // Prevent automatic rejoin by setting a flag
+            sessionStorage.setItem("preventAutoRejoin", "true");
+            navigate(
+              `/meeting-exit?meetingId=${encodeURIComponent(
+                info.meetingId
+              )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
+            );
+          } else {
+            sessionStorage.removeItem("meetingExitInfo");
+          }
+        } catch (err) {
+          sessionStorage.removeItem("meetingExitInfo");
+        }
+      }
+
+      // Check for pending user left notification
+      const pendingUserLeft = sessionStorage.getItem("pendingUserLeft");
+      if (pendingUserLeft) {
+        try {
+          const data = JSON.parse(pendingUserLeft);
+          console.log("📡 Sending pending user left notification:", data);
+
+          // Send the pending notification
+          fetch(config.getApiUrl(config.API_ENDPOINTS.USER_LEFT), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: pendingUserLeft,
+          })
+            .then(() => {
+              console.log(
+                "✅ Pending user left notification sent successfully"
+              );
+            })
+            .catch((err) => {
+              console.error(
+                "❌ Failed to send pending user left notification:",
+                err
+              );
+            });
+
+          sessionStorage.removeItem("pendingUserLeft");
+        } catch (err) {
+          console.error("❌ Failed to parse pending user left data:", err);
+          sessionStorage.removeItem("pendingUserLeft");
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("unload", handleBeforeUnload); // Backup unload handler
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("load", handleLoad);
+
+    // Check immediately on mount
+    handleLoad();
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("unload", handleBeforeUnload);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("load", handleLoad);
+    };
+  }, [navigate, sessionName, userName, role]);
+
+  // Main session lifecycle effect
+  useEffect(() => {
+    const client = getClient();
+    clientRef.current = client;
+
+    // Only proceed if we have valid meeting info
+    if (!sessionName || !userName) {
+      return;
+    }
+
+    // Check if we should prevent automatic rejoin (user just left due to refresh)
+    const preventAutoRejoin = sessionStorage.getItem("preventAutoRejoin");
+    if (preventAutoRejoin === "true") {
+      sessionStorage.removeItem("preventAutoRejoin");
+      console.log("🚫 Preventing automatic rejoin due to recent refresh");
+      return;
+    }
+
+    // Fetch devices and set state
+    const fetchDevices = async () => {
+      try {
+        const devices = await ZoomVideo.getDevices();
+        const cams = devices.filter((d) => d.kind === "videoinput");
+        const mics = devices.filter((d) => d.kind === "audioinput");
+        const speakers = devices.filter((d) => d.kind === "audiooutput");
+        setVideoDevices(cams);
+        setAudioDevices(mics);
+        setSpeakerDevices(speakers);
+
+        // Set default devices if not already set
+        if (!selectedCamera && cams[0]) setSelectedCamera(cams[0].deviceId);
+        if (!selectedMic && mics[0]) setSelectedMic(mics[0].deviceId);
+        if (!selectedSpeaker && speakers[0])
+          setSelectedSpeaker(speakers[0].deviceId);
+
+        // Clear any previous device errors
+        setError("");
+        setPermissionError("");
+      } catch (err) {
+        console.warn("Device fetch warning:", err);
+
+        // Only show error if it's a permission issue, not just no devices
+        if (
+          err.name === "NotAllowedError" ||
+          err.name === "PermissionDeniedError"
+        ) {
+          setPermissionError(
+            "Camera/microphone access denied. Please allow permissions in your browser settings and refresh the page."
+          );
+        } else if (
+          err.name === "NotFoundError" ||
+          err.name === "NotReadableError"
+        ) {
+          setError(
+            "No camera or microphone found. Please connect a device and refresh the page."
+          );
+        } else {
+          // For other errors, just log them but don't show to user
+          console.log("Device fetch error (non-critical):", err);
+        }
+      }
+    };
+    // Try to request permissions first, then fetch devices
+    const initializeDevices = async () => {
+      try {
+        // First try to get user media to request permissions
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+        // If successful, fetch devices
+        await fetchDevices();
+      } catch (err) {
+        console.log(
+          "Permission request failed, trying to fetch devices anyway:",
+          err
+        );
+        // Even if permission request fails, try to fetch devices
+        await fetchDevices();
+      }
+    };
+
+    initializeDevices();
+
+    // Listen for device-change event
+    client.on("device-change", fetchDevices);
+
+    // Listen for permission-change event
+    client.on("permission-change", (payload) => {
+      setPermissionError(
+        "Camera or microphone permission changed. Please re-authorize in your browser settings."
+      );
+    });
+
+    // Device plug/unplug and permission changes
+    client.on("device-change", fetchDevices);
+    client.on("device-permission-change", (payload) => {
+      addNotification(`${payload.name} permission is ${payload.state}`);
+      if (payload.state === "denied") {
+        setMediaWarningMessage(
+          `Media error: Your mic is muted in system or browser settings. Please open your settings to unmute and adjust the level.`
+        );
+        setShowMediaWarning(true);
+      }
+    });
+
+    // Media failure handling
+    client.on("active-media-failed", (payload) => {
+      const message = payload.message || payload.code || "Unknown media error";
+      addNotification(`Media error: ${message}`);
+
+      // Show warning dialog instead of throwing error
+      setMediaWarningMessage(
+        `We detected an issue with the microphone that we cannot resolve.\n\n Your mic is muted in system or browser settings.\n\n Please open your settings to unmute and adjust the level..\n\nPlease refresh the page to try to fix it.`
+      );
+      setShowMediaWarning(true);
+    });
+
+    // Audio/video state changes
+    client.on("current-audio-change", (payload) => {
+      if (payload.action === "Leave") {
+        addNotification(`Audio ended: ${payload.source}`);
+      } else if (payload.action === "Muted") {
+        addNotification(`Audio muted: ${payload.source}`);
+        // Show warning for system-level mute
+        if (payload.source && payload.source.includes("system")) {
+          setMediaWarningMessage(
+            `Your microphone has been muted by the system.\n\nPlease check your system audio settings and unmute your microphone.`
+          );
+          setShowMediaWarning(true);
+        }
+      }
+    });
+
+    // Auto-play audio failure
+    client.on("auto-play-audio-failed", () => {
+      addNotification(
+        `Audio playback blocked. Click anywhere to resume audio.`
+      );
+    });
+
+    // Network quality indicator
+    client.on("network-quality-change", (payload) => {
+      setNetworkQuality((prev) => ({
+        ...prev,
+        [payload.userId]: payload.level,
+      }));
+    });
+
+    // Dynamic video aspect ratio
+    client.on("video-aspect-ratio-change", (payload) => {
+      aspectRatioRefs.current[payload.userId] = payload.aspectRatio;
+      // Optionally, force a re-render
+      // Removed notification for aspect ratio change
+      // addNotification(`Aspect ratio changed for user ${payload.userId}`);
+    });
+
+    const getSignature = async () => {
+      try {
+        const response = await fetch(
+          config.getApiUrl(config.API_ENDPOINTS.GENERATE_SIGNATURE),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ sessionName, role }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.signature;
+      } catch (err) {
+        setError("Failed to get a valid signature.");
+        return null;
+      }
+    };
+
+    client.on("chat-on-message", (payload) => {
+      setChatMessages((prev) => {
+        // Check if this message already exists to prevent duplicates
+        const messageExists = prev.some(
+          (msg) =>
+            msg.sender === payload.sender.name &&
+            msg.content === payload.message &&
+            msg.timestamp === new Date(payload.timestamp).toLocaleTimeString()
+        );
+
+        if (messageExists) {
+          return prev; // Don't add duplicate
+        }
+
+        return [
+          ...prev,
+          {
+            sender: payload.sender.name,
+            content: payload.message,
+            timestamp: new Date(payload.timestamp).toLocaleTimeString(),
+          },
+        ];
+      });
+    });
+
+    client.on("peer-video-state-change", async (payload) => {
+      const { action, userId } = payload;
+      if (userId === selfUserIdRef.current) return; // Ignore self events
+
+      console.log(`📹 Video state change for user ${userId}: ${action}`);
+
+      if (action === "Start") {
+        // Check if user is still in the meeting before attaching video
+        const allUsers = client.getAllUser();
+        const user = allUsers.find((u) => u.userId === userId);
+        if (!user) {
+          console.log(
+            `🚫 User ${userId} no longer in meeting - skipping video attachment`
+          );
+          return;
+        }
+
+        console.log(`🎥 User ${userId} started video - attaching`);
+        await attachVideo(userId);
+      } else if (action === "Stop") {
+        console.log(
+          `📹 User ${userId} stopped video - complete cleanup initiated`
+        );
+        await detachVideo(userId);
+
+        // Use the complete user removal function
+        completeUserRemoval(userId);
+      }
+
+      // Update participants state so UI reflects remote video changes
+      setParticipants(client.getAllUser());
+    });
+
+    // Add peer-audio-state-change listener to update participants state
+    client.on("peer-audio-state-change", (payload) => {
+      if (payload && payload.userId) {
+        setParticipants((prev) =>
+          prev.map((user) =>
+            user.userId === payload.userId
+              ? { ...user, muted: payload.action === "Muted" }
+              : user
+          )
+        );
+      } else {
+        setParticipants(client.getAllUser());
+      }
+    });
+    client.on("user-updated", () => {
+      setParticipants(client.getAllUser());
+    });
+
+    const joinSession = async () => {
+      try {
+        await client.init("en-US", "Global", {
+          patchJsMedia: true,
+          enforceVirtualBackground: true,
+          virtualBackground: { isSupport: true },
+        });
+        const signature = await getSignature();
+        if (!signature) return;
+
+        await client.join(sessionName, signature, userName);
+
+        // Set meeting start time when successfully joined
+        setMeetingStartTime(new Date().toISOString());
+
+        // notify backend that user joined
+        await notifyUserJoined();
+
+        // Enable leave on page unload after successful join
+        client.leaveOnPageUnload = true;
+
+        mediaStreamRef.current = client.getMediaStream();
+        selfUserIdRef.current = client.getCurrentUserInfo().userId;
+        setParticipants(client.getAllUser());
+
+        setTimeout(async () => {
+          // Start audio
+          await mediaStreamRef.current.startAudio();
+          setIsAudioOn(true);
+
+          // Start and attach self video with initial background mode
+          try {
+            let vbOptions = {};
+            if (bgMode === "blur") {
+              vbOptions = { virtualBackground: { imageUrl: "blur" } };
+            } else if (bgMode === "image") {
+              vbOptions = {
+                virtualBackground: {
+                  imageUrl: "/lib/vb-resource/background.jpg",
+                },
+              };
+            }
+
+            await mediaStreamRef.current.startVideo(vbOptions);
+            setIsVideoOn(true);
+            await attachVideo(selfUserIdRef.current);
+          } catch (e) {
+            if (e?.errorCode === 6105) {
+              // Camera is still starting, show a small message and optionally retry
+              setError("Camera is still starting, please wait and try again.");
+              // Optionally, retry after 1 second:
+              // setTimeout(() => toggleVideo(), 1000);
+              return;
+            }
+            console.error("Failed to start self video", e);
+            setError("Could not start camera. Check permissions.");
+          }
+
+          // Attach videos for users already in the session
+          client.getAllUser().forEach(async (user) => {
+            if (user.bVideoOn && user.userId !== selfUserIdRef.current) {
+              console.log(
+                `🎥 Attaching video for existing user: ${user.userId} (${user.displayName})`
+              );
+              await attachVideo(user.userId);
+            } else if (
+              !user.bVideoOn &&
+              user.userId !== selfUserIdRef.current
+            ) {
+              console.log(
+                `📹 Skipping video for user without video: ${user.userId} (${user.displayName})`
+              );
+            }
+          });
+
+          // Cloud recording logic
+          recordingClientRef.current = client.getRecordingClient();
+          // If not host, just show the notice if recording is active
+          if (
+            !isHost &&
+            recordingClientRef.current.getCloudRecordingStatus() === "recording"
+          ) {
+            setShowRecordingNotice(true);
+          }
+        }, 500); // Small delay to allow React to render containers
+
+        const setupEventListeners = () => {
+          // This function is called but not defined
+          console.log("Setting up event listeners");
+        };
+      } catch (err) {
+        console.error("Join error:", err);
+        setError("Failed to join the session.");
+      } finally {
+        setIsJoining(false);
+      }
+    };
+
+    joinSession();
+
+    // Advanced screen sharing event handlers (like MeetingPage.jsx)
+    const handleShareStarted = () => setIsSharingScreen(true);
+    const handleShareStopped = () => {
+      setIsSharingScreen(false);
+      if (shareRenderVideoRef.current)
+        shareRenderVideoRef.current.style.display = "none";
+      if (shareCanvasRef.current) shareCanvasRef.current.style.display = "none";
+    };
+
+    // For viewers: always use canvas for incoming share (like MeetingPage.jsx)
+    const handleActiveShareChange = ({ userId, state }) => {
+      if (!mediaStreamRef.current) return;
+      if (state === "Active") {
+        if (shareCanvasRef.current) {
+          mediaStreamRef.current.startShareView(shareCanvasRef.current, userId);
+          shareCanvasRef.current.style.display = "block";
+          if (shareRenderVideoRef.current)
+            shareRenderVideoRef.current.style.display = "none";
+        }
+        setIsRemoteSharing(true);
+        addNotification(`Screen sharing started by ${userId}`);
+      } else {
+        mediaStreamRef.current.stopShareView();
+        setIsRemoteSharing(false);
+        if (shareCanvasRef.current)
+          shareCanvasRef.current.style.display = "none";
+        if (shareRenderVideoRef.current)
+          shareRenderVideoRef.current.style.display = "none";
+      }
+    };
+
+    const handleShareReceived = ({ userId }) => {
+      if (shareCanvasRef.current) {
+        mediaStreamRef.current.renderShare(
+          shareCanvasRef.current,
+          userId,
+          1280,
+          720,
+          0,
+          0
+        );
+        shareCanvasRef.current.style.display = "block";
+        if (shareRenderVideoRef.current)
+          shareRenderVideoRef.current.style.display = "none";
+      }
+    };
+
+    // Use client.on/off instead of mediaStream.on/off (like MeetingPage.jsx)
+    client.on("share-content-started", handleShareStarted);
+    client.on("share-content-stopped", handleShareStopped);
+    client.on("share-content-received", handleShareReceived);
+    client.on("active-share-change", handleActiveShareChange);
+
+    // Optional: Listen for annotation privilege changes
+    client.on(
+      "annotation-privilege-change",
+      ({ userId, isAnnotationEnabled }) => {
+        if (!isAnnotationEnabled && isAnnotating) {
+          stopAnnotation();
+        }
+      }
+    );
+
+    // Listen for active speaker changes
+    client.on("video-active-change", (payload) => {
+      setActiveSpeakerId(payload.userId);
+    });
+
+    // User join/leave notifications
+    const handleUserAdded = (payload) => {
+      payload.forEach((item) => {
+        // Generate a better display name if not provided
+        const displayName =
+          item.displayName ||
+          `User ${item.userId?.toString().slice(-4) || "Guest"}`;
+
+        console.log("[USER] User joined:", {
+          userId: item.userId,
+          displayName: displayName,
+          isLocal: item.userId === selfUserIdRef.current,
+          timestamp: new Date().toISOString(),
+          hasVideo: item.bVideoOn,
+        });
+
+        // Only show notification for non-local users or if it's not a rejoin
+        if (item.userId !== selfUserIdRef.current) {
+          addNotification(`${displayName} joined the session.`);
+        }
+
+        // If user joined without video, don't create a video container
+        if (!item.bVideoOn && item.userId !== selfUserIdRef.current) {
+          console.log(
+            `📹 User ${item.userId} joined without video - skipping video container`
+          );
+        }
+
+        // Re-register screen share event listeners for new participants
+        if (item.userId !== selfUserIdRef.current) {
+          console.log(
+            "[SCREEN SHARE] Re-registering events for new participant:",
+            item.userId
+          );
+          // Force a re-registration of screen share events
+          client.off("active-share-change");
+          client.on("active-share-change", (payload) => {
+            console.log("[SCREEN SHARE] active-share-change (re-registered):", {
+              state: payload.state,
+              userId: payload.userId,
+              isLocalUser: payload.userId === selfUserIdRef.current,
+            });
+
+            if (!mediaStreamRef.current) {
+              console.log(
+                "[SCREEN SHARE] ERROR: mediaStreamRef.current is null"
+              );
+              return;
+            }
+
+            if (payload.state === "Active") {
+              console.log(
+                "[SCREEN SHARE] Starting remote share view for user:",
+                payload.userId
+              );
+              setIsRemoteSharing(true);
+
+              // Wait for remote container to be available
+              setTimeout(() => {
+                if (!remoteShareContainerRef.current) {
+                  console.log(
+                    "[SCREEN SHARE] ERROR: Remote canvas ref is null"
+                  );
+                  return;
+                }
+
+                try {
+                  console.log(
+                    "[SCREEN SHARE] Remote canvas element:",
+                    remoteShareContainerRef.current
+                  );
+                  mediaStreamRef.current.startShareView(
+                    remoteShareContainerRef.current,
+                    payload.userId
+                  );
+                  console.log(
+                    "[SCREEN SHARE] Remote share view started successfully"
+                  );
+                  addNotification(
+                    `Screen sharing started by ${payload.userId}`
+                  );
+                } catch (error) {
+                  console.log(
+                    "[SCREEN SHARE] Error starting remote share view:",
+                    error
+                  );
+                }
+              }, 100);
+            } else if (payload.state === "Inactive") {
+              console.log("[SCREEN SHARE] Stopping remote share view");
+              setIsRemoteSharing(false);
+
+              try {
+                mediaStreamRef.current.stopShareView();
+                console.log(
+                  "[SCREEN SHARE] Remote share view stopped successfully"
+                );
+                addNotification("Screen sharing stopped");
+              } catch (error) {
+                console.log(
+                  "[SCREEN SHARE] Error stopping remote share view:",
+                  error
+                );
+              }
+            }
+          });
+        }
+      });
+      setParticipants(client.getAllUser());
+    };
+    const handleUserRemoved = (payload) => {
+      payload.forEach((item) => {
+        console.log("[USER] User left:", {
+          userId: item.userId,
+          displayName: item.displayName,
+          timestamp: new Date().toISOString(),
+          isLocal: item.userId === selfUserIdRef.current,
+        });
+
+        // Complete user removal - handle like userLeft webhook
+        console.log(
+          `🚫 Complete removal of user: ${item.userId} (${item.displayName})`
+        );
+
+        // Use the complete user removal function
+        completeUserRemoval(item.userId);
+
+        // Additional detach video call
+        detachVideo(item.userId);
+
+        // Only show notification for non-local users
+        if (item.userId !== selfUserIdRef.current) {
+          addNotification(
+            `${item.displayName || item.userId} left the session.`
+          );
+        }
+      });
+      setParticipants(client.getAllUser());
+    };
+    client.on("user-added", handleUserAdded);
+    client.on("user-removed", handleUserRemoved);
+
+    // Connection status handling
+    client.on("connection-change", (payload) => {
+      console.log("🔗 Connection change:", payload);
+
+      if (payload.state === "Closed") {
+        // Only notify if we were actually connected before
+        if (client.getCurrentUserInfo()?.userId) {
+          notifyUserLeft().catch((err) =>
+            console.error("failed to notify user left: ", err)
+          );
+        }
+        addNotification(
+          payload.reason === "ended by host"
+            ? "The host has ended the meeting."
+            : `Session ended: ${payload.reason || "Closed by host or network"}`
+        );
+        navigate("/meeting-left");
+      } else if (payload.state === "Reconnecting") {
+        addNotification(`Reconnecting to session...`);
+      } else if (payload.state === "Connected") {
+        addNotification(`Connected to session.`);
+      } else if (payload.state === "Fail") {
+        // Only notify if we were actually connected before
+        if (client.getCurrentUserInfo()?.userId) {
+          notifyUserLeft().catch((err) =>
+            console.error("Failed to notify user left:", err)
+          );
+        }
+
+        addNotification(
+          `Session failed: ${payload.reason || payload.errorCode}`
+        );
+        navigate("/meeting-left");
+      }
+    });
+
+    // Device plug/unplug and permission changes
+    client.on("device-change", fetchDevices);
+    client.on("device-permission-change", (payload) => {
+      addNotification(`${payload.name} permission is ${payload.state}`);
+      if (payload.state === "denied") {
+        setMediaWarningMessage(
+          `Media error: Your mic is muted in system or browser settings. Please open your settings to unmute and adjust the level.`
+        );
+        setShowMediaWarning(true);
+      }
+    });
+
+    // Media failure handling
+    client.on("active-media-failed", (payload) => {
+      const message = payload.message || payload.code || "Unknown media error";
+      addNotification(`Media error: ${message}`);
+
+      // Show warning dialog instead of throwing error
+      setMediaWarningMessage(
+        `We detected an issue with the microphone that we cannot resolve.\n\n Your mic is muted in system or browser settings.\n\n Please open your settings to unmute and adjust the level..\n\nPlease refresh the page to try to fix it.`
+      );
+      setShowMediaWarning(true);
+    });
+
+    // Audio/video state changes
+    client.on("current-audio-change", (payload) => {
+      if (payload.action === "Leave") {
+        addNotification(`Audio ended: ${payload.source}`);
+      } else if (payload.action === "Muted") {
+        addNotification(`Audio muted: ${payload.source}`);
+        // Show warning for system-level mute
+        if (payload.source && payload.source.includes("system")) {
+          setMediaWarningMessage(
+            `Your microphone has been muted by the system.\n\nPlease check your system audio settings and unmute your microphone.`
+          );
+          setShowMediaWarning(true);
+        }
+      }
+    });
+
+    // Auto-play audio failure
+    client.on("auto-play-audio-failed", () => {
+      addNotification(
+        `Audio playback blocked. Click anywhere to resume audio.`
+      );
+    });
+
+    // Network quality indicator
+    client.on("network-quality-change", (payload) => {
+      setNetworkQuality((prev) => ({
+        ...prev,
+        [payload.userId]: payload.level,
+      }));
+    });
+
+    // Dynamic video aspect ratio
+    client.on("video-aspect-ratio-change", (payload) => {
+      aspectRatioRefs.current[payload.userId] = payload.aspectRatio;
+      // Optionally, force a re-render
+      // Removed notification for aspect ratio change
+      // addNotification(`Aspect ratio changed for user ${payload.userId}`);
+    });
+
+    return () => {
+      // Clean up screen sharing elements
+      cleanupScreenShareElements();
+
+      // Clean up all video containers immediately
+      Object.keys(videoContainerRefs.current).forEach((userId) => {
+        if (videoContainerRefs.current[userId]) {
+          console.log(
+            `🧹 Cleaning up video container on unmount for user: ${userId}`
+          );
+          videoContainerRefs.current[userId].innerHTML = "";
+        }
+      });
+      videoContainerRefs.current = {};
+
+      if (clientRef.current) {
+        clientRef.current.leave();
+      }
+      cleanup();
+      client.off("user-added", handleUserAdded);
+      client.off("user-removed", handleUserRemoved);
+      client.off("connection-change");
+      client.off("device-change");
+      client.off("device-permission-change");
+      client.off("active-media-failed");
+      client.off("current-audio-change");
+      client.off("user-updated");
+      client.off("auto-play-audio-failed");
+      client.off("network-quality-change");
+      client.off("video-aspect-ratio-change");
+
+      // Clean up screen sharing event handlers
+      client.off("share-content-started", handleShareStarted);
+      client.off("share-content-stopped", handleShareStopped);
+      client.off("share-content-received", handleShareReceived);
+      client.off("active-share-change", handleActiveShareChange);
+
+      // Clean up error handling event listeners
+      client.off("device-permission-change");
+      client.off("active-media-failed");
+      client.off("current-audio-change");
+      client.off("auto-play-audio-failed");
+    };
+  }, []);
+
+  const toggleAudio = useCallback(async () => {
+    console.log(
+      "🎤 Toggle audio clicked, mediaStreamRef:",
+      !!mediaStreamRef.current,
+      "isAudioOn:",
+      isAudioOn
+    );
+    if (mediaStreamRef.current) {
+      try {
+        if (isAudioOn) {
+          console.log("🎤 Muting audio...");
+          await mediaStreamRef.current.muteAudio();
+        } else {
+          console.log("🎤 Unmuting audio...");
+          await mediaStreamRef.current.unmuteAudio();
+        }
+        setIsAudioOn(!isAudioOn);
+        console.log("🎤 Audio state updated to:", !isAudioOn);
+        // Force update participants to reflect local audio state
+        if (clientRef.current) setParticipants(clientRef.current.getAllUser());
+        // Manually emit peer-audio-state-change for local user to update UI globally
+        if (clientRef.current) {
+          const event = new Event("peer-audio-state-change");
+          clientRef.current.emit &&
+            clientRef.current.emit("peer-audio-state-change", {
+              userId: selfUserIdRef.current,
+              action: isAudioOn ? "Muted" : "Unmuted",
+            });
+        }
+      } catch (error) {
+        console.error("Toggle audio error:", error);
+        // Show warning instead of throwing error
+        setMediaWarningMessage(
+          `Media error: Your mic is muted in system or browser settings. Please open your settings to unmute and adjust the level.`
+        );
+        setShowMediaWarning(true);
+      }
+    } else {
+      console.error("🎤 mediaStreamRef.current is null - cannot toggle audio");
+    }
+  }, [isAudioOn]);
+
+  const toggleVideo = useCallback(async () => {
+    console.log(
+      "📹 Toggle video clicked, mediaStreamRef:",
+      !!mediaStreamRef.current,
+      "isVideoOn:",
+      isVideoOn
+    );
+    if (!mediaStreamRef.current) {
+      console.error("📹 mediaStreamRef.current is null - cannot toggle video");
+      return;
+    }
+    try {
+      if (isVideoOn) {
+        console.log("📹 Stopping video...");
+        await mediaStreamRef.current.stopVideo();
+        await detachVideo(selfUserIdRef.current);
+        setIsVideoOn(false);
+        console.log("📹 Video stopped");
+      } else {
+        console.log("📹 Starting video...");
+
+        // Apply virtual background if set (like MeetingPage.jsx)
+        let vbOptions = {};
+        if (bgMode === "blur") {
+          vbOptions = { virtualBackground: { imageUrl: "blur" } };
+        } else if (bgMode === "image") {
+          vbOptions = {
+            virtualBackground: { imageUrl: "/lib/vb-resource/background.jpg" },
+          };
+        }
+
+        await mediaStreamRef.current.startVideo(vbOptions);
+        await attachVideo(selfUserIdRef.current);
+        setIsVideoOn(true);
+        console.log("📹 Video started with background:", bgMode);
+      }
+      // Force update participants to reflect local video state
+      if (clientRef.current) setParticipants(clientRef.current.getAllUser());
+      // Manually emit peer-video-state-change for local user to update UI globally
+      if (clientRef.current) {
+        const event = new Event("peer-video-state-change");
+        clientRef.current.emit &&
+          clientRef.current.emit("peer-video-state-change", {
+            userId: selfUserIdRef.current,
+            action: isVideoOn ? "Stop" : "Start",
+          });
+      }
+    } catch (e) {
+      console.error("Toggle video error", e);
+      setError("Failed to toggle video: " + (e.reason || e.message));
+    }
+  }, [isVideoOn, attachVideo, detachVideo, bgMode]);
+
+  const handleStartAnnotation = async () => {
+    try {
+      if (!mediaStreamRef.current) return;
+      await mediaStreamRef.current.startAnnotation();
+      const annotationController =
+        mediaStreamRef.current.getAnnotationController();
+      await annotationController.setToolType(1); // pen
+      await annotationController.setToolWidth(8);
+      setIsAnnotating(true);
+      addNotification("Annotation started");
+    } catch (err) {
+      console.error("Failed to start annotation", err);
+      setError(
+        "Failed to start annotation: " + (err.message || "Unknown error")
+      );
+    }
+  };
+
+  const stopAnnotation = async () => {
+    if (!mediaStreamRef.current) return;
+    try {
+      await mediaStreamRef.current.stopAnnotation();
+      setIsAnnotating(false);
+      addNotification("Annotation stopped");
+    } catch (err) {
+      console.error("Failed to stop annotation", err);
+    }
+  };
+
+  const handleBgChange = async (e) => {
+    const newBgMode = e.target.value;
+    console.log("🎨 Background changed to:", newBgMode);
+
+    if (!mediaStreamRef.current) return;
+
+    try {
+      // Stop video to change background (like MeetingPage.jsx)
+      await mediaStreamRef.current.stopVideo();
+
+      let vbOptions = {};
+      if (newBgMode === "blur") {
+        vbOptions = { virtualBackground: { imageUrl: "blur" } };
+      } else if (newBgMode === "image") {
+        vbOptions = {
+          virtualBackground: { imageUrl: "/lib/vb-resource/background.jpg" },
+        };
+      }
+
+      await mediaStreamRef.current.startVideo(vbOptions);
+      setBgMode(newBgMode);
+      setIsVideoOn(true);
+
+      // Add notification for background change
+      addNotification(`Virtual background changed to ${newBgMode}`);
+
+      // Re-attach video after changing background
+      await attachVideo(selfUserIdRef.current);
+    } catch (err) {
+      console.error("Error updating VB:", err);
+      setError("Failed to switch background.");
+      // If it fails, try to restart video without VB
+      if (!isVideoOn) {
+        await mediaStreamRef.current.startVideo();
+        await attachVideo(selfUserIdRef.current);
+        setIsVideoOn(true);
+      }
+    }
+  };
+  // Helper: Detect WebCodecs support (like MeetingPage.jsx)
+  const webCodecsEnabled =
+    typeof window.MediaStreamTrackProcessor === "function";
+
+  // Clean up screen sharing elements
+  const cleanupScreenShareElements = () => {
+    if (shareRenderVideoRef.current) {
+      shareRenderVideoRef.current.style.display = "none";
+    }
+    if (shareCanvasRef.current) {
+      shareCanvasRef.current.style.display = "none";
+    }
+    setIsSharingScreen(false);
+  };
+
+  // Advanced screen sharing with proper element setup (like MeetingPage.jsx)
+  const startScreenShare = async () => {
+    console.log(
+      "[SCREEN SHARE] handleScreenShare called, isSharingScreen:",
+      isSharingScreen
+    );
+
+    if (!mediaStreamRef.current) {
+      console.log("[SCREEN SHARE] ERROR: mediaStreamRef.current is null");
+      return;
+    }
+
+    try {
+      if (!isSharingScreen) {
+        console.log("[SCREEN SHARE] Starting screen share...");
+        const el = shareRenderVideoRef.current;
+        if (!el) {
+          console.log("[SCREEN SHARE] ERROR: Screen share element not found");
+          setError("Screen share element not found.");
+          return;
+        }
+
+        // Ensure video element is properly configured with static values
+        const videoElement = el;
+        console.log("[SCREEN SHARE] Video element initial state:", {
+          width: videoElement.width,
+          height: videoElement.height,
+          offsetWidth: videoElement.offsetWidth,
+          offsetHeight: videoElement.offsetHeight,
+        });
+
+        // Force static dimensions for consistent behavior
+        videoElement.width = 1920;
+        videoElement.height = 1080;
+        videoElement.style.display = "block";
+        videoElement.style.width = "100%";
+        videoElement.style.height = "auto";
+        videoElement.style.visibility = "visible";
+        videoElement.style.position = "relative";
+
+        // Ensure container is visible
+        const container = videoElement.parentElement;
+        if (container) {
+          container.style.display = "block";
+          container.style.visibility = "visible";
+          container.style.position = "relative";
+        }
+
+        // Small delay for DOM update
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        console.log("[SCREEN SHARE] Video element after setup:", {
+          width: videoElement.width,
+          height: videoElement.height,
+          offsetWidth: videoElement.offsetWidth,
+          offsetHeight: videoElement.offsetHeight,
+        });
+
+        const canUseVideoElement =
+          mediaStreamRef.current.isStartShareScreenWithVideoElement();
+        console.log(
+          "[SCREEN SHARE] Can use video element:",
+          canUseVideoElement
+        );
+
+        if (canUseVideoElement) {
+          console.log("[SCREEN SHARE] Using video element for screen share");
+          await mediaStreamRef.current.startShareScreen(el);
+          console.log("[SCREEN SHARE] Screen share started successfully");
+        } else {
+          console.log("[SCREEN SHARE] Using canvas element for screen share");
+          await mediaStreamRef.current.startShareScreen(el);
+          console.log("[SCREEN SHARE] Screen share started successfully");
+        }
+
+        setIsSharingScreen(true);
+        addNotification("Screen sharing started");
+
+        // Add a safety timeout to reset if screen sharing gets stuck
+        setTimeout(() => {
+          if (isSharingScreen) {
+            console.log(
+              "[SCREEN SHARE] Safety timeout - resetting screen share state"
+            );
+            cleanupScreenShareElements();
+          }
+        }, 30000); // 30 second timeout
+      } else {
+        console.log("[SCREEN SHARE] Stopping screen share...");
+        await mediaStreamRef.current.stopShareScreen();
+        console.log("[SCREEN SHARE] Screen sharing stopped successfully");
+        setIsSharingScreen(false);
+        addNotification("Screen sharing stopped");
+      }
+    } catch (err) {
+      console.log("[SCREEN SHARE] Error:", {
+        reason: err?.reason,
+        errorCode: err?.errorCode,
+        message: err?.message,
+        name: err?.name,
+      });
+
+      // Always reset the sharing state and clean up UI elements
+      cleanupScreenShareElements();
+
+      if (err?.reason === "user deny screen share" || err?.errorCode === 6200) {
+        console.log("[SCREEN SHARE] User cancelled screen share");
+        addNotification("Screen sharing cancelled");
+        return;
+      }
+
+      setError(
+        "Failed to start screen sharing: " + (err.reason || err.message)
+      );
+    }
+  };
+
+  // Recording control functions (host only)
+  const startRecording = async () => {
+    if (!recordingClientRef.current) return;
+    try {
+      const res = await recordingClientRef.current.startCloudRecording();
+      if (res === "") {
+        setRecordingStatus("recording");
+        setShowRecordingNotice(true);
+        addNotification("Recording started");
+      }
+    } catch (err) {
+      console.error("Failed to start recording:", err);
+      setError("Failed to start recording");
+    }
+  };
+
+  const pauseRecording = async () => {
+    if (!recordingClientRef.current) return;
+    try {
+      const res = await recordingClientRef.current.pauseCloudRecording();
+      if (res === "") {
+        setRecordingStatus("paused");
+        addNotification("Recording paused");
+      }
+    } catch (err) {
+      console.error("Failed to pause recording:", err);
+      setError("Failed to pause recording");
+    }
+  };
+
+  const resumeRecording = async () => {
+    if (!recordingClientRef.current) return;
+    try {
+      const res = await recordingClientRef.current.resumeCloudRecording();
+      if (res === "") {
+        setRecordingStatus("recording");
+        addNotification("Recording resumed");
+      }
+    } catch (err) {
+      console.error("Failed to resume recording:", err);
+      setError("Failed to resume recording");
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recordingClientRef.current) return;
+    try {
+      const res = await recordingClientRef.current.stopCloudRecording();
+      if (res === "") {
+        setRecordingStatus("stopped");
+        setShowRecordingNotice(false);
+        addNotification("Recording stopped");
+      }
+    } catch (err) {
+      console.error("Failed to stop recording:", err);
+      setError("Failed to stop recording");
+    }
+  };
+
+  const handleEndMeeting = async () => {
+    setShowEndMeetingConfirm(true);
+  };
+
+  const confirmEndMeeting = async () => {
+    setShowEndMeetingConfirm(false);
+    if (clientRef.current) {
+      try {
+        // Notify backend that host is ending the meeting
+        await notifyMeetingEnd();
+        await clientRef.current.leave(true); // Host ends session for all
+      } catch (err) {
+        setError("Failed to end meeting for all.");
+      }
+    }
+    navigate(
+      "/meeting-exit?meetingId=" +
+        encodeURIComponent(sessionName) +
+        "&userId=" +
+        encodeURIComponent(userName) +
+        "&role=" +
+        role
+    );
+  };
+
+  const leaveSession = async () => {
+    try {
+      await cleanupMediaAndLeave();
+      await notifyUserLeft();
+      navigate("/meeting-left");
+    } catch (err) {
+      console.error("Error leaving session:", err);
+      navigate("/meeting-left");
+    }
+  };
+
+  // Centralized modal management (like MeetingPage.jsx)
+  const handleModal = (modal, state) =>
+    setShowModals((prev) => ({ ...prev, [modal]: state }));
+
+  // Device switching functions (like MeetingPage.jsx)
+  const switchCamera = async (deviceId) => {
+    if (mediaStreamRef.current) {
+      try {
+        await mediaStreamRef.current.switchCamera(deviceId);
+        setSelectedCamera(deviceId);
+        addNotification("Camera switched successfully");
+      } catch (err) {
+        console.error("Failed to switch camera:", err);
+        setError("Failed to switch camera");
+      }
+    }
+  };
+
+  const switchMicrophone = async (deviceId) => {
+    if (mediaStreamRef.current) {
+      try {
+        await mediaStreamRef.current.switchMicrophone(deviceId);
+        setSelectedMic(deviceId);
+        addNotification("Microphone switched successfully");
+      } catch (err) {
+        console.error("Failed to switch microphone:", err);
+        setError("Failed to switch microphone");
+      }
+    }
+  };
+
+  const switchSpeaker = async (deviceId) => {
+    if (mediaStreamRef.current) {
+      try {
+        await mediaStreamRef.current.switchSpeaker(deviceId);
+        setSelectedSpeaker(deviceId);
+        addNotification("Speaker switched successfully");
+      } catch (err) {
+        console.error("Failed to switch speaker:", err);
+        setError("Failed to switch speaker");
+      }
+    }
+  };
+
+  const sendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    try {
+      const client = clientRef.current;
+      if (!client) {
+        setError("Chat client not available");
+        return;
+      }
+
+      const chatClient = client.getChatClient();
+      if (!chatClient) {
+        setError("Chat client not initialized");
+        return;
+      }
+
+      await chatClient.sendToAll(chatInput);
+      // Don't add message here - it will be added by the chat-on-message event
+      setChatInput("");
+    } catch (err) {
+      console.error("Chat send error:", err);
+      setError("Failed to send message: " + (err.message || "Unknown error"));
+    }
+  };
+
+  // Modal overlay click handler
+  const handleOverlayClick = (closeFn) => (e) => {
+    if (e.target.classList.contains("modal")) closeFn();
+  };
+
+  // Start camera for self-preview
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch((err) => {
+        console.error("Error accessing camera:", err);
+      });
+
+    return () => {
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  //=====camera drop down=====
+  useEffect(() => {
+    console.log("🎨 showVideoOptions changed to:", showVideoOptions);
+  }, [showVideoOptions]);
+
+  useEffect(() => {
+    function handleClick(e) {
+      // Close dropdowns when clicking outside
+      const isClickInsideDropdown = e.target.closest(".video-options-menu");
+      const isClickInsideButton = e.target.closest(".video-options-toggle");
+
+      if (!isClickInsideDropdown && !isClickInsideButton) {
+        setShowVideoOptions(null);
+      }
+    }
+
+    if (showVideoOptions) {
+      document.addEventListener("mousedown", handleClick);
+    } else {
+      document.removeEventListener("mousedown", handleClick);
+    }
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showVideoOptions]);
+
+  const count = participants.length;
+
+  let gridClass = "";
+  if (count === 1) gridClass = "grid-1";
+  else if (count <= 4) gridClass = `grid-${count}`;
+  else if (count <= 9) gridClass = `grid-${count}`;
+  else if (count <= 16) gridClass = `grid-${count}`;
+  else if (count <= 25) gridClass = `grid-${count}`;
+  else gridClass = "grid-25";
+
+  return (
+    <div
+      className="joinerScreen"
+      style={{ overflow: "hidden", height: "100vh" }}
+    >
+      <Header
+        userEmail={`${userName}@example.com`}
+        userName={userName}
+        meetingTitle={sessionName}
+        startTime={meetingStartTime}
+        showTimer={true}
+      />
+
+      <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
+        <div className="joinerScreenBlock">
+          <div
+            className={`joinerVideoScreen ${gridClass}`}
+            style={{
+              padding:
+                participants.length >= 3 &&
+                participants.length <= participants.length
+                  ? "20px 100px"
+                  : "20px 50px",
+            }}
+          >
+            {participants.slice(0, 4).map((user, i) => (
+              <div
+                className={`joinerVideoBox ${
+                  user.userId === selfUserIdRef.current ? "active" : ""
+                } ${
+                  activeSpeakerId && user.userId === activeSpeakerId
+                    ? "active-speaker"
+                    : ""
+                }`}
+                key={user.userId}
+              >
+                {/* Video container for Zoom SDK to attach video - like MeetingPage.jsx */}
+                <video-player-container
+                  ref={(el) => {
+                    videoContainerRefs.current[user.userId] = el;
+                    // Set aspect ratio if available (like MeetingPage.jsx)
+                    if (el && aspectRatioRefs.current[user.userId]) {
+                      el.style.aspectRatio =
+                        aspectRatioRefs.current[user.userId];
+                    }
+                    // Ensure container is properly styled
+                    if (el) {
+                      el.style.width = "100%";
+                      el.style.height = "100%";
+                      el.style.background = "black";
+                      el.style.display = "flex";
+                      el.style.alignItems = "center";
+                      el.style.justifyContent = "center";
+                    }
+                  }}
+                ></video-player-container>
+                {/* Show error if local video fails */}
+                {user.userId === localUserIdRef.current &&
+                  error &&
+                  !isVideoOn && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        color: "#fff",
+                        background: "rgba(0,0,0,0.7)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 18,
+                        zIndex: 2,
+                        textAlign: "center",
+                        padding: 16,
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
+                <div className="joinerName">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <span>
+                      {user.displayName ||
+                        `User ${user.userId?.toString().slice(-4) || "Guest"}`}
+                    </span>
+                    {/* Network quality indicator */}
+                    {networkQuality[user.userId] !== undefined && (
+                      <FaSignal
+                        style={{
+                          marginLeft: 6,
+                          color:
+                            networkQuality[user.userId] >= 3
+                              ? "#22c55e"
+                              : networkQuality[user.userId] === 2
+                                ? "#f59e0b"
+                                : "#ef4444",
+                        }}
+                        title={`Network: ${
+                          networkQuality[user.userId] >= 3
+                            ? "Good"
+                            : networkQuality[user.userId] === 2
+                              ? "Fair"
+                              : "Poor"
+                        }`}
+                      />
+                    )}
+                    {/* Audio status icon */}
+                    {(
+                      user.userId === selfUserIdRef.current
+                        ? isAudioOn
+                        : !user.muted
+                    ) ? (
+                      <FaMicrophone
+                        style={{ marginLeft: 6, color: "#22c55e" }}
+                        title="Mic On"
+                      />
+                    ) : (
+                      <FaMicrophoneSlash
+                        style={{ marginLeft: 6, color: "#ef4444" }}
+                        title="Mic Off"
+                      />
+                    )}
+                    {/* Video status icon */}
+                    {(
+                      user.userId === selfUserIdRef.current
+                        ? isVideoOn
+                        : user.bVideoOn
+                    ) ? (
+                      <FaVideo
+                        style={{ marginLeft: 6, color: "#22c55e" }}
+                        title="Camera On"
+                      />
+                    ) : (
+                      <FaVideoSlash
+                        style={{ marginLeft: 6, color: "#ef4444" }}
+                        title="Camera Off"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Screen Share Containers - Always render but hide when not sharing */}
+          <div
+            className="screen-share-container"
+            style={{
+              display: "block",
+              opacity: isSharingScreen ? 1 : 0,
+              visibility: isSharingScreen ? "visible" : "hidden",
+              position: isSharingScreen ? "relative" : "absolute",
+              top: isSharingScreen ? "auto" : "-9999px",
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              margin: "16px 0",
+            }}
+          >
+            {/* Video element for screen sharing (when browser supports it) */}
+            <video
+              ref={shareRenderVideoRef}
+              autoPlay
+              playsInline
+              id="my-screen-share-content-video"
+              style={{
+                display: "none",
+                maxWidth: "90vw",
+                maxHeight: "60vh",
+                borderRadius: 12,
+                boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              }}
+            />
+            {/* Canvas element for screen sharing (fallback) */}
+            <canvas
+              ref={shareCanvasRef}
+              id="my-screen-share-content-canvas"
+              height={720}
+              width={1280}
+              style={{
+                display: "none",
+                maxWidth: "90vw",
+                maxHeight: "60vh",
+                borderRadius: 12,
+                boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              }}
+            />
+          </div>
+
+          {/* Remote Share Container - Always render but hide when not viewing */}
+          <div
+            className="remote-share-container"
+            style={{
+              display: "block",
+              opacity: isRemoteSharing ? 1 : 0,
+              visibility: isRemoteSharing ? "visible" : "hidden",
+              position: isRemoteSharing ? "relative" : "absolute",
+              top: isRemoteSharing ? "auto" : "-9999px",
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              margin: "16px 0",
+            }}
+          >
+            {/* Video element for viewing other users' shared content */}
+            <video
+              ref={shareVideoRef}
+              autoPlay
+              playsInline
+              style={{
+                maxWidth: "90vw",
+                maxHeight: "60vh",
+                borderRadius: 12,
+                boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              }}
+            />
+            {/* Canvas for remote share */}
+            <canvas
+              ref={remoteShareContainerRef}
+              id="users-screen-share-content-canvas"
+              width="1920"
+              height="1080"
+              style={{
+                display: "none",
+                maxWidth: "90vw",
+                maxHeight: "60vh",
+                borderRadius: 12,
+                boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              }}
+            />
+          </div>
+
+          <div className="joinerSettingBottom">
+            {/* Mic button with dropdown for mic and speaker selection */}
+            <div
+              className="control-button video-control-group"
+              style={{
+                position: "relative",
+                display: "inline-block",
+                marginRight: 8,
+              }}
+            >
+              <button
+                className={`commonJoinderBtn muteBoxSetting ${
+                  !isAudioOn ? "active" : ""
+                }`}
+                onClick={toggleAudio}
+              >
+                {!isAudioOn ? <UnMicroPhone /> : <MicroPhone />}
+                <span>{!isAudioOn ? "Unmute" : "Mute"}</span>
+              </button>
+              <button
+                className="video-options-toggle"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  bottom: 40,
+                  background: "#222",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "2px 8px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  zIndex: 10,
+                  transition: "all 0.2s ease",
+                }}
+                onClick={() =>
+                  setShowVideoOptions(showVideoOptions === "mic" ? null : "mic")
+                }
+              >
+                <FaChevronUp />
+              </button>
+              {showVideoOptions === "mic" &&
+                createPortal(
+                  <div
+                    className="video-options-menu"
+                    style={{
+                      position: "fixed",
+                      bottom: 80,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: "#222",
+                      color: "#fff",
+                      borderRadius: 10,
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                      padding: 16,
+                      minWidth: 220,
+                      zIndex: 9999,
+                      border: "1px solid #333",
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: 8,
+                        fontSize: "14px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Microphone:
+                      <select
+                        value={selectedMic}
+                        onChange={async (e) => {
+                          await switchMicrophone(e.target.value);
+                        }}
+                        style={{
+                          width: "100%",
+                          marginTop: 4,
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #444",
+                          background: "#333",
+                          color: "#fff",
+                          fontSize: "14px",
+                          outline: "none",
+                        }}
+                      >
+                        {audioDevices.map((d) => (
+                          <option key={d.deviceId} value={d.deviceId}>
+                            {d.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: 8,
+                        fontSize: "14px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Speaker:
+                      <select
+                        value={selectedSpeaker}
+                        onChange={async (e) => {
+                          await switchSpeaker(e.target.value);
+                        }}
+                        style={{
+                          width: "100%",
+                          marginTop: 4,
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #444",
+                          background: "#333",
+                          color: "#fff",
+                          fontSize: "14px",
+                          outline: "none",
+                        }}
+                      >
+                        {speakerDevices.map((d) => (
+                          <option key={d.deviceId} value={d.deviceId}>
+                            {d.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>,
+                  document.body
+                )}
+            </div>
+
+            {/* Camera button with dropdown for camera and background selection */}
+            <div
+              className="control-button video-control-group"
+              style={{
+                position: "relative",
+                display: "inline-block",
+                marginRight: 8,
+              }}
+              ref={cameraBtnRef}
+            >
+              <button
+                className={`commonJoinderBtn videoBoxSetting ${
+                  !isVideoOn ? "active" : ""
+                }`}
+                onClick={toggleVideo}
+                disabled={isTogglingVideo}
+                style={{ position: "relative" }}
+              >
+                {!isVideoOn ? <OffVideoCamera /> : <VideoCamera />}
+                <span>{!isVideoOn ? "Start Video" : "Stop Video"}</span>
+              </button>
+              <button
+                className="video-options-toggle"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  bottom: 40,
+                  background: "#222",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "2px 8px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  zIndex: 10,
+                  transition: "all 0.2s ease",
+                }}
+                onClick={() => {
+                  console.log(
+                    "🎨 Background dropdown clicked, current state:",
+                    showVideoOptions
+                  );
+                  setShowVideoOptions(
+                    showVideoOptions === "video" ? null : "video"
+                  );
+                }}
+                title="Change Background"
+              >
+                <FaChevronUp />
+              </button>
+              {showVideoOptions === "video" &&
+                createPortal(
+                  <div
+                    className="video-options-menu"
+                    style={{
+                      position: "fixed",
+                      bottom: 80,
+                      right: "20px",
+                      background: "#222",
+                      color: "#fff",
+                      borderRadius: 10,
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                      padding: 16,
+                      minWidth: 220,
+                      zIndex: 9999,
+                      border: "1px solid #333",
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: 8,
+                        fontSize: "14px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Camera:
+                      <select
+                        value={selectedCamera}
+                        onChange={async (e) => {
+                          await switchCamera(e.target.value);
+                        }}
+                        style={{
+                          width: "100%",
+                          marginTop: 4,
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #444",
+                          background: "#333",
+                          color: "#fff",
+                          fontSize: "14px",
+                          outline: "none",
+                        }}
+                      >
+                        {videoDevices.map((d) => (
+                          <option key={d.deviceId} value={d.deviceId}>
+                            {d.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: 8,
+                        fontSize: "14px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Virtual Background:
+                      <select
+                        value={bgMode}
+                        onChange={async (e) => {
+                          console.log(
+                            "🎨 Background changed to",
+                            e.target.value
+                          );
+                          setBgMode(e.target.value);
+                          setShowVideoOptions(null);
+                          if (isVideoOn) {
+                            await handleBgChange(e);
+                          }
+                        }}
+                        style={{
+                          width: "100%",
+                          marginTop: 4,
+                          padding: "8px 12px",
+                          borderRadius: 6,
+                          border: "1px solid #444",
+                          background: "#333",
+                          color: "#fff",
+                          fontSize: "14px",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="none">None</option>
+                        <option value="blur">Blur</option>
+                        <option value="image">Image</option>
+                      </select>
+                    </label>
+                  </div>,
+                  document.body
+                )}
+            </div>
+
+            <button
+              className={`commonJoinderBtn chatSetting ${
+                showModals.chat ? "active" : ""
+              }`}
+              onClick={() => handleModal("chat", !showModals.chat)}
+            >
+              <span className="messageRound">
+                <ChatIcon />
+                {showModals.chat && <span></span>}
+              </span>
+              <span>{showModals.chat ? "Close Chat" : "Open Chat"}</span>
+            </button>
+
+            <button
+              className={`commonJoinderBtn participantsSetting ${
+                showModals.participants ? "active" : ""
+              }`}
+              onClick={() =>
+                handleModal("participants", !showModals.participants)
+              }
+              title="Participants"
+            >
+              <span className="messageRound">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H17c-.8 0-1.54.37-2.01 1l-1.7 2.26A6.003 6.003 0 0 0 10 16c0 3.31 2.69 6 6 6h4v-2h-4c-2.21 0-4-1.79-4-4s1.79-4 4-4c.73 0 1.41.21 2 .56V14h2v-2.44c.59-.35 1.27-.56 2-.56 2.21 0 4 1.79 4 4v6h-2z" />
+                </svg>
+                {showModals.participants && <span></span>}
+              </span>
+              <span>
+                {showModals.participants
+                  ? "Close Participants"
+                  : "Participants"}
+              </span>
+            </button>
+
+            <button
+              className={`commonJoinderBtn infoSetting ${
+                showModals.info ? "active" : ""
+              }`}
+              onClick={() => handleModal("info", !showModals.info)}
+              title="Meeting Info"
+            >
+              <span className="messageRound">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                </svg>
+                {showModals.info && <span></span>}
+              </span>
+              <span>{showModals.info ? "Close Info" : "Info"}</span>
+            </button>
+
+            <button
+              className={`commonJoinderBtn screenShareSetting ${
+                isSharingScreen ? "active" : ""
+              }`}
+              onClick={startScreenShare}
+            >
+              <ShareScreenIcon />
+              <span>{isSharingScreen ? "Stop Share" : "Share Screen"}</span>
+            </button>
+
+            {/* Annotation Button (only show if sharing or viewing share) */}
+            {(isSharingScreen || isRemoteSharing) &&
+              (isAnnotating ? (
+                <button
+                  className="commonJoinderBtn annotationSetting active"
+                  onClick={stopAnnotation}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
+                  <span>Stop Annotation</span>
+                </button>
+              ) : (
+                <button
+                  className="commonJoinderBtn annotationSetting"
+                  onClick={handleStartAnnotation}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                  </svg>
+                  <span>Annotate</span>
+                </button>
+              ))}
+
+            {/* Recording button - different behavior for host vs participant */}
+            {isHost ? (
+              <>
+                {recordingStatus === "stopped" && (
+                  <button
+                    className="commonJoinderBtn recordingSetting"
+                    onClick={startRecording}
+                  >
+                    <RecordingIcon />
+                    <span>Start</span>
+                  </button>
+                )}
+                {recordingStatus === "recording" && (
+                  <>
+                    <button
+                      className="commonJoinderBtn recordingSetting active"
+                      onClick={pauseRecording}
+                    >
+                      <RecordingIcon />
+                      <span>Pause</span>
+                    </button>
+                    <button
+                      className="commonJoinderBtn recordingSetting"
+                      onClick={stopRecording}
+                    >
+                      <RecordingIcon />
+                      <span>Stop</span>
+                    </button>
+                  </>
+                )}
+                {recordingStatus === "paused" && (
+                  <>
+                    <button
+                      className="commonJoinderBtn recordingSetting active"
+                      onClick={resumeRecording}
+                    >
+                      <RecordingIcon />
+                      <span>Resume</span>
+                    </button>
+                    <button
+                      className="commonJoinderBtn recordingSetting"
+                      onClick={stopRecording}
+                    >
+                      <RecordingIcon />
+                      <span>Stop</span>
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <button
+                className={`commonJoinderBtn recordingSetting ${
+                  showRecordingNotice ? "active" : ""
+                }`}
+                disabled
+              >
+                <RecordingIcon />
+                <span>
+                  {showRecordingNotice ? "Recording Active" : "Recording"}
+                </span>
+              </button>
+            )}
+
+            {isHost ? (
+              <button
+                className="leaveMeetingButton"
+                onClick={handleEndMeeting}
+                style={{ background: "#e53935" }}
+              >
+                End Meeting
+              </button>
+            ) : (
+              <button className="leaveMeetingButton" onClick={leaveSession}>
+                Leave Meeting
+              </button>
+            )}
+          </div>
+        </div>
+        <ChatSidebar
+          isChatOpen={showModals.chat}
+          setIsChatOpen={(state) => handleModal("chat", state)}
+          participants={participants}
+          chatMessages={chatMessages}
+          onSendMessage={(message) => {
+            // Direct message sending without creating fake event
+            if (message && message.trim()) {
+              const sendMessage = async () => {
+                try {
+                  const client = clientRef.current;
+                  if (!client) {
+                    setError("Chat client not available");
+                    return;
+                  }
+
+                  const chatClient = client.getChatClient();
+                  if (!chatClient) {
+                    setError("Chat client not initialized");
+                    return;
+                  }
+
+                  await chatClient.sendToAll(message);
+                  // Don't add message here - it will be added by the chat-on-message event
+                } catch (err) {
+                  console.error("Chat send error:", err);
+                  setError(
+                    "Failed to send message: " +
+                      (err.message || "Unknown error")
+                  );
+                }
+              };
+              sendMessage();
+            }
+          }}
+          userName={userName}
+        />
+      </div>
+
+      {/* Recording Notice */}
+      {showRecordingNotice && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#e53935",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: "8px",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ fontSize: "12px" }}>●</span>
+          This meeting is being recorded
+        </div>
+      )}
+
+      {/* End Meeting Confirmation Modal */}
+      {showEndMeetingConfirm && (
+        <div
+          className="modal"
+          onClick={(e) => {
+            if (e.target.classList.contains("modal"))
+              setShowEndMeetingConfirm(false);
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              color: "#222",
+              width: "100%",
+              maxWidth: 400,
+              borderRadius: 16,
+              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              padding: 32,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              maxHeight: "90vh",
+              overflow: "auto",
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>End Meeting</h3>
+            <p style={{ textAlign: "center", marginBottom: 24 }}>
+              Are you sure you want to end this meeting for all participants?
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setShowEndMeetingConfirm(false)}
+                style={{
+                  background: "#f5f5f5",
+                  color: "#222",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmEndMeeting}
+                style={{
+                  background: "#e53935",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: "pointer",
+                }}
+              >
+                End Meeting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Participants Modal */}
+      {showModals.participants && (
+        <div
+          className="modal participants-modal"
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            height: "100%",
+            width: 340,
+            background: "#fff",
+            boxShadow: "-2px 0 12px #0002",
+            zIndex: 2000,
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid #e0e0e0",
+            padding: 0,
+            animation: "slideInRight 0.3s",
+          }}
+          onClick={() => handleModal("participants", false)}
+        >
+          <div
+            className="modal-content"
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              background: "#f8f9fa",
+              borderRadius: 0,
+              boxShadow: "none",
+              minWidth: 0,
+              minHeight: 0,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "18px 24px 12px 24px",
+                borderBottom: "1px solid #e0e0e0",
+                background: "#fff",
+              }}
+            >
+              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
+                Participants ({participants.length})
+              </h3>
+              <button
+                onClick={() => handleModal("participants", false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 22,
+                  color: "#888",
+                  cursor: "pointer",
+                  marginLeft: 8,
+                }}
+                aria-label="Close participants panel"
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 0" }}>
+              {participants.map((p, idx) => (
+                <div
+                  key={p.userId}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    background: idx % 2 === 0 ? "#fff" : "#f3f4f6",
+                    padding: "12px 24px",
+                    borderBottom: "1px solid #f0f0f0",
+                    fontSize: 16,
+                    minHeight: 56,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      background: "#e3e7ed",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 600,
+                      fontSize: 18,
+                      color: "#3a3a3a",
+                      marginRight: 16,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {p.displayName?.[0] || "?"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span
+                      style={{
+                        fontWeight: 500,
+                        color: "#222",
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {p.displayName ||
+                        `User ${p.userId?.toString().slice(-4) || "Guest"}`}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        color: "#666",
+                        display: "block",
+                      }}
+                    >
+                      {p.userId === selfUserIdRef.current
+                        ? "You"
+                        : p.role === 1
+                          ? "Host"
+                          : "Participant"}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    {/* Audio status icon */}
+                    {(
+                      p.userId === selfUserIdRef.current ? isAudioOn : !p.muted
+                    ) ? (
+                      <FaMicrophone
+                        style={{ color: "#22c55e", fontSize: 18 }}
+                        title="Mic On"
+                      />
+                    ) : (
+                      <FaMicrophoneSlash
+                        style={{ color: "#ef4444", fontSize: 18 }}
+                        title="Mic Off"
+                      />
+                    )}
+                    {/* Video status icon */}
+                    {(
+                      p.userId === selfUserIdRef.current
+                        ? isVideoOn
+                        : p.bVideoOn
+                    ) ? (
+                      <FaVideo
+                        style={{ color: "#22c55e", fontSize: 18 }}
+                        title="Camera On"
+                      />
+                    ) : (
+                      <FaVideoSlash
+                        style={{ color: "#ef4444", fontSize: 18 }}
+                        title="Camera Off"
+                      />
+                    )}
+                    {/* Network quality icon */}
+                    {networkQuality[p.userId] !== undefined && (
+                      <FaSignal
+                        style={{
+                          color:
+                            networkQuality[p.userId] >= 3
+                              ? "#22c55e"
+                              : networkQuality[p.userId] === 2
+                                ? "#f59e0b"
+                                : "#ef4444",
+                          fontSize: 18,
+                        }}
+                        title={`Network: ${
+                          networkQuality[p.userId] >= 3
+                            ? "Good"
+                            : networkQuality[p.userId] === 2
+                              ? "Fair"
+                              : "Poor"
+                        }`}
+                      />
+                    )}
+                    {p.userId === selfUserIdRef.current && (
+                      <span
+                        style={{
+                          background: "#00baff",
+                          color: "#fff",
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          fontSize: 12,
+                          fontWeight: 500,
+                        }}
+                      >
+                        You
+                      </span>
+                    )}
+                    {p.role === 1 && (
+                      <span
+                        style={{
+                          background: "#ff6b35",
+                          color: "#fff",
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          fontSize: 12,
+                          fontWeight: 500,
+                        }}
+                      >
+                        Host
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Display */}
+      {notifications.length > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            left: "20px",
+            zIndex: 1001,
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            maxHeight: "80vh",
+            overflow: "auto",
+          }}
+        >
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              style={{
+                background: "#00baff",
+                color: "#fff",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                maxWidth: "300px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                animation: "slideIn 0.3s ease-out",
+              }}
+            >
+              {notification.msg}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Info Modal */}
+      {showModals.info && (
+        <div
+          className="modal info-modal"
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            height: "100%",
+            width: 340,
+            background: "#fff",
+            boxShadow: "-2px 0 12px #0002",
+            zIndex: 2000,
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid #e0e0e0",
+            padding: 0,
+            animation: "slideInRight 0.3s",
+          }}
+          onClick={() => handleModal("info", false)}
+        >
+          <div
+            className="modal-content"
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              background: "#f8f9fa",
+              borderRadius: 0,
+              boxShadow: "none",
+              minWidth: 0,
+              minHeight: 0,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "18px 24px 12px 24px",
+                borderBottom: "1px solid #e0e0e0",
+                background: "#fff",
+              }}
+            >
+              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
+                Meeting Info
+              </h3>
+              <button
+                onClick={() => handleModal("info", false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 22,
+                  color: "#888",
+                  cursor: "pointer",
+                  marginLeft: 8,
+                }}
+                aria-label="Close info panel"
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+              <div style={{ marginBottom: 24 }}>
+                <h4
+                  style={{ margin: "0 0 12px 0", color: "#222", fontSize: 16 }}
+                >
+                  Meeting Details
+                </h4>
+                <div
+                  style={{
+                    background: "#fff",
+                    padding: 16,
+                    borderRadius: 8,
+                    border: "1px solid #e0e0e0",
+                  }}
+                >
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Session:
+                    </span>
+                    <span style={{ marginLeft: 8, color: "#222" }}>
+                      {sessionName}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Your Name:
+                    </span>
+                    <span style={{ marginLeft: 8, color: "#222" }}>
+                      {userName}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Role:
+                    </span>
+                    <span style={{ marginLeft: 8, color: "#222" }}>
+                      {isHost ? "Host" : "Participant"}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Participants:
+                    </span>
+                    <span style={{ marginLeft: 8, color: "#222" }}>
+                      {participants.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <h4
+                  style={{ margin: "0 0 12px 0", color: "#222", fontSize: 16 }}
+                >
+                  Connection Status
+                </h4>
+                <div
+                  style={{
+                    background: "#fff",
+                    padding: 16,
+                    borderRadius: 8,
+                    border: "1px solid #e0e0e0",
+                  }}
+                >
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Audio:
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        color: isAudioOn ? "#22c55e" : "#ef4444",
+                      }}
+                    >
+                      {isAudioOn ? "Connected" : "Muted"}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Video:
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        color: isVideoOn ? "#22c55e" : "#ef4444",
+                      }}
+                    >
+                      {isVideoOn ? "Connected" : "Off"}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 600, color: "#666" }}>
+                      Screen Share:
+                    </span>
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        color: isSharingScreen ? "#22c55e" : "#666",
+                      }}
+                    >
+                      {isSharingScreen ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isHost && (
+                <div>
+                  <h4
+                    style={{
+                      margin: "0 0 12px 0",
+                      color: "#222",
+                      fontSize: 16,
+                    }}
+                  >
+                    Recording Status
+                  </h4>
+                  <div
+                    style={{
+                      background: "#fff",
+                      padding: 16,
+                      borderRadius: 8,
+                      border: "1px solid #e0e0e0",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#666" }}>
+                        Status:
+                      </span>
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          color:
+                            recordingStatus === "recording"
+                              ? "#22c55e"
+                              : recordingStatus === "paused"
+                                ? "#f59e0b"
+                                : "#666",
+                        }}
+                      >
+                        {recordingStatus === "recording"
+                          ? "Recording"
+                          : recordingStatus === "paused"
+                            ? "Paused"
+                            : "Stopped"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Warning Modal */}
+      {showMediaWarning && (
+        <div
+          onClick={() => {
+            setShowMediaWarning(false);
+            // Try to resume audio when clicking anywhere
+            if (mediaStreamRef.current && !isAudioOn) {
+              try {
+                mediaStreamRef.current.unmuteAudio();
+                setIsAudioOn(true);
+              } catch (error) {
+                console.error("Failed to resume audio:", error);
+              }
+            }
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.35)",
+            zIndex: 3000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#333",
+              borderRadius: 12,
+              padding: "24px 32px 24px 32px",
+              boxShadow: "0 4px 24px #0002",
+              minWidth: 400,
+              maxWidth: "90vw",
+              color: "#fff",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  background: "#ff9800",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 12,
+                  fontSize: 16,
+                  fontWeight: "bold",
+                }}
+              >
+                !
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+                Active Media Failed
+              </h3>
+            </div>
+            <div
+              style={{
+                color: "#ccc",
+                fontSize: 14,
+                lineHeight: 1.5,
+                marginBottom: 24,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {mediaWarningMessage}
+            </div>
+            <div
+              style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}
+            >
+              <button
+                onClick={() => {
+                  setShowMediaWarning(false);
+                  // Try to resume audio when dismissing the warning
+                  if (mediaStreamRef.current && !isAudioOn) {
+                    try {
+                      mediaStreamRef.current.unmuteAudio();
+                      setIsAudioOn(true);
+                    } catch (error) {
+                      console.error("Failed to resume audio:", error);
+                    }
+                  }
+                }}
+                style={{
+                  background: "transparent",
+                  color: "#fff",
+                  border: "1px solid #666",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 14,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = "#444";
+                  e.target.style.borderColor = "#888";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "transparent";
+                  e.target.style.borderColor = "#666";
+                }}
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => {
+                  setShowMediaWarning(false);
+                  // Try to resume audio and refresh the page
+                  if (mediaStreamRef.current && !isAudioOn) {
+                    try {
+                      mediaStreamRef.current.unmuteAudio();
+                      setIsAudioOn(true);
+                    } catch (error) {
+                      console.error("Failed to resume audio:", error);
+                    }
+                  }
+                  window.location.reload();
+                }}
+                style={{
+                  background: "#ff9800",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontSize: 14,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = "#f57c00";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "#ff9800";
+                }}
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideIn {
+          from {
+            transform: translateY(-10px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
+      {(error || permissionError) && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background: "#ff4b5c",
+            color: "#fff",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            zIndex: 1000,
+            maxWidth: "300px",
+            maxHeight: "80vh",
+            overflow: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          }}
+        >
+          <button
+            onClick={() => {
+              setError("");
+              setPermissionError("");
+            }}
+            style={{
+              position: "absolute",
+              top: "4px",
+              right: "4px",
+              background: "none",
+              border: "none",
+              color: "#fff",
+              fontSize: "16px",
+              cursor: "pointer",
+              padding: "0",
+              width: "20px",
+              height: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ×
+          </button>
+          <div>{error || permissionError}</div>
+          {error.includes("permissions") && (
+            <button
+              onClick={() => {
+                navigator.mediaDevices
+                  .getUserMedia({ video: true, audio: true })
+                  .then(() => {
+                    setError("");
+                    // Retry fetching devices
+                    const initializeDevices = async () => {
+                      try {
+                        const devices = await ZoomVideo.getDevices();
+                        const cams = devices.filter(
+                          (d) => d.kind === "videoinput"
+                        );
+                        const mics = devices.filter(
+                          (d) => d.kind === "audioinput"
+                        );
+                        const speakers = devices.filter(
+                          (d) => d.kind === "audiooutput"
+                        );
+                        setVideoDevices(cams);
+                        setAudioDevices(mics);
+                        setSpeakerDevices(speakers);
+                        if (!selectedCamera && cams[0])
+                          setSelectedCamera(cams[0].deviceId);
+                        if (!selectedMic && mics[0])
+                          setSelectedMic(mics[0].deviceId);
+                        if (!selectedSpeaker && speakers[0])
+                          setSelectedSpeaker(speakers[0].deviceId);
+                      } catch (err) {
+                        console.log("Retry failed:", err);
+                      }
+                    };
+                    initializeDevices();
+                  })
+                  .catch((err) => {
+                    console.log("Permission request failed:", err);
+                  });
+              }}
+              style={{
+                background: "#fff",
+                color: "#ff4b5c",
+                border: "none",
+                borderRadius: "4px",
+                padding: "4px 8px",
+                fontSize: "12px",
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              Grant Permissions
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default JoinerScreen;

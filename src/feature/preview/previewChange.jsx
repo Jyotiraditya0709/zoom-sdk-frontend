@@ -1,16 +1,26 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ZoomVideo from "@zoom/videosdk";
 import { useNavigate, useLocation } from "react-router-dom";
-import "./Preview.css";
+import "./PreJoin.css";
+import {
+  MicroPhone,
+  NoSpeakerIcon,
+  OffVideoCamera,
+  RightArrow,
+  SpeakerIcon,
+  UnMicroPhone,
+  VideoCamera,
+} from "../../icon/icon";
+import Header from "../../Layout/Header/Header";
 import { useZoom } from "./ZoomContext";
+import config from "../../config/config";
 
-// Persistent tracks (module-level, not per-render)
+// Persistent module-level tracks
 let localVideoTrack = null;
 let localAudioTrack = null;
 
-const Preview = () => {
+const PreJoin = () => {
   const location = useLocation();
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const meetingId = params.get("meetingId");
@@ -43,8 +53,10 @@ const Preview = () => {
     }
   }, [location.search]);
 
-  const videoRef = useRef(null);
   const navigate = useNavigate();
+
+  const videoRef = useRef(null);
+
   const {
     selectedCamera,
     setSelectedCamera,
@@ -52,14 +64,15 @@ const Preview = () => {
     setSelectedMic,
     selectedSpeaker,
     setSelectedSpeaker,
-    userName,
-    setUserName,
     sessionName,
     setSessionName,
+    userName,
+    setUserName,
     bgMode,
     setBgMode,
     cleanup: contextCleanup,
   } = useZoom();
+
   // Add local state for role
   const [role, setRole] = useState("1"); // 1 = host, 0 = attendee
   const [userType, setUserType] = useState(""); // mentor or mentee
@@ -77,9 +90,105 @@ const Preview = () => {
   const [micTestPlaybackWarning, setMicTestPlaybackWarning] = useState("");
   const microPhoneTesterRef = useRef(null);
 
+  // Add missing state variables
+  const [isMute, setIsMute] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [volume, setVolume] = useState(50);
+
+  // Add agenda state
+  const [agendaData, setAgendaData] = useState(null);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaError, setAgendaError] = useState("");
+
   const client = useRef(null);
 
-  //========== Fetch Devices on Mount ==========
+  // Volume slider change
+  const handleVolumeChange = (e) => {
+    setVolume(Number(e.target.value));
+  };
+
+  // Fetch agenda data from database
+  const fetchAgendaData = async (meetingId, userId) => {
+    if (!meetingId || !userId) return;
+
+    setAgendaLoading(true);
+    setAgendaError("");
+
+    try {
+      // Add timeout and better error handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(
+        config.getApiUrl(
+          `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${userId}`
+        ),
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn("⚠️ Meeting not found, using default agenda");
+          setAgendaData({
+            agenda: "Meeting Session - General discussion and collaboration",
+            meetingId: meetingId,
+            startTime: null,
+            endTime: null,
+            meetingStatus: "pending",
+          });
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.IsSuccess && data.Data) {
+        setAgendaData({
+          agenda: data.Data.agenda || "No agenda available",
+          meetingId: data.Data.meetingId,
+          startTime: data.Data.startTime,
+          endTime: data.Data.endTime,
+          meetingStatus: data.Data.meetingStatus,
+        });
+        console.log("✅ Agenda data fetched:", data.Data);
+      } else {
+        throw new Error(data.Message || "Failed to fetch agenda data");
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch agenda data:", err);
+
+      // Handle specific error types
+      if (err.name === "AbortError") {
+        setAgendaError("Request timeout - please check your connection");
+      } else if (err.message.includes("Failed to fetch")) {
+        setAgendaError("Network error - please check your connection");
+      } else {
+        setAgendaError("Failed to load agenda data");
+      }
+
+      // Set default agenda if API fails
+      setAgendaData({
+        agenda: "Meeting Session - General discussion and collaboration",
+        meetingId: meetingId,
+        startTime: null,
+        endTime: null,
+        meetingStatus: "pending",
+      });
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
+
+  // ===== Fetch devices =====
   useEffect(() => {
     const fetchDevices = async () => {
       try {
@@ -97,12 +206,19 @@ const Preview = () => {
       } catch (err) {
         console.error("Error fetching devices:", err);
         setError(
-          "Failed to fetch devices. Please check your camera and microphone permissions."
+          "Failed to fetch devices. Please allow camera/mic permissions."
         );
       }
     };
     fetchDevices();
   }, []);
+
+  // Fetch agenda data when component mounts
+  useEffect(() => {
+    if (sessionName && userName) {
+      fetchAgendaData(sessionName, userName);
+    }
+  }, [sessionName, userName]);
 
   // ========== Cleanup function ==========
   // Removed duplicate cleanup, use contextCleanup instead
@@ -246,9 +362,7 @@ const Preview = () => {
   }, [bgMode, videoRef.current]);
 
   useEffect(() => {
-    if (selectedCamera && selectedMic) {
-      startPreview();
-    }
+    if (selectedCamera && selectedMic) startPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCamera, selectedMic]);
 
@@ -395,149 +509,170 @@ const Preview = () => {
   };
 
   return (
-    <div className="preview-page">
-      <div className="preview-container">
-        <div className="video-preview">
-          <video-player-container
-            className="local-preview-container"
-            style={{ width: "100%", height: "100%", background: "black" }}
-          >
-            {bgMode === "none" ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{ width: "100%", height: "100%" }}
-              ></video>
-            ) : (
-              <video-player
-                ref={videoRef}
-                id="local-preview-video"
-                style={{ width: "100%", height: "100%" }}
-              ></video-player>
-            )}
-          </video-player-container>
-          {isLoading && <div className="loading">Starting preview...</div>}
-          {error && <div className="error">{error}</div>}
-        </div>
+    <div className="mainMeetingContainer">
+      <Header
+        userEmail={`${userName}@example.com`}
+        userName={userName}
+        meetingTitle={
+          agendaData?.agenda ||
+          "Meeting Session - General discussion and collaboration"
+        }
+        showTimer={false}
+      />
+      <div className="videoCallContainer">
+        <div className="videoCallDetailBlock">
+          <div className="meetingDetailWrapper">
+            {/* LEFT PREVIEW */}
+            <div className="leftMeetingDetail">
+              <video-player-container className="local-preview-container">
+                {bgMode === "none" ? (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="previewVideo"
+                  />
+                ) : (
+                  <video-player
+                    ref={videoRef}
+                    id="local-preview-video"
+                    className="previewVideo"
+                  />
+                )}
+              </video-player-container>
+              {isLoading && <div className="loading">Starting preview...</div>}
+              {error && <div className="error">{error}</div>}
 
-        <div className="controls">
-          <h2>Ready to join?</h2>
-
-          <label>
-            Camera:
-            <select
-              value={selectedCamera}
-              onChange={(e) => setSelectedCamera(e.target.value)}
-            >
-              {videoDevices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Microphone:
-            <select
-              value={selectedMic}
-              onChange={(e) => setSelectedMic(e.target.value)}
-            >
-              {audioDevices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Speaker:
-            <select
-              value={selectedSpeaker}
-              onChange={(e) => setSelectedSpeaker(e.target.value)}
-            >
-              {speakerDevices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Role:{" "}
-            <strong style={{ color: role === "1" ? "#007bff" : "#28a745" }}>
-              {userType
-                ? role === "1"
-                  ? "Host (Mentor)"
-                  : "Attendee (Mentee)"
-                : role === "1"
-                  ? "Host"
-                  : "Attendee"}
-            </strong>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              style={{ marginLeft: 8 }}
-              disabled={!!userType} // Disable if userType is set (from URL)
-            >
-              <option value="1">Host</option>
-              <option value="0">Attendee</option>
-            </select>
-          </label>
-
-          <label>
-            Virtual Background:
-            <select value={bgMode} onChange={(e) => setBgMode(e.target.value)}>
-              <option value="none">None</option>
-              <option value="blur">Blur</option>
-              <option value="image">Image</option>
-            </select>
-          </label>
-
-          <label>
-            Session Name:
-            <input
-              type="text"
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-              placeholder="Enter session name"
-              style={{ marginLeft: 8 }}
-              disabled={!!userType} // Disable if userType is set (from URL)
-            />
-          </label>
-
-          <label>
-            Your Name:
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="Enter your name"
-              style={{ marginLeft: 8 }}
-              disabled={!!userType} // Disable if userType is set (from URL)
-            />
-          </label>
-
-          {/* Shareable meeting link
-          {sessionName && userName && (
-            <div style={{ margin: "12px 0", wordBreak: "break-all" }}>
-              <strong>Shareable Meeting Link:</strong>
-              <div style={{ background: "#eee", padding: 6, borderRadius: 4 }}>
-                {`${
-                  window.location.origin
-                }/meeting?session=${encodeURIComponent(
-                  sessionName
-                )}&user=${encodeURIComponent(userName)}&role=${role}`}
+              <div className="buttonZoomSetting">
+                <button onClick={() => setIsMute(!isMute)}>
+                  {isMute ? <MicroPhone /> : <UnMicroPhone />}
+                </button>
+                <button onClick={() => setIsVideoOff(!isVideoOff)}>
+                  {isVideoOff ? <VideoCamera /> : <OffVideoCamera />}
+                </button>
               </div>
             </div>
-          )} */}
 
-          <div className="test-controls">
-            <button onClick={handleMicTest}>
+            {/* RIGHT SETTINGS */}
+            <div className="rightMeetingDetail">
+              <h2>Ready to Join?</h2>
+
+              <div className="colGap22">
+                <div className="commonDetail">
+                  <span>Joinee: </span>
+                  <p>{userName}</p>
+                </div>
+                <div className="commonDetail">
+                  <span>Agenda: </span>
+                  {agendaLoading ? (
+                    <p
+                      className="lineClamp"
+                      style={{ color: "#666", fontStyle: "italic" }}
+                    >
+                      Loading agenda...
+                    </p>
+                  ) : agendaError ? (
+                    <p className="lineClamp" style={{ color: "#dc2626" }}>
+                      ⚠️ {agendaError}
+                    </p>
+                  ) : agendaData ? (
+                    <p className="lineClamp">
+                      {agendaData.agenda || "No agenda available"}
+                    </p>
+                  ) : (
+                    <p
+                      className="lineClamp"
+                      style={{ color: "#666", fontStyle: "italic" }}
+                    >
+                      Meeting Session - General discussion and collaboration
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="colGap12 settingOptionGroup">
+                {/* Camera */}
+                <div className="dropdownWrapper">
+                  <select
+                    className="dropdownMeeting"
+                    value={selectedCamera}
+                    onChange={(e) => setSelectedCamera(e.target.value)}
+                  >
+                    {videoDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Mic */}
+                <div className="dropdownWrapper">
+                  <select
+                    className="dropdownMeeting"
+                    value={selectedMic}
+                    onChange={(e) => setSelectedMic(e.target.value)}
+                  >
+                    {audioDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Speaker */}
+                <div className="dropdownWrapper">
+                  <select
+                    className="dropdownMeeting"
+                    value={selectedSpeaker}
+                    onChange={(e) => setSelectedSpeaker(e.target.value)}
+                  >
+                    {speakerDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Background */}
+                <div className="dropdownWrapper">
+                  <select
+                    className="dropdownMeeting"
+                    value={bgMode}
+                    onChange={(e) => setBgMode(e.target.value)}
+                  >
+                    <option value="none">None</option>
+                    <option value="blur">Blur</option>
+                    <option value="image">Image</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                className="joinMeeting"
+                onClick={handleJoin}
+                disabled={isLoading || !selectedCamera || !selectedMic}
+              >
+                {isLoading ? (
+                  "Starting..."
+                ) : (
+                  <>
+                    Join Meeting <RightArrow />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="bottomControls">
+            <button
+              className="commonTextBtn testMicrophone"
+              onClick={handleMicTest}
+            >
               {micTestPhase === "recording"
                 ? "Recording..."
                 : micTestPhase === "playing"
@@ -546,8 +681,27 @@ const Preview = () => {
                     ? "Stop"
                     : "Test Microphone"}
             </button>
-            <button onClick={handleSpeakerTest}>Test Speaker</button>
+
+            <button
+              className="commonTextBtn testSpeaker"
+              onClick={handleSpeakerTest}
+            >
+              Test Speaker
+            </button>
+
+            <div className="sliderMeetingWrapper">
+              {volume === 0 ? <NoSpeakerIcon /> : <SpeakerIcon />}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="slider"
+              />
+            </div>
           </div>
+
           <progress
             id="mic-input-level"
             value={micLevel}
@@ -559,18 +713,10 @@ const Preview = () => {
               {micTestPlaybackWarning}
             </div>
           )}
-
-          <button
-            className="join-button"
-            onClick={handleJoin}
-            disabled={isLoading || !selectedCamera || !selectedMic}
-          >
-            {isLoading ? "Starting..." : "Join Session"}
-          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default Preview;
+export default PreJoin;

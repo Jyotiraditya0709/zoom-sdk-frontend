@@ -1,0 +1,230 @@
+.chatSideBar {
+  width: 100%;
+  max-width: 0;
+  border-left: 1px solid #e5e5e5;
+  background: #fff;
+  height: 100%;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+
+  &.active {
+    max-width: 332px;
+  }
+
+  .userListChartBox {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .userItemsChartBox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 15px 18px;
+  }
+
+  .userItemsChartBox .avatar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .userItemsChartBox .avatarBox {
+    width: 30px;
+    height: 30px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #c2e0fa;
+    background: #e0effd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .usersNameDetails .user-name {
+    color: #262626;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 120%;
+    cursor: pointer;
+  }
+
+  .usersNameDetails .user-name:hover {
+    color: #3397ef;
+  }
+
+  .usersNameDetails .user-designation {
+    color: #737373;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 120%;
+  }
+
+  .rightSideChartBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rightSideChartBox .hostShow {
+    border-radius: 11px;
+    background: #e0effd;
+    padding: 4px 8px;
+    color: #3397ef;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 100%;
+
+    &.participant {
+      background: #f0f0f0;
+      color: #666;
+      font-size: 11px;
+    }
+  }
+
+  .rightSideChartBox svg {
+    cursor: pointer;
+  }
+
+  .chatBoxBlock {
+    height: 100%;
+  }
+
+  .chatBoxBlock .chatHeader {
+    background: #fafafa;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .chatBoxBlock .chatHeaderTitle {
+    color: #404040;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .threeDotDropdown svg {
+    cursor: pointer;
+  }
+
+  .messageAreaBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 20px 15px;
+    height: calc(100% - 110px);
+  }
+
+  .chatMsgContent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .upperNameUser {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .upperNameUser .timeView {
+    color: #737373;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .messageDescription {
+    color: #404040;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #f5f5f5;
+    background: #f5f5f5;
+  }
+
+  .messageFormSide {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+
+    .fromMessage {
+      color: #0e77d3;
+      font-size: 12px;
+      font-weight: 400;
+    }
+  }
+
+  .from-me .messageDescription {
+    border: 1px solid #c2e0fa;
+    background: #e0effd;
+  }
+
+  .backRouteChat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #404040;
+    padding: 4px 8px;
+    cursor: pointer;
+
+    svg {
+      transition: 0.3s;
+    }
+  }
+
+  .backRouteChat:hover {
+    color: #0e77d3;
+
+    svg path {
+      stroke: #0e77d3;
+    }
+
+    svg {
+      transform: translateX(-4px);
+    }
+  }
+
+  .chatInputBox {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid#D4D4D4;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    background: #fff;
+    padding-right: 8px;
+
+    button {
+      outline: none;
+      border: none;
+      background: transparent;
+    }
+
+    input {
+      flex: 1;
+      display: flex;
+      border: none;
+      outline: none;
+      padding: 16px 8px;
+    }
+
+    input::placeholder {
+      color: #737373;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 120%;
+    }
+  }
+}

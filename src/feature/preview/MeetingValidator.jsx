@@ -183,7 +183,7 @@ const MeetingValidator = () => {
             });
 
             navigate(
-              `/preview?meetingId=${meetingId}&userId=${userId}&agenda=${encodeURIComponent(
+              `/pre-join?meetingId=${meetingId}&userId=${userId}&agenda=${encodeURIComponent(
                 meetingData.agenda || ""
               )}&status=${encodeURIComponent(
                 meetingData.meetingStatus || ""
@@ -191,7 +191,7 @@ const MeetingValidator = () => {
             );
           }}
         >
-          Continue to Preview
+          Continue to Pre-Join
         </button>
       </div>
     );

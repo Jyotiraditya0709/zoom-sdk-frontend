@@ -104,6 +104,12 @@ const MeetingPage = () => {
   };
 
   const notifyUserLeft = async () => {
+    // Prevent calling userLeft during initial join process
+    if (isJoining) {
+      console.log("🚫 Skipping userLeft webhook during join process");
+      return;
+    }
+
     try {
       console.log("🎯 Calling userLeft webhook with:", {
         meetingId: meetingId,
@@ -207,7 +213,6 @@ const MeetingPage = () => {
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showMediaWarning, setShowMediaWarning] = useState(false);
   const [mediaWarningMessage, setMediaWarningMessage] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Refs
   const clientRef = useRef(null);
@@ -243,14 +248,119 @@ const MeetingPage = () => {
       const container = videoContainerRefs.current[userId];
       if (container && mediaStreamRef.current) {
         try {
+          console.log(`🎥 Attaching video for user: ${userId}`);
           const userVideo = await mediaStreamRef.current.attachVideo(
             userId,
             VIDEO_QUALITY
           );
           container.innerHTML = "";
           container.appendChild(userVideo);
+
+          // Immediate check for black tile (after 500ms)
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement) {
+                // Check if video has actual content
+                if (
+                  videoElement.videoWidth === 0 ||
+                  videoElement.videoHeight === 0
+                ) {
+                  console.log(
+                    `🧹 Immediate aggressive cleanup of black tile for user: ${userId}`
+                  );
+                  container.innerHTML = "";
+                  container.style.display = "none";
+                  // Remove from DOM completely
+                  if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                  }
+                  // Remove from refs
+                  delete videoContainerRefs.current[userId];
+
+                  if (mediaStreamRef.current) {
+                    mediaStreamRef.current
+                      .detachVideo(userId)
+                      .catch((e) =>
+                        console.error(`Failed to detach video for ${userId}`, e)
+                      );
+                  }
+
+                  // Force UI update
+                  setParticipants(clientRef.current?.getAllUser() || []);
+                }
+              }
+            }
+          }, 500); // Check after 500ms for immediate cleanup
+
+          // Additional timeout to clean up black tiles that don't load
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement && videoElement.videoWidth === 0) {
+                console.log(
+                  `🧹 Aggressive cleanup of persistent black tile for user: ${userId}`
+                );
+                container.innerHTML = "";
+                container.style.display = "none";
+                // Remove from DOM completely
+                if (container.parentNode) {
+                  container.parentNode.removeChild(container);
+                }
+                // Remove from refs
+                delete videoContainerRefs.current[userId];
+
+                // Use mediaStreamRef directly to avoid circular dependency
+                if (mediaStreamRef.current) {
+                  mediaStreamRef.current
+                    .detachVideo(userId)
+                    .catch((e) =>
+                      console.error(`Failed to detach video for ${userId}`, e)
+                    );
+                }
+
+                // Force UI update
+                setParticipants(clientRef.current?.getAllUser() || []);
+              }
+            }
+          }, 2000); // Reduced to 2 seconds for faster cleanup
+
+          // Additional check for video element that doesn't start playing
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement && !videoElement.playing) {
+                console.log(
+                  `🧹 Aggressive cleanup of non-playing video for user: ${userId}`
+                );
+                container.innerHTML = "";
+                container.style.display = "none";
+                // Remove from DOM completely
+                if (container.parentNode) {
+                  container.parentNode.removeChild(container);
+                }
+                // Remove from refs
+                delete videoContainerRefs.current[userId];
+
+                if (mediaStreamRef.current) {
+                  mediaStreamRef.current
+                    .detachVideo(userId)
+                    .catch((e) =>
+                      console.error(`Failed to detach video for ${userId}`, e)
+                    );
+                }
+
+                // Force UI update
+                setParticipants(clientRef.current?.getAllUser() || []);
+              }
+            }
+          }, 2000); // Check after 2 seconds
         } catch (e) {
           console.error(`Failed to attach video for ${userId}`, e);
+          // Clean up container if attachment fails
+          if (container) {
+            container.innerHTML = "";
+          }
         }
       }
     },
@@ -267,45 +377,264 @@ const MeetingPage = () => {
     }
   }, []);
 
-  // Refresh detection effect
+  // Complete user removal function - handles all cleanup
+  const completeUserRemoval = useCallback((userId) => {
+    console.log(`🚫 Complete user removal initiated for: ${userId}`);
+
+    // 1. Clean up video container
+    if (videoContainerRefs.current[userId]) {
+      console.log(`🧹 Complete cleanup of video container for user: ${userId}`);
+      const container = videoContainerRefs.current[userId];
+      container.innerHTML = "";
+      container.style.display = "none";
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      delete videoContainerRefs.current[userId];
+    }
+
+    // 2. Remove from participants list
+    setParticipants((prevParticipants) => {
+      const updatedParticipants = prevParticipants.filter(
+        (p) => p.userId !== userId
+      );
+      console.log(
+        `📊 Complete removal - Participants updated: ${prevParticipants.length} -> ${updatedParticipants.length}`
+      );
+      return updatedParticipants;
+    });
+
+    // 3. Force additional cleanup
+    setTimeout(() => {
+      // Final check and cleanup
+      const remainingContainer = videoContainerRefs.current[userId];
+      if (remainingContainer) {
+        console.log(
+          `🧹 Final cleanup of remaining container for user: ${userId}`
+        );
+        remainingContainer.innerHTML = "";
+        remainingContainer.style.display = "none";
+        if (remainingContainer.parentNode) {
+          remainingContainer.parentNode.removeChild(remainingContainer);
+        }
+        delete videoContainerRefs.current[userId];
+      }
+
+      // Force final participants update
+      setParticipants((prevParticipants) => {
+        const finalParticipants = prevParticipants.filter(
+          (p) => p.userId !== userId
+        );
+        console.log(
+          `🔄 Complete removal - Final participants count: ${finalParticipants.length}`
+        );
+        return finalParticipants;
+      });
+    }, 100);
+  }, []);
+
+  // Cleanup function to stop media and leave session
+  const cleanupMediaAndLeave = async () => {
+    try {
+      if (mediaStreamRef.current) {
+        await mediaStreamRef.current.stopVideo?.();
+        await mediaStreamRef.current.muteAudio?.();
+      }
+      if (clientRef.current) {
+        await clientRef.current.leave();
+      }
+    } catch (err) {
+      // Ignore errors on cleanup
+    }
+  };
+
+  // Handle refresh detection and automatic redirect
   useEffect(() => {
-    const handleBeforeUnload = (event) => {
-      // Check if this is a hard refresh (not just navigation)
-      if (event.type === "beforeunload") {
-        // Set a flag in sessionStorage to indicate this was a refresh
-        sessionStorage.setItem("meetingRefreshed", "true");
+    // Only set up refresh detection if we have valid meeting info
+    if (!sessionName || !userName) {
+      return;
+    }
+
+    const handleBeforeUnload = () => {
+      // Store meeting info in sessionStorage for after refresh
+      sessionStorage.setItem(
+        "meetingExitInfo",
+        JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+          role: role,
+          timestamp: Date.now(),
+        })
+      );
+
+      // 🔑 CRITICAL: Force immediate client.leave() to notify Zoom
+      try {
+        if (
+          clientRef.current &&
+          clientRef.current.getCurrentUserInfo()?.userId
+        ) {
+          console.log(
+            "🔄 Page unloading - forcing immediate client.leave() to notify Zoom"
+          );
+          clientRef.current.leave(true); // true => force immediate leave
+        }
+      } catch (err) {
+        console.error("❌ Error leaving meeting on page unload:", err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Only handle visibility change if we're actually leaving the page
+      // Tab switches should NOT cause users to leave the meeting
+      if (document.visibilityState === "hidden") {
+        // Check if this is likely a page unload vs just a tab switch
+        // We'll use a small delay to differentiate between tab switch and page unload
+        setTimeout(() => {
+          // If the page is still hidden after a short delay, it might be a page unload
+          // But we won't force leave here - let the beforeunload and pagehide handlers deal with it
+          console.log(
+            "🔄 Tab hidden - but not forcing leave (likely just tab switch)"
+          );
+        }, 100);
+      } else if (document.visibilityState === "visible") {
+        console.log("🔄 Tab visible again - user returned to meeting tab");
+      }
+    };
+
+    const handlePageHide = () => {
+      // Immediately notify backend that user is leaving due to refresh/page close
+      if (clientRef.current && clientRef.current.getCurrentUserInfo()?.userId) {
+        console.log("🔄 User leaving page - immediately notifying backend");
+
+        // Try multiple methods to ensure the webhook is called
+        const data = JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+        });
+
+        // Method 1: sendBeacon (most reliable for page unload)
+        if (navigator.sendBeacon) {
+          const success = navigator.sendBeacon(
+            config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+            data
+          );
+          console.log("📡 sendBeacon result:", success);
+        }
+
+        // Method 2: Synchronous XMLHttpRequest (fallback)
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open(
+            "POST",
+            config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+            false
+          );
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.send(data);
+          console.log("📡 XMLHttpRequest status:", xhr.status);
+        } catch (err) {
+          console.error("📡 XMLHttpRequest failed:", err);
+        }
+
+        // Method 3: Store in sessionStorage for next page load
+        sessionStorage.setItem("pendingUserLeft", data);
       }
     };
 
     const handleLoad = () => {
-      // Check if we're returning from a refresh
-      const wasRefreshed = sessionStorage.getItem("meetingRefreshed");
-      if (wasRefreshed === "true") {
-        setIsRefreshing(true);
-        sessionStorage.removeItem("meetingRefreshed");
+      // Check if we have stored meeting info from a refresh
+      const storedInfo = sessionStorage.getItem("meetingExitInfo");
+      if (storedInfo) {
+        try {
+          const info = JSON.parse(storedInfo);
+          const timeDiff = Date.now() - info.timestamp;
+
+          // Only redirect if the refresh happened within the last 5 seconds
+          if (timeDiff < 5000) {
+            sessionStorage.removeItem("meetingExitInfo");
+            // Prevent automatic rejoin by setting a flag
+            sessionStorage.setItem("preventAutoRejoin", "true");
+            navigate(
+              `/meeting-exit?meetingId=${encodeURIComponent(
+                info.meetingId
+              )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
+            );
+          } else {
+            sessionStorage.removeItem("meetingExitInfo");
+          }
+        } catch (err) {
+          sessionStorage.removeItem("meetingExitInfo");
+        }
+      }
+
+      // Check for pending user left notification
+      const pendingUserLeft = sessionStorage.getItem("pendingUserLeft");
+      if (pendingUserLeft) {
+        try {
+          const data = JSON.parse(pendingUserLeft);
+          console.log("📡 Sending pending user left notification:", data);
+
+          // Send the pending notification
+          fetch(config.getApiUrl(config.API_ENDPOINTS.USER_LEFT), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: pendingUserLeft,
+          })
+            .then(() => {
+              console.log(
+                "✅ Pending user left notification sent successfully"
+              );
+            })
+            .catch((err) => {
+              console.error(
+                "❌ Failed to send pending user left notification:",
+                err
+              );
+            });
+
+          sessionStorage.removeItem("pendingUserLeft");
+        } catch (err) {
+          console.error("❌ Failed to parse pending user left data:", err);
+          sessionStorage.removeItem("pendingUserLeft");
+        }
       }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("unload", handleBeforeUnload); // Backup unload handler
+    window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("load", handleLoad);
 
-    // Check on initial load
-    const wasRefreshed = sessionStorage.getItem("meetingRefreshed");
-    if (wasRefreshed === "true") {
-      setIsRefreshing(true);
-      sessionStorage.removeItem("meetingRefreshed");
-    }
+    // Check immediately on mount
+    handleLoad();
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("unload", handleBeforeUnload);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("load", handleLoad);
     };
-  }, []);
+  }, [navigate, sessionName, userName, role]);
 
   // Main session lifecycle effect
   useEffect(() => {
     const client = getClient();
     clientRef.current = client;
+
+    // Only proceed if we have valid meeting info
+    if (!sessionName || !userName) {
+      return;
+    }
+
+    // Check if we should prevent automatic rejoin (user just left due to refresh)
+    const preventAutoRejoin = sessionStorage.getItem("preventAutoRejoin");
+    if (preventAutoRejoin === "true") {
+      sessionStorage.removeItem("preventAutoRejoin");
+      console.log("🚫 Preventing automatic rejoin due to recent refresh");
+      return;
+    }
 
     // Fetch devices and set state
     const fetchDevices = async () => {
@@ -382,11 +711,32 @@ const MeetingPage = () => {
       client.on("peer-video-state-change", async (payload) => {
         const { action, userId } = payload;
         if (userId === selfUserIdRef.current) return; // Ignore self events
+
+        console.log(`📹 Video state change for user ${userId}: ${action}`);
+
         if (action === "Start") {
+          // Check if user is still in the meeting before attaching video
+          const allUsers = client.getAllUser();
+          const user = allUsers.find((u) => u.userId === userId);
+          if (!user) {
+            console.log(
+              `🚫 User ${userId} no longer in meeting - skipping video attachment`
+            );
+            return;
+          }
+
+          console.log(`🎥 User ${userId} started video - attaching`);
           await attachVideo(userId);
         } else if (action === "Stop") {
+          console.log(
+            `📹 User ${userId} stopped video - complete cleanup initiated`
+          );
           await detachVideo(userId);
+
+          // Use the complete user removal function
+          completeUserRemoval(userId);
         }
+
         // Update participants state so UI reflects remote video changes
         setParticipants(client.getAllUser());
       });
@@ -424,8 +774,10 @@ const MeetingPage = () => {
 
         // notify backend that user joined
         await notifyUserJoined();
-        // Leave on page unload
-        if (client.leaveOnPageUnload) client.leaveOnPageUnload();
+
+        // Enable leave on page unload after successful join
+        client.leaveOnPageUnload = true;
+
         mediaStreamRef.current = client.getMediaStream();
         selfUserIdRef.current = client.getCurrentUserInfo().userId;
         setParticipants(client.getAllUser());
@@ -466,7 +818,17 @@ const MeetingPage = () => {
           // Attach videos for users already in the session
           client.getAllUser().forEach(async (user) => {
             if (user.bVideoOn && user.userId !== selfUserIdRef.current) {
+              console.log(
+                `🎥 Attaching video for existing user: ${user.userId} (${user.displayName})`
+              );
               await attachVideo(user.userId);
+            } else if (
+              !user.bVideoOn &&
+              user.userId !== selfUserIdRef.current
+            ) {
+              console.log(
+                `📹 Skipping video for user without video: ${user.userId} (${user.displayName})`
+              );
             }
           });
 
@@ -577,10 +939,23 @@ const MeetingPage = () => {
           userId: item.userId,
           displayName: item.displayName,
           isLocal: item.userId === selfUserIdRef.current,
+          timestamp: new Date().toISOString(),
+          hasVideo: item.bVideoOn,
         });
-        addNotification(
-          `${item.displayName || item.userId} joined the session.`
-        );
+
+        // Only show notification for non-local users or if it's not a rejoin
+        if (item.userId !== selfUserIdRef.current) {
+          addNotification(
+            `${item.displayName || item.userId} joined the session.`
+          );
+        }
+
+        // If user joined without video, don't create a video container
+        if (!item.bVideoOn && item.userId !== selfUserIdRef.current) {
+          console.log(
+            `📹 User ${item.userId} joined without video - skipping video container`
+          );
+        }
 
         // Re-register screen share event listeners for new participants
         if (item.userId !== selfUserIdRef.current) {
@@ -669,8 +1044,27 @@ const MeetingPage = () => {
         console.log("[USER] User left:", {
           userId: item.userId,
           displayName: item.displayName,
+          timestamp: new Date().toISOString(),
+          isLocal: item.userId === selfUserIdRef.current,
         });
-        addNotification(`${item.displayName || item.userId} left the session.`);
+
+        // Complete user removal - handle like userLeft webhook
+        console.log(
+          `🚫 Complete removal of user: ${item.userId} (${item.displayName})`
+        );
+
+        // Use the complete user removal function
+        completeUserRemoval(item.userId);
+
+        // Additional detach video call
+        detachVideo(item.userId);
+
+        // Only show notification for non-local users
+        if (item.userId !== selfUserIdRef.current) {
+          addNotification(
+            `${item.displayName || item.userId} left the session.`
+          );
+        }
       });
       setParticipants(client.getAllUser());
     };
@@ -679,10 +1073,15 @@ const MeetingPage = () => {
 
     // Connection status handling
     client.on("connection-change", (payload) => {
+      console.log("🔗 Connection change:", payload);
+
       if (payload.state === "Closed") {
-        notifyUserLeft().catch((err) =>
-          console.error("failed to notify user left: ", err)
-        );
+        // Only notify if we were actually connected before
+        if (client.getCurrentUserInfo()?.userId) {
+          notifyUserLeft().catch((err) =>
+            console.error("failed to notify user left: ", err)
+          );
+        }
         addNotification(
           payload.reason === "ended by host"
             ? "The host has ended the meeting."
@@ -694,9 +1093,12 @@ const MeetingPage = () => {
       } else if (payload.state === "Connected") {
         addNotification(`Connected to session.`);
       } else if (payload.state === "Fail") {
-        notifyUserLeft().catch((err) =>
-          console.error("Failed to notify user left:", err)
-        );
+        // Only notify if we were actually connected before
+        if (client.getCurrentUserInfo()?.userId) {
+          notifyUserLeft().catch((err) =>
+            console.error("Failed to notify user left:", err)
+          );
+        }
 
         addNotification(
           `Session failed: ${payload.reason || payload.errorCode}`
@@ -769,6 +1171,17 @@ const MeetingPage = () => {
     });
 
     return () => {
+      // Clean up all video containers immediately
+      Object.keys(videoContainerRefs.current).forEach((userId) => {
+        if (videoContainerRefs.current[userId]) {
+          console.log(
+            `🧹 Cleaning up video container on unmount for user: ${userId}`
+          );
+          videoContainerRefs.current[userId].innerHTML = "";
+        }
+      });
+      videoContainerRefs.current = {};
+
       if (clientRef.current) {
         clientRef.current.leave();
       }
@@ -1071,6 +1484,14 @@ const MeetingPage = () => {
         setError("Failed to end meeting for all.");
       }
     }
+    navigate(
+      "/meeting-exit?meetingId=" +
+        encodeURIComponent(sessionName) +
+        "&userId=" +
+        encodeURIComponent(userName) +
+        "&role=" +
+        role
+    );
   };
   const handleLeave = async () => {
     if (clientRef.current) {
@@ -1083,10 +1504,16 @@ const MeetingPage = () => {
         setError("Failed to leave meeting.");
       }
     }
-    navigate("/meeting-left");
+    navigate(
+      "/meeting-exit?meetingId=" +
+        encodeURIComponent(sessionName) +
+        "&userId=" +
+        encodeURIComponent(userName) +
+        "&role=" +
+        role
+    );
   };
 
-  if (isRefreshing) return <MeetingLeft />;
   if (isJoining) return <div>Joining meeting...</div>;
   if (error)
     return (
@@ -1270,7 +1697,7 @@ const MeetingPage = () => {
                 )}
                 {(
                   user.userId === selfUserIdRef.current
-                    ? isVideoOn
+                    ? 2000000000002020
                     : user.bVideoOn
                 ) ? (
                   <FaVideo
