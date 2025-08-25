@@ -129,6 +129,8 @@ function JoinerScreen() {
   const [showRecordingNotice, setShowRecordingNotice] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
+  const [showLeaveMeetingConfirm, setShowLeaveMeetingConfirm] = useState(false);
+
   const recordingClientRef = useRef(null);
   const remoteShareContainerRef = useRef(null);
 
@@ -281,47 +283,51 @@ function JoinerScreen() {
     }
   };
 
+  // Meeting end notification with proper API call
   const notifyMeetingEnd = async () => {
     try {
-      console.log("🏁 Calling meetingEnd webhook with:", {
-        meetingId: meetingId,
+      console.log("🏁 Meeting ended by host:", {
+        meetingId: sessionName,
         userId: userName,
+        role: role,
+        userType: userType,
       });
+
+      const requestBody = {
+        meetingId: sessionName,
+        userId: userName,
+        userType: userType,
+        role: role.toString(),
+        isMentor: userType === "mentor",
+        isHost: role === 1,
+        ...(userType === "mentor" && { mentorId: userName }),
+        ...(userType === "mentee" && { menteeId: userName }),
+      };
+
+      console.log("📡 Making meeting end API call with:", requestBody);
 
       const response = await fetch(
         config.getApiUrl(config.API_ENDPOINTS.MEETING_END),
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            meetingId: meetingId,
-            userId: userName,
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
         }
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ Backend Error Response:", {
+        console.error("❌ Meeting end API Error:", {
           status: response.status,
           statusText: response.statusText,
           body: errorText,
         });
-        throw new Error(
-          `HTTP error! status: ${response.status} - ${errorText}`
-        );
+      } else {
+        const data = await response.json();
+        console.log("✅ Meeting end API call successful:", data);
       }
-
-      const data = await response.json();
-      console.log("✅ Meeting end webhook sent:", data);
     } catch (err) {
-      console.error("❌ Failed to send meeting end webhook:", err);
-      console.error("❌ Error details:", {
-        message: err.message,
-        status: err.status,
-      });
+      console.error("❌ Failed to notify meeting end:", err);
     }
   };
 
@@ -341,24 +347,31 @@ function JoinerScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const { meetingId, userId } = useParams();
-  const { sessionName, userName, role } = React.useMemo(() => {
-    const params = new URLSearchParams(location.search);
+  const { sessionName, userName, displayName, role, userType } =
+    React.useMemo(() => {
+      const params = new URLSearchParams(location.search);
 
-    // Debug logging
-    console.log("🔍 URL Parameters Debug:", {
-      meetingId,
-      userId,
-      searchParams: Object.fromEntries(params.entries()),
-      pathname: location.pathname,
-      fullUrl: location.href,
-    });
+      // Debug logging
+      console.log("🔍 URL Parameters Debug:", {
+        meetingId,
+        userId,
+        searchParams: Object.fromEntries(params.entries()),
+        pathname: location.pathname,
+        fullUrl: location.href,
+        roleParam: params.get("role"),
+        userTypeParam: params.get("userType"),
+      });
 
-    return {
-      sessionName: meetingId || "default-session",
-      userName: `User ${userId?.slice(-4) || "Guest"}`,
-      role: parseInt(params.get("role") || "1", 10),
-    };
-  }, [location.search, meetingId, userId]);
+      return {
+        sessionName: meetingId || "default-session",
+        userName: userId || "Guest", // Use full userId for backend
+        displayName: userId || "Guest", // Use full userId for display too
+        role: parseInt(params.get("role") || "1", 10),
+        userType:
+          params.get("userType") ||
+          (parseInt(params.get("role") || "1", 10) === 1 ? "mentor" : "mentee"),
+      };
+    }, [location.search, meetingId, userId]);
 
   const isHost = role === 1;
 
@@ -586,18 +599,21 @@ function JoinerScreen() {
     }, 100);
   }, []);
 
-  // Cleanup function to stop media and leave session
+  // Simple cleanup function (like MeetingPage.jsx)
   const cleanupMediaAndLeave = async () => {
     try {
-      if (mediaStreamRef.current) {
-        await mediaStreamRef.current.stopVideo?.();
-        await mediaStreamRef.current.muteAudio?.();
+      // Stop screen sharing if active
+      if (isSharingScreen && mediaStreamRef.current) {
+        await mediaStreamRef.current.stopShareScreen();
+        setIsSharingScreen(false);
       }
+
+      // Leave the session
       if (clientRef.current) {
         await clientRef.current.leave();
       }
     } catch (err) {
-      // Ignore errors on cleanup
+      console.error("Error during cleanup:", err);
     }
   };
   // Handle refresh detection and automatic redirect
@@ -1193,8 +1209,7 @@ function JoinerScreen() {
       payload.forEach((item) => {
         // Generate a better display name if not provided
         const displayName =
-          item.displayName ||
-          `User ${item.userId?.toString().slice(-4) || "Guest"}`;
+          item.displayName || item.userId?.toString() || "Guest";
 
         console.log("[USER] User joined:", {
           userId: item.userId,
@@ -1828,32 +1843,121 @@ function JoinerScreen() {
 
   const confirmEndMeeting = async () => {
     setShowEndMeetingConfirm(false);
-    if (clientRef.current) {
-      try {
-        // Notify backend that host is ending the meeting
-        await notifyMeetingEnd();
-        await clientRef.current.leave(true); // Host ends session for all
-      } catch (err) {
-        setError("Failed to end meeting for all.");
+
+    try {
+      // Simple cleanup like MeetingPage.jsx
+      await cleanupCamera(selfUserIdRef.current);
+
+      // Stop screen sharing if active
+      if (isSharingScreen && mediaStreamRef.current) {
+        try {
+          await mediaStreamRef.current.stopShareScreen();
+          setIsSharingScreen(false);
+        } catch (err) {
+          console.warn("Failed to stop screen sharing:", err);
+        }
       }
+
+      // Stop recording if active
+      if (recordingClientRef.current && recordingStatus !== "stopped") {
+        try {
+          await recordingClientRef.current.stopCloudRecording();
+          setRecordingStatus("stopped");
+        } catch (err) {
+          console.warn("Failed to stop recording:", err);
+        }
+      }
+
+      // Leave the session (this will end it for all participants if host)
+      if (clientRef.current) {
+        await clientRef.current.leave(true);
+      }
+
+      // Clean up zoom context
+      cleanup();
+
+      // Notify backend that meeting ended
+      await notifyMeetingEnd();
+
+      addNotification("Meeting ended successfully");
+
+      // Navigate to exit page
+      navigate(
+        "/meeting-exit?meetingId=" +
+          encodeURIComponent(sessionName) +
+          "&userId=" +
+          encodeURIComponent(userName) +
+          "&role=" +
+          role
+      );
+    } catch (err) {
+      console.error("Failed to end meeting:", err);
+
+      // Even if cleanup fails, try to leave and navigate
+      try {
+        if (clientRef.current) {
+          await clientRef.current.leave(true);
+        }
+        cleanup();
+      } catch (fallbackErr) {
+        console.error("Fallback leave failed:", fallbackErr);
+      }
+
+      // Navigate anyway
+      navigate(
+        "/meeting-exit?meetingId=" +
+          encodeURIComponent(sessionName) +
+          "&userId=" +
+          encodeURIComponent(userName) +
+          "&role=" +
+          role
+      );
     }
-    navigate(
-      "/meeting-exit?meetingId=" +
-        encodeURIComponent(sessionName) +
-        "&userId=" +
-        encodeURIComponent(userName) +
-        "&role=" +
-        role
-    );
   };
 
-  const leaveSession = async () => {
+  const confirmLeaveSession = async () => {
+    setShowLeaveMeetingConfirm(false);
+
     try {
-      await cleanupMediaAndLeave();
-      await notifyUserLeft();
+      // Simple cleanup like MeetingPage.jsx
+      await cleanupCamera(selfUserIdRef.current);
+
+      // Stop screen sharing if active
+      if (isSharingScreen && mediaStreamRef.current) {
+        try {
+          await mediaStreamRef.current.stopShareScreen();
+          setIsSharingScreen(false);
+        } catch (err) {
+          console.warn("Failed to stop screen sharing:", err);
+        }
+      }
+
+      // Leave the session
+      if (clientRef.current) {
+        await clientRef.current.leave();
+      }
+
+      // Clean up zoom context
+      cleanup();
+
+      addNotification("You have left the meeting");
+
+      // Navigate to exit page
       navigate("/meeting-left");
     } catch (err) {
       console.error("Error leaving session:", err);
+
+      // Even if cleanup fails, try to leave and navigate
+      try {
+        if (clientRef.current) {
+          await clientRef.current.leave();
+        }
+        cleanup();
+      } catch (fallbackErr) {
+        console.error("Fallback leave failed:", fallbackErr);
+      }
+
+      // Navigate anyway
       navigate("/meeting-left");
     }
   };
@@ -1992,8 +2096,8 @@ function JoinerScreen() {
       style={{ overflow: "hidden", height: "100vh" }}
     >
       <Header
-        userEmail={`${userName}@example.com`}
-        userName={userName}
+        userEmail={`${displayName}@example.com`}
+        userName={displayName}
         meetingTitle={sessionName}
         startTime={meetingStartTime}
         showTimer={true}
@@ -2076,8 +2180,7 @@ function JoinerScreen() {
                     }}
                   >
                     <span>
-                      {user.displayName ||
-                        `User ${user.userId?.toString().slice(-4) || "Guest"}`}
+                      {user.displayName || user.userId?.toString() || "Guest"}
                     </span>
                     {/* Network quality indicator */}
                     {networkQuality[user.userId] !== undefined && (
@@ -2662,7 +2765,10 @@ function JoinerScreen() {
                 End Meeting
               </button>
             ) : (
-              <button className="leaveMeetingButton" onClick={leaveSession}>
+              <button
+                className="leaveMeetingButton"
+                onClick={() => setShowLeaveMeetingConfirm(true)}
+              >
                 Leave Meeting
               </button>
             )}
@@ -2703,7 +2809,7 @@ function JoinerScreen() {
               sendMessage();
             }
           }}
-          userName={userName}
+          userName={displayName}
         />
       </div>
 
@@ -2770,7 +2876,7 @@ function JoinerScreen() {
           >
             <h3 style={{ marginTop: 0, marginBottom: 16 }}>End Meeting</h3>
             <p style={{ textAlign: "center", marginBottom: 24 }}>
-              Are you sure you want to end this meeting for all participants?
+              Are you sure you want to end this meeting?
             </p>
             <div style={{ display: "flex", gap: 12 }}>
               <button
@@ -2802,6 +2908,99 @@ function JoinerScreen() {
                 }}
               >
                 End Meeting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leave Meeting Confirmation Modal */}
+      {showLeaveMeetingConfirm && (
+        <div
+          className="modal"
+          onClick={(e) => {
+            if (e.target.classList.contains("modal"))
+              setShowLeaveMeetingConfirm(false);
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              color: "#222",
+              width: "100%",
+              maxWidth: 400,
+              borderRadius: 16,
+              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              padding: 32,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              maxHeight: "90vh",
+              overflow: "auto",
+            }}
+          >
+            <p
+              style={{
+                textAlign: "center",
+                marginBottom: 24,
+                fontSize: "18px",
+                fontWeight: "500",
+              }}
+            >
+              Yes, I want to leave this meeting
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                width: "100%",
+              }}
+            >
+              <button
+                onClick={confirmLeaveSession}
+                style={{
+                  background: "#e53935",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                Yes, I want to leave this meeting
+              </button>
+              <button
+                onClick={() => setShowLeaveMeetingConfirm(false)}
+                style={{
+                  background: "#fff",
+                  color: "#00baff",
+                  border: "2px solid #00baff",
+                  borderRadius: 8,
+                  padding: "12px 24px",
+                  fontWeight: 600,
+                  fontSize: 16,
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                Rejoin
               </button>
             </div>
           </div>
@@ -2915,8 +3114,7 @@ function JoinerScreen() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {p.displayName ||
-                        `User ${p.userId?.toString().slice(-4) || "Guest"}`}
+                      {p.displayName || p.userId?.toString() || "Guest"}
                     </span>
                     <span
                       style={{
@@ -3153,7 +3351,7 @@ function JoinerScreen() {
                       Your Name:
                     </span>
                     <span style={{ marginLeft: 8, color: "#222" }}>
-                      {userName}
+                      {displayName}
                     </span>
                   </div>
                   <div style={{ marginBottom: 12 }}>

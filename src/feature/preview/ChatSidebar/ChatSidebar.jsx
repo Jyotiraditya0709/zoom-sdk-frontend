@@ -19,11 +19,9 @@ const ChatSidebar = ({
   // Convert participants to users format for UserList
   const users = participants.map((participant) => ({
     id: participant.userId,
-    name:
-      participant.displayName ||
-      `User ${participant.userId?.toString().slice(-4) || "Guest"}`,
+    name: participant.displayName || participant.userId?.toString() || "Guest",
     designation: participant.role === 1 ? "Host" : "Attendee",
-        img: "/assets/svg/user.svg",
+    img: "/assets/svg/user.svg",
     type: participant.role === 1 ? "host" : "attendee",
   }));
 

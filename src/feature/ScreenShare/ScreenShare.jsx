@@ -86,8 +86,8 @@ const ScreenShare = ({
         remoteShareContainerRef.current
       );
       setError("Screen share elements not ready. Please try again.");
-      return;
-    }
+          return;
+        }
 
     try {
       if (!isScreenShare) {
@@ -149,8 +149,8 @@ const ScreenShare = ({
       if (!mediaStreamRef.current) return;
       if (state === "Active") {
         if (remoteShareContainerRef.current) {
-          mediaStreamRef.current.startShareView(
-            remoteShareContainerRef.current,
+            mediaStreamRef.current.startShareView(
+              remoteShareContainerRef.current,
             userId
           );
         }
@@ -159,7 +159,7 @@ const ScreenShare = ({
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
-        addNotification("Screen sharing stopped");
+          addNotification("Screen sharing stopped");
       }
     };
 
@@ -244,9 +244,9 @@ const ScreenShare = ({
 
             {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
             {(isScreenShare || isRemoteSharing) && (
-              <div className="screenViewHere">
-                <div
-                  style={{
+            <div className="screenViewHere">
+              <div
+                style={{
                     width: "100%",
                     display: "flex",
                     justifyContent: "center",
@@ -256,12 +256,12 @@ const ScreenShare = ({
                   }}
                 >
                   {/* Video element for screen sharing (when browser supports it) */}
-                  <video
-                    ref={screenShareContainerRef}
+                <video
+                  ref={screenShareContainerRef}
                     autoPlay
                     playsInline
-                    id="my-screen-share-content-video"
-                    style={{
+                  id="my-screen-share-content-video"
+                  style={{
                       display: "none",
                       maxWidth: "90vw",
                       maxHeight: "60vh",
@@ -270,22 +270,22 @@ const ScreenShare = ({
                     }}
                   />
                   {/* Canvas element for screen sharing (fallback) */}
-                  <canvas
-                    ref={remoteShareContainerRef}
-                    id="users-screen-share-content-canvas"
+                <canvas
+                  ref={remoteShareContainerRef}
+                  id="users-screen-share-content-canvas"
                     height={720}
                     width={1280}
-                    style={{
+                  style={{
                       display: "none",
                       maxWidth: "90vw",
                       maxHeight: "60vh",
                       borderRadius: 12,
                       boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
-                    }}
-                  />
-                </div>
-                <div className="nameJoinerHere">Screen / Presenter</div>
+                  }}
+                />
               </div>
+              <div className="nameJoinerHere">Screen / Presenter</div>
+            </div>
             )}
           </div>
 

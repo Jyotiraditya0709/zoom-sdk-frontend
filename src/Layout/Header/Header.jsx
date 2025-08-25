@@ -56,14 +56,29 @@ const Header = ({
     >
       {pathname === "/pre-join" && (
         <div className="headerContentOne">
-          <img src="/assets/svg/getPrepped.svg" alt="getPrepped" />
+          <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
           <div className="profileDetailHeader">
             <div className="profileName">
               <span className="emailText">{userEmail}</span>
               <span className="nameText">{userName}</span>
             </div>
             <div className="profileImage">
-              <img src="/assets/svg/userDummy.svg" alt="Profile" />
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  backgroundColor: "#00baff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "16px",
+                }}
+              >
+                {userName ? userName.charAt(0).toUpperCase() : "U"}
+              </div>
             </div>
           </div>
         </div>
@@ -74,7 +89,7 @@ const Header = ({
         pathname.includes("/meeting/")) && (
         <div className="headerContentTwo">
           <div className="headerLeftJoinerScreen">
-            <img src="/assets/svg/getPrepped.svg" alt="getPrepped" />
+            <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
             <span className="headerDescription">{meetingTitle}</span>
           </div>
 

@@ -15,19 +15,68 @@ const MeetingExit = () => {
 
   const handleEndOrLeave = async () => {
     try {
+      console.log("🏁 Meeting exit action:", {
+        isHost,
+        meetingId,
+        userId,
+        role,
+        action: isHost ? "end meeting" : "leave meeting",
+      });
+
+      // Make API call to update backend
       const endpoint = isHost
         ? config.API_ENDPOINTS.MEETING_END
         : config.API_ENDPOINTS.USER_LEFT;
+
+      const requestBody = {
+        meetingId,
+        userId,
+        ...(isHost && {
+          userType: "mentor",
+          role: "1",
+          isMentor: true,
+          isHost: true,
+          mentorId: userId,
+        }),
+        ...(!isHost && {
+          userType: "mentee",
+          role: "0",
+          isMentor: false,
+          isHost: false,
+          menteeId: userId,
+        }),
+      };
+
+      console.log("📡 Making API call to:", endpoint);
+      console.log("📡 Request body:", requestBody);
+
       const response = await fetch(config.getApiUrl(endpoint), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meetingId, userId }),
+        body: JSON.stringify(requestBody),
       });
-      if (!response.ok) throw new Error("Failed to update meeting");
-      // Optionally show feedback or confirmation
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Backend Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+
+        // Even if API fails, navigate to feedback
+        console.warn("⚠️ API call failed, but continuing with navigation");
+      } else {
+        const data = await response.json();
+        console.log("✅ Backend updated successfully:", data);
+      }
+
+      // Navigate to feedback page
       navigate("/feedback");
     } catch (err) {
-      alert("Failed to update meeting: " + err.message);
+      console.error("❌ Error in handleEndOrLeave:", err);
+      // Navigate anyway even if there's an error
+      navigate("/feedback");
     }
   };
 

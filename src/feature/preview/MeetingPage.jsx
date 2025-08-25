@@ -155,45 +155,45 @@ const MeetingPage = () => {
 
   const notifyMeetingEnd = async () => {
     try {
-      console.log("🏁 Calling meetingEnd webhook with:", {
+      console.log("🏁 Meeting ended by host:", {
         meetingId: meetingId,
         userId: userName,
       });
+
+      const requestBody = {
+        meetingId: meetingId,
+        userId: userName,
+        userType: "mentor",
+        role: "1",
+        isMentor: true,
+        isHost: true,
+        mentorId: userName,
+      };
+
+      console.log("📡 Making meeting end API call with:", requestBody);
 
       const response = await fetch(
         config.getApiUrl(config.API_ENDPOINTS.MEETING_END),
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            meetingId: meetingId,
-            userId: userName,
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
         }
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ Backend Error Response:", {
+        console.error("❌ Meeting end API Error:", {
           status: response.status,
           statusText: response.statusText,
           body: errorText,
         });
-        throw new Error(
-          `HTTP error! status: ${response.status} - ${errorText}`
-        );
+      } else {
+        const data = await response.json();
+        console.log("✅ Meeting end API call successful:", data);
       }
-
-      const data = await response.json();
-      console.log("✅ Meeting end webhook sent:", data);
     } catch (err) {
-      console.error("❌ Failed to send meeting end webhook:", err);
-      console.error("❌ Error details:", {
-        message: err.message,
-        status: err.status,
-      });
+      console.error("❌ Failed to notify meeting end:", err);
     }
   };
   // Notification helper (move this above useEffect)
