@@ -130,6 +130,8 @@ function JoinerScreen() {
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showLeaveMeetingConfirm, setShowLeaveMeetingConfirm] = useState(false);
+  const [localUserRemoved, setLocalUserRemoved] = useState(false);
+  const [isHostReconnecting, setIsHostReconnecting] = useState(false);
 
   const recordingClientRef = useRef(null);
   const remoteShareContainerRef = useRef(null);
@@ -233,7 +235,7 @@ function JoinerScreen() {
     }
   };
 
-  const notifyUserLeft = async () => {
+  const notifyUserLeft = async (isTemporaryLeave = false) => {
     // Prevent calling userLeft during initial join process
     if (isJoining) {
       console.log("🚫 Skipping userLeft webhook during join process");
@@ -244,6 +246,8 @@ function JoinerScreen() {
       console.log("🎯 Calling userLeft webhook with:", {
         meetingId: meetingId,
         userId: userName,
+        isHost: isHost,
+        isTemporaryLeave: isTemporaryLeave,
       });
 
       const response = await fetch(
@@ -256,6 +260,9 @@ function JoinerScreen() {
           body: JSON.stringify({
             meetingId: meetingId,
             userId: userName,
+            userType: isHost ? "mentor" : "mentee",
+            isHost: isHost,
+            isTemporaryLeave: isTemporaryLeave,
           }),
         }
       );
@@ -608,6 +615,16 @@ function JoinerScreen() {
         setIsSharingScreen(false);
       }
 
+      // Stop recording if active
+      if (recordingClientRef.current && recordingStatus !== "stopped") {
+        try {
+          await recordingClientRef.current.stopCloudRecording();
+          setRecordingStatus("stopped");
+        } catch (err) {
+          console.warn("Failed to stop recording:", err);
+        }
+      }
+
       // Leave the session
       if (clientRef.current) {
         await clientRef.current.leave();
@@ -617,6 +634,7 @@ function JoinerScreen() {
     }
   };
   // Handle refresh detection and automatic redirect
+  // Enhanced to prevent host refresh from ending meeting for all participants
   useEffect(() => {
     // Only set up refresh detection if we have valid meeting info
     if (!sessionName || !userName) {
@@ -635,16 +653,30 @@ function JoinerScreen() {
         })
       );
 
-      // 🔑 CRITICAL: Force immediate client.leave() to notify Zoom
+      // 🔑 CRITICAL: Handle page unload based on user role
       try {
         if (
           clientRef.current &&
           clientRef.current.getCurrentUserInfo()?.userId
         ) {
           console.log(
-            "🔄 Page unloading - forcing immediate client.leave() to notify Zoom"
+            `🔄 Page unloading - handling based on role: ${
+              isHost ? "host" : "participant"
+            }`
           );
-          clientRef.current.leave(true); // true => force immediate leave
+
+          if (isHost) {
+            // For hosts: Don't end the meeting, just leave as participant
+            // This prevents ending the meeting for all other participants
+            console.log(
+              "👑 Host refreshing - leaving as participant to preserve meeting"
+            );
+            clientRef.current.leave(false); // false => leave as participant, don't end meeting
+          } else {
+            // For participants: Normal leave behavior
+            console.log("👤 Participant refreshing - normal leave behavior");
+            clientRef.current.leave(true); // true => force immediate leave
+          }
         }
       } catch (err) {
         console.error("❌ Error leaving meeting on page unload:", err);
@@ -672,12 +704,20 @@ function JoinerScreen() {
     const handlePageHide = () => {
       // Immediately notify backend that user is leaving due to refresh/page close
       if (clientRef.current && clientRef.current.getCurrentUserInfo()?.userId) {
-        console.log("🔄 User leaving page - immediately notifying backend");
+        console.log(
+          `🔄 User leaving page - notifying backend (role: ${
+            isHost ? "host" : "participant"
+          })`
+        );
 
         // Try multiple methods to ensure the webhook is called
         const data = JSON.stringify({
           meetingId: sessionName,
           userId: userName,
+          userType: isHost ? "mentor" : "mentee",
+          isHost: isHost,
+          // For hosts, indicate this is a temporary leave (refresh) not a meeting end
+          isTemporaryLeave: isHost,
         });
 
         // Method 1: sendBeacon (most reliable for page unload)
@@ -720,13 +760,23 @@ function JoinerScreen() {
           // Only redirect if the refresh happened within the last 5 seconds
           if (timeDiff < 5000) {
             sessionStorage.removeItem("meetingExitInfo");
-            // Prevent automatic rejoin by setting a flag
-            sessionStorage.setItem("preventAutoRejoin", "true");
-            navigate(
-              `/meeting-exit?meetingId=${encodeURIComponent(
-                info.meetingId
-              )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
-            );
+
+            // For hosts, allow reconnection to the same meeting
+            if (info.role === 1 || info.role === "1") {
+              console.log(
+                "👑 Host refreshing - allowing reconnection to same meeting"
+              );
+              setIsHostReconnecting(true);
+              // Don't prevent rejoin for hosts
+            } else {
+              // For participants, prevent automatic rejoin by setting a flag
+              sessionStorage.setItem("preventAutoRejoin", "true");
+              navigate(
+                `/meeting-exit?meetingId=${encodeURIComponent(
+                  info.meetingId
+                )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
+              );
+            }
           } else {
             sessionStorage.removeItem("meetingExitInfo");
           }
@@ -802,6 +852,12 @@ function JoinerScreen() {
       sessionStorage.removeItem("preventAutoRejoin");
       console.log("🚫 Preventing automatic rejoin due to recent refresh");
       return;
+    }
+
+    // For hosts, allow reconnection even after refresh
+    if (isHostReconnecting) {
+      console.log("👑 Host reconnecting after refresh - proceeding with join");
+      setIsHostReconnecting(false);
     }
 
     // Fetch devices and set state
@@ -1066,6 +1122,22 @@ function JoinerScreen() {
         // Enable leave on page unload after successful join
         client.leaveOnPageUnload = true;
 
+        // If this is a host reconnecting after refresh, show notification
+        if (isHost) {
+          const storedInfo = sessionStorage.getItem("meetingExitInfo");
+          if (storedInfo) {
+            try {
+              const info = JSON.parse(storedInfo);
+              const timeDiff = Date.now() - info.timestamp;
+              if (timeDiff < 5000) {
+                addNotification("Host reconnected to the meeting");
+              }
+            } catch (err) {
+              // Ignore parsing errors
+            }
+          }
+        }
+
         mediaStreamRef.current = client.getMediaStream();
         selfUserIdRef.current = client.getCurrentUserInfo().userId;
         setParticipants(client.getAllUser());
@@ -1205,6 +1277,7 @@ function JoinerScreen() {
     });
 
     // User join/leave notifications
+    // Enhanced to handle local user removal due to leaveOnPageUnload (refresh/close)
     const handleUserAdded = (payload) => {
       payload.forEach((item) => {
         // Generate a better display name if not provided
@@ -1313,18 +1386,119 @@ function JoinerScreen() {
       });
       setParticipants(client.getAllUser());
     };
+
+    // Enhanced user removal handler that properly handles local user removal
+    // due to leaveOnPageUnload (refresh/close tab/browser)
     const handleUserRemoved = (payload) => {
       payload.forEach((item) => {
+        const isLocalUser = item.userId === selfUserIdRef.current;
+
         console.log("[USER] User left:", {
           userId: item.userId,
           displayName: item.displayName,
           timestamp: new Date().toISOString(),
-          isLocal: item.userId === selfUserIdRef.current,
+          isLocal: isLocalUser,
         });
 
-        // Complete user removal - handle like userLeft webhook
+        // Handle local user removal (due to refresh/close/leaveOnPageUnload)
+        if (isLocalUser) {
+          console.log(
+            "🚫 Local user removed from meeting - handling UI cleanup"
+          );
+
+          // Set local user removed state to prevent further interactions
+          setLocalUserRemoved(true);
+
+          // Clean up local user's video container
+          completeUserRemoval(item.userId);
+
+          // Clean up local media resources
+          cleanupCamera(item.userId);
+
+          // Stop screen sharing if active
+          if (isSharingScreen && mediaStreamRef.current) {
+            try {
+              mediaStreamRef.current.stopShareScreen();
+              setIsSharingScreen(false);
+            } catch (err) {
+              console.warn(
+                "Failed to stop screen sharing during local user removal:",
+                err
+              );
+            }
+          }
+
+          // Stop recording if active (for host)
+          if (recordingClientRef.current && recordingStatus !== "stopped") {
+            try {
+              recordingClientRef.current.stopCloudRecording();
+              setRecordingStatus("stopped");
+            } catch (err) {
+              console.warn(
+                "Failed to stop recording during local user removal:",
+                err
+              );
+            }
+          }
+
+          // Update UI state to reflect local user is no longer in meeting
+          setIsAudioOn(false);
+          setIsVideoOn(false);
+          setIsSharingScreen(false);
+          setIsRemoteSharing(false);
+          setIsAnnotating(false);
+          setShowRecordingNotice(false);
+          setRecordingStatus("stopped");
+
+          // Clear any active modals
+          setShowModals({
+            participants: false,
+            chat: false,
+            info: false,
+          });
+
+          // Clear any active confirmations
+          setShowEndMeetingConfirm(false);
+          setShowLeaveMeetingConfirm(false);
+
+          // Show notification that local user left
+          addNotification("You have left the meeting");
+
+          // Navigate to appropriate exit page
+          // Check if this was due to page refresh/close (stored in sessionStorage)
+          const meetingExitInfo = sessionStorage.getItem("meetingExitInfo");
+          if (meetingExitInfo) {
+            try {
+              const info = JSON.parse(meetingExitInfo);
+              const timeDiff = Date.now() - info.timestamp;
+
+              // If refresh happened recently, navigate to meeting-exit
+              if (timeDiff < 5000) {
+                navigate(
+                  `/meeting-exit?meetingId=${encodeURIComponent(
+                    info.meetingId
+                  )}&userId=${encodeURIComponent(info.userId)}&role=${
+                    info.role
+                  }`
+                );
+              } else {
+                navigate("/meeting-left");
+              }
+            } catch (err) {
+              console.error("Failed to parse meeting exit info:", err);
+              navigate("/meeting-left");
+            }
+          } else {
+            // No stored info, navigate to meeting-left
+            navigate("/meeting-left");
+          }
+
+          return; // Exit early for local user
+        }
+
+        // Handle remote user removal (existing logic)
         console.log(
-          `🚫 Complete removal of user: ${item.userId} (${item.displayName})`
+          `🚫 Complete removal of remote user: ${item.userId} (${item.displayName})`
         );
 
         // Use the complete user removal function
@@ -1333,13 +1507,11 @@ function JoinerScreen() {
         // Additional detach video call
         detachVideo(item.userId);
 
-        // Only show notification for non-local users
-        if (item.userId !== selfUserIdRef.current) {
-          addNotification(
-            `${item.displayName || item.userId} left the session.`
-          );
-        }
+        // Show notification for remote users
+        addNotification(`${item.displayName || item.userId} left the session.`);
       });
+
+      // Update participants list (only for remote users, local user handling is above)
       setParticipants(client.getAllUser());
     };
     client.on("user-added", handleUserAdded);
@@ -1352,7 +1524,9 @@ function JoinerScreen() {
       if (payload.state === "Closed") {
         // Only notify if we were actually connected before
         if (client.getCurrentUserInfo()?.userId) {
-          notifyUserLeft().catch((err) =>
+          // For hosts, this might be a temporary leave (refresh), not a meeting end
+          const isTemporaryLeave = isHost && payload.reason !== "ended by host";
+          notifyUserLeft(isTemporaryLeave).catch((err) =>
             console.error("failed to notify user left: ", err)
           );
         }
@@ -1369,7 +1543,9 @@ function JoinerScreen() {
       } else if (payload.state === "Fail") {
         // Only notify if we were actually connected before
         if (client.getCurrentUserInfo()?.userId) {
-          notifyUserLeft().catch((err) =>
+          // For hosts, this might be a temporary leave (refresh), not a meeting end
+          const isTemporaryLeave = isHost;
+          notifyUserLeft(isTemporaryLeave).catch((err) =>
             console.error("Failed to notify user left:", err)
           );
         }
@@ -1458,6 +1634,9 @@ function JoinerScreen() {
         }
       });
       videoContainerRefs.current = {};
+
+      // Clean up camera resources
+      cleanupCamera(selfUserIdRef.current);
 
       if (clientRef.current) {
         clientRef.current.leave();
@@ -1915,6 +2094,27 @@ function JoinerScreen() {
     }
   };
 
+  const handleLeave = async () => {
+    if (clientRef.current) {
+      try {
+        // notify backend that user is leaving (not temporary)
+        await notifyUserLeft(false);
+
+        await clientRef.current.leave(); // Participant leaves session
+      } catch (err) {
+        setError("Failed to leave meeting.");
+      }
+    }
+    navigate(
+      "/meeting-exit?meetingId=" +
+        encodeURIComponent(sessionName) +
+        "&userId=" +
+        encodeURIComponent(userName) +
+        "&role=" +
+        role
+    );
+  };
+
   const confirmLeaveSession = async () => {
     setShowLeaveMeetingConfirm(false);
 
@@ -2089,6 +2289,16 @@ function JoinerScreen() {
   else if (count <= 16) gridClass = `grid-${count}`;
   else if (count <= 25) gridClass = `grid-${count}`;
   else gridClass = "grid-25";
+
+  if (isJoining) return <div>Joining meeting...</div>;
+  if (error)
+    return (
+      <div className="error-page">
+        Error: {error}{" "}
+        <button onClick={() => navigate("/meeting-left")}>Go Back</button>
+      </div>
+    );
+  if (localUserRemoved) return <div>Redirecting...</div>;
 
   return (
     <div
@@ -2325,6 +2535,7 @@ function JoinerScreen() {
                   !isAudioOn ? "active" : ""
                 }`}
                 onClick={toggleAudio}
+                disabled={localUserRemoved}
               >
                 {!isAudioOn ? <UnMicroPhone /> : <MicroPhone />}
                 <span>{!isAudioOn ? "Unmute" : "Mute"}</span>
@@ -2457,7 +2668,7 @@ function JoinerScreen() {
                   !isVideoOn ? "active" : ""
                 }`}
                 onClick={toggleVideo}
-                disabled={isTogglingVideo}
+                disabled={isTogglingVideo || localUserRemoved}
                 style={{ position: "relative" }}
               >
                 {!isVideoOn ? <OffVideoCamera /> : <VideoCamera />}
@@ -2593,6 +2804,7 @@ function JoinerScreen() {
                 showModals.chat ? "active" : ""
               }`}
               onClick={() => handleModal("chat", !showModals.chat)}
+              disabled={localUserRemoved}
             >
               <span className="messageRound">
                 <ChatIcon />
@@ -2609,6 +2821,7 @@ function JoinerScreen() {
                 handleModal("participants", !showModals.participants)
               }
               title="Participants"
+              disabled={localUserRemoved}
             >
               <span className="messageRound">
                 <svg
@@ -2634,6 +2847,7 @@ function JoinerScreen() {
               }`}
               onClick={() => handleModal("info", !showModals.info)}
               title="Meeting Info"
+              disabled={localUserRemoved}
             >
               <span className="messageRound">
                 <svg
@@ -2654,6 +2868,7 @@ function JoinerScreen() {
                 isSharingScreen ? "active" : ""
               }`}
               onClick={startScreenShare}
+              disabled={localUserRemoved}
             >
               <ShareScreenIcon />
               <span>{isSharingScreen ? "Stop Share" : "Share Screen"}</span>
@@ -2665,6 +2880,7 @@ function JoinerScreen() {
                 <button
                   className="commonJoinderBtn annotationSetting active"
                   onClick={stopAnnotation}
+                  disabled={localUserRemoved}
                 >
                   <svg
                     width="20"
@@ -2680,6 +2896,7 @@ function JoinerScreen() {
                 <button
                   className="commonJoinderBtn annotationSetting"
                   onClick={handleStartAnnotation}
+                  disabled={localUserRemoved}
                 >
                   <svg
                     width="20"
@@ -2700,6 +2917,7 @@ function JoinerScreen() {
                   <button
                     className="commonJoinderBtn recordingSetting"
                     onClick={startRecording}
+                    disabled={localUserRemoved}
                   >
                     <RecordingIcon />
                     <span>Start</span>
@@ -2710,6 +2928,7 @@ function JoinerScreen() {
                     <button
                       className="commonJoinderBtn recordingSetting active"
                       onClick={pauseRecording}
+                      disabled={localUserRemoved}
                     >
                       <RecordingIcon />
                       <span>Pause</span>
@@ -2717,6 +2936,7 @@ function JoinerScreen() {
                     <button
                       className="commonJoinderBtn recordingSetting"
                       onClick={stopRecording}
+                      disabled={localUserRemoved}
                     >
                       <RecordingIcon />
                       <span>Stop</span>
@@ -2728,6 +2948,7 @@ function JoinerScreen() {
                     <button
                       className="commonJoinderBtn recordingSetting active"
                       onClick={resumeRecording}
+                      disabled={localUserRemoved}
                     >
                       <RecordingIcon />
                       <span>Resume</span>
@@ -2735,6 +2956,7 @@ function JoinerScreen() {
                     <button
                       className="commonJoinderBtn recordingSetting"
                       onClick={stopRecording}
+                      disabled={localUserRemoved}
                     >
                       <RecordingIcon />
                       <span>Stop</span>
@@ -2747,7 +2969,7 @@ function JoinerScreen() {
                 className={`commonJoinderBtn recordingSetting ${
                   showRecordingNotice ? "active" : ""
                 }`}
-                disabled
+                disabled={true}
               >
                 <RecordingIcon />
                 <span>
@@ -2761,13 +2983,15 @@ function JoinerScreen() {
                 className="leaveMeetingButton"
                 onClick={handleEndMeeting}
                 style={{ background: "#e53935" }}
+                disabled={localUserRemoved}
               >
                 End Meeting
               </button>
             ) : (
               <button
                 className="leaveMeetingButton"
-                onClick={() => setShowLeaveMeetingConfirm(true)}
+                onClick={handleLeave}
+                disabled={localUserRemoved}
               >
                 Leave Meeting
               </button>
@@ -3000,7 +3224,7 @@ function JoinerScreen() {
                   width: "100%",
                 }}
               >
-                Rejoin
+                Cancel
               </button>
             </div>
           </div>
@@ -3655,6 +3879,18 @@ function JoinerScreen() {
             transform: translateY(0);
             opacity: 1;
           }
+        }
+        
+        .commonJoinderBtn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+        
+        .leaveMeetingButton:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
         }
       `}</style>
 

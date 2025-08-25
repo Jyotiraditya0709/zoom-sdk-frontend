@@ -367,3 +367,32 @@ export const LeftArrow = ({ className, color, onClick }) => {
     </svg>
   );
 };
+
+export const SendIcon = ({ className, color, onClick }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      className={className}
+      onClick={onClick}
+    >
+      <path
+        d="M17.5 2.5L9.16667 10.8333"
+        stroke="#3397EF"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M17.5 2.5L12.5 17.5L9.16667 10.8333L2.5 7.5L17.5 2.5Z"
+        stroke="#3397EF"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
