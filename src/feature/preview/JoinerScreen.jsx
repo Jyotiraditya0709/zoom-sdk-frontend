@@ -125,6 +125,7 @@ function JoinerScreen() {
   const [activeSpeakerId, setActiveSpeakerId] = useState(null);
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [isRemoteSharing, setIsRemoteSharing] = useState(false);
+  const [currentSharerId, setCurrentSharerId] = useState(null);
   const [isAnnotating, setIsAnnotating] = useState(false);
   const [showRecordingNotice, setShowRecordingNotice] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
@@ -1068,15 +1069,26 @@ function JoinerScreen() {
         }
 
         console.log(`🎥 User ${userId} started video - attaching`);
+
+        // Show video container if it was hidden
+        if (videoContainerRefs.current[userId]) {
+          console.log(`📹 Showing video container for user: ${userId}`);
+          const container = videoContainerRefs.current[userId];
+          container.style.display = "block";
+        }
+
         await attachVideo(userId);
       } else if (action === "Stop") {
-        console.log(
-          `📹 User ${userId} stopped video - complete cleanup initiated`
-        );
+        console.log(`📹 User ${userId} stopped video - detaching video only`);
         await detachVideo(userId);
 
-        // Use the complete user removal function
-        completeUserRemoval(userId);
+        // Only hide the video container, don't remove the user
+        if (videoContainerRefs.current[userId]) {
+          console.log(`📹 Hiding video container for user: ${userId}`);
+          const container = videoContainerRefs.current[userId];
+          container.style.display = "none";
+          // Don't remove from refs or participants - user is still in meeting
+        }
       }
 
       // Update participants state so UI reflects remote video changes
@@ -1218,10 +1230,22 @@ function JoinerScreen() {
     joinSession();
 
     // Advanced screen sharing event handlers (like MeetingPage.jsx)
-    const handleShareStarted = () => setIsSharingScreen(true);
+    const handleShareStarted = () => {
+      setIsSharingScreen(true);
+      setCurrentSharerId(selfUserIdRef.current);
+      // Set up browser screen sharing handlers for the sharer
+      setTimeout(() => {
+        if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+          setupBrowserScreenShareHandlers();
+        }
+      }, 100);
+    };
     const handleShareStopped = () => {
       setIsSharingScreen(false);
       setIsRemoteSharing(false);
+      setCurrentSharerId(null);
+      // Clean up browser screen sharing handlers
+      cleanupBrowserScreenShareHandlers();
     };
 
     // For viewers: always use canvas for incoming share (like MeetingPage.jsx)
@@ -1235,10 +1259,12 @@ function JoinerScreen() {
           );
         }
         setIsRemoteSharing(true);
+        setCurrentSharerId(userId);
         addNotification(`Screen sharing started by ${userId}`);
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
+        setCurrentSharerId(null);
       }
     };
 
@@ -1260,6 +1286,181 @@ function JoinerScreen() {
     client.on("share-content-stopped", handleShareStopped);
     client.on("share-content-received", handleShareReceived);
     client.on("active-share-change", handleActiveShareChange);
+
+    // Listen for browser screen sharing events to sync UI - ONLY for the user who is sharing
+    const handleBrowserScreenShareEnd = async () => {
+      console.log("[SCREEN SHARE] Browser screen share ended");
+      // Only handle if this user is actually sharing their screen
+      if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+        try {
+          // Stop the screen sharing in the Zoom SDK
+          if (mediaStreamRef.current) {
+            await mediaStreamRef.current.stopShareScreen();
+          }
+
+          // Clean up screen sharing elements
+          if (shareRenderVideoRef.current) {
+            shareRenderVideoRef.current.style.display = "none";
+          }
+          if (shareCanvasRef.current) {
+            shareCanvasRef.current.style.display = "none";
+          }
+
+          // Update state
+          setIsSharingScreen(false);
+          setCurrentSharerId(null);
+          setIsRemoteSharing(false);
+
+          addNotification("Screen sharing stopped");
+          console.log("[SCREEN SHARE] Browser screen share cleanup completed");
+        } catch (error) {
+          console.error(
+            "[SCREEN SHARE] Error during browser screen share cleanup:",
+            error
+          );
+          // Still update state even if cleanup fails
+          setIsSharingScreen(false);
+          setCurrentSharerId(null);
+          setIsRemoteSharing(false);
+        }
+      }
+    };
+
+    // Add event listeners for browser screen sharing - ONLY for the user who is sharing
+    let originalGetDisplayMedia = null;
+    let isGetDisplayMediaOverridden = false;
+
+    const setupBrowserScreenShareHandlers = () => {
+      // Only set up handlers if this user is the one sharing
+      if (
+        isSharingScreen &&
+        currentSharerId === selfUserIdRef.current &&
+        !isGetDisplayMediaOverridden
+      ) {
+        console.log(
+          "[SCREEN SHARE] Setting up browser screen share handlers for sharer"
+        );
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          // Store original function
+          originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia;
+
+          // Override getDisplayMedia to add event listeners
+          navigator.mediaDevices.getDisplayMedia = function (constraints) {
+            return originalGetDisplayMedia
+              .call(this, constraints)
+              .then((stream) => {
+                // Add event listener to the stream to detect when it ends
+                stream.getVideoTracks().forEach((track) => {
+                  track.addEventListener("ended", handleBrowserScreenShareEnd);
+                  track.addEventListener("stop", handleBrowserScreenShareEnd);
+                });
+
+                // Also listen for the stream's ended event
+                stream.addEventListener("ended", handleBrowserScreenShareEnd);
+
+                return stream;
+              });
+          };
+          isGetDisplayMediaOverridden = true;
+        }
+
+        // Add visibility change listener only for the sharer
+        const handleVisibilityChange = () => {
+          if (
+            document.visibilityState === "hidden" &&
+            isSharingScreen &&
+            currentSharerId === selfUserIdRef.current
+          ) {
+            setTimeout(() => {
+              if (
+                isSharingScreen &&
+                currentSharerId === selfUserIdRef.current
+              ) {
+                console.log(
+                  "[SCREEN SHARE] Tab hidden during screen share - checking if stopped"
+                );
+                handleBrowserScreenShareEnd();
+              }
+            }, 100);
+          }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        // Add page unload listener only for the sharer
+        const handlePageUnload = () => {
+          if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+            console.log("[SCREEN SHARE] Page unloading during screen share");
+            handleBrowserScreenShareEnd();
+          }
+        };
+
+        window.addEventListener("beforeunload", handlePageUnload);
+        window.addEventListener("pagehide", handlePageUnload);
+
+        // Store references for cleanup
+        window._screenShareVisibilityHandler = handleVisibilityChange;
+        window._screenSharePageUnloadHandler = handlePageUnload;
+      }
+    };
+
+    const cleanupBrowserScreenShareHandlers = () => {
+      // Restore original getDisplayMedia if it was overridden
+      if (isGetDisplayMediaOverridden && originalGetDisplayMedia) {
+        navigator.mediaDevices.getDisplayMedia = originalGetDisplayMedia;
+        isGetDisplayMediaOverridden = false;
+        originalGetDisplayMedia = null;
+      }
+
+      // Remove event listeners
+      if (window._screenShareVisibilityHandler) {
+        document.removeEventListener(
+          "visibilitychange",
+          window._screenShareVisibilityHandler
+        );
+        window._screenShareVisibilityHandler = null;
+      }
+      if (window._screenSharePageUnloadHandler) {
+        window.removeEventListener(
+          "beforeunload",
+          window._screenSharePageUnloadHandler
+        );
+        window.removeEventListener(
+          "pagehide",
+          window._screenSharePageUnloadHandler
+        );
+        window._screenSharePageUnloadHandler = null;
+      }
+    };
+
+    // Set up handlers when screen sharing starts
+    if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+      setupBrowserScreenShareHandlers();
+    }
+
+    // Periodic check to ensure screen sharing state is accurate - ONLY for the sharer
+    const screenShareCheckInterval = setInterval(() => {
+      if (
+        isSharingScreen &&
+        currentSharerId === selfUserIdRef.current &&
+        mediaStreamRef.current
+      ) {
+        try {
+          if (!mediaStreamRef.current.isSharingScreen) {
+            console.log(
+              "[SCREEN SHARE] Periodic check detected screen sharing ended"
+            );
+            handleBrowserScreenShareEnd();
+          }
+        } catch (error) {
+          console.log(
+            "[SCREEN SHARE] Periodic check error - screen sharing may have ended"
+          );
+          handleBrowserScreenShareEnd();
+        }
+      }
+    }, 2000); // Check every 2 seconds
 
     // Optional: Listen for annotation privilege changes
     client.on(
@@ -1420,6 +1621,7 @@ function JoinerScreen() {
             try {
               mediaStreamRef.current.stopShareScreen();
               setIsSharingScreen(false);
+              setCurrentSharerId(null);
             } catch (err) {
               console.warn(
                 "Failed to stop screen sharing during local user removal:",
@@ -1446,6 +1648,7 @@ function JoinerScreen() {
           setIsVideoOn(false);
           setIsSharingScreen(false);
           setIsRemoteSharing(false);
+          setCurrentSharerId(null);
           setIsAnnotating(false);
           setShowRecordingNotice(false);
           setRecordingStatus("stopped");
@@ -1665,6 +1868,14 @@ function JoinerScreen() {
       client.off("active-media-failed");
       client.off("current-audio-change");
       client.off("auto-play-audio-failed");
+
+      // Clean up browser screen sharing handlers
+      cleanupBrowserScreenShareHandlers();
+
+      // Clean up periodic check interval
+      if (screenShareCheckInterval) {
+        clearInterval(screenShareCheckInterval);
+      }
     };
   }, []);
 
@@ -1921,7 +2132,15 @@ function JoinerScreen() {
         }
 
         setIsSharingScreen(true);
+        setCurrentSharerId(selfUserIdRef.current);
         addNotification("Screen sharing started");
+
+        // Set up browser screen sharing handlers for the sharer
+        setTimeout(() => {
+          if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+            setupBrowserScreenShareHandlers();
+          }
+        }, 100);
       } else {
         console.log("[SCREEN SHARE] Stopping screen share...");
         const mediaStream = clientRef.current.getMediaStream();
@@ -1932,7 +2151,11 @@ function JoinerScreen() {
           shareCanvasRef.current.style.display = "none";
         console.log("[SCREEN SHARE] Screen sharing stopped successfully");
         setIsSharingScreen(false);
+        setCurrentSharerId(null);
         addNotification("Screen sharing stopped");
+
+        // Clean up browser screen sharing handlers
+        cleanupBrowserScreenShareHandlers();
       }
     } catch (err) {
       console.log("[SCREEN SHARE] Error:", {
@@ -1944,6 +2167,8 @@ function JoinerScreen() {
 
       // Always reset the sharing state
       setIsSharingScreen(false);
+      setCurrentSharerId(null);
+      cleanupBrowserScreenShareHandlers();
 
       if (err?.reason === "user deny screen share" || err?.errorCode === 6200) {
         console.log("[SCREEN SHARE] User cancelled screen share");

@@ -1,0 +1,160 @@
+/* MeetingValidator.css */
+
+.meeting-validator-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f8f9fa;
+  font-family: "Google Sans", Roboto, sans-serif;
+}
+
+.meeting-validator-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.meeting-validator-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 18px;
+  color: #737373;
+  background-color: #f8f9fa;
+  font-family: "Google Sans", Roboto, sans-serif;
+}
+
+.meeting-validator-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #171717;
+  margin: 0;
+}
+
+.meeting-validator-title.success {
+  color: #00c853;
+}
+
+.meeting-validator-title.error {
+  color: #dc3545;
+}
+
+.meeting-validator-title.warning {
+  color: #ff6d00;
+}
+
+.meeting-validator-title.info {
+  color: #0e77d3;
+}
+
+.meeting-validator-message {
+  color: #737373;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.meeting-validator-details {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  text-align: left;
+}
+
+.meeting-validator-details p {
+  margin: 8px 0;
+  color: #171717;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.meeting-validator-details strong {
+  color: #404040;
+  font-weight: 600;
+}
+
+.meeting-validator-button {
+  background: #0e77d3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-width: 120px;
+}
+
+.meeting-validator-button:hover {
+  background: #0b5aa3;
+}
+
+.meeting-validator-button:active {
+  background: #094a8a;
+}
+
+.meeting-validator-info {
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  max-width: 400px;
+}
+
+.meeting-validator-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* Error state specific styles */
+.meeting-validator-error .meeting-validator-title {
+  color: #dc3545;
+}
+
+.meeting-validator-error .meeting-validator-button {
+  background: #dc3545;
+}
+
+.meeting-validator-error .meeting-validator-button:hover {
+  background: #c82333;
+}
+
+/* Success state specific styles */
+.meeting-validator-success .meeting-validator-title {
+  color: #00c853;
+}
+
+.meeting-validator-success .meeting-validator-button {
+  background: #00c853;
+}
+
+.meeting-validator-success .meeting-validator-button:hover {
+  background: #00a047;
+}
+
+/* Warning state specific styles */
+.meeting-validator-warning .meeting-validator-title {
+  color: #ff6d00;
+}
+
+.meeting-validator-warning .meeting-validator-button {
+  background: #ff6d00;
+}
+
+.meeting-validator-warning .meeting-validator-button:hover {
+  background: #e55a00;
+}
+
+
