@@ -2793,15 +2793,15 @@ function JoinerScreen() {
                     className="video-options-menu"
                     style={{
                       position: "absolute",
-                      bottom: 50,
-                      left: 0,
+                      bottom: "105px",
+                      left: "433px",
                       background: "#222",
                       color: "#fff",
                       borderRadius: 10,
                       boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                       padding: 16,
                       minWidth: 220,
-                      maxWidth: "90vw",
+                      maxWidth: "220px",
                       zIndex: 9999,
                       border: "1px solid #333",
                     }}
@@ -2935,14 +2935,14 @@ function JoinerScreen() {
                     style={{
                       position: "absolute",
                       bottom: 50,
-                      right: 0,
+                      left: 0,
                       background: "#222",
                       color: "#fff",
                       borderRadius: 10,
                       boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                       padding: 16,
                       minWidth: 220,
-                      maxWidth: "90vw",
+                      maxWidth: "220px",
                       zIndex: 9999,
                       border: "1px solid #333",
                     }}

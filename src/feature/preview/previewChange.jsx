@@ -355,11 +355,11 @@ const PreJoin = () => {
         );
       }
     };
-    // Only run if the video element is mounted
+    // Only run if the video element is mounted and bgMode changes
     if (videoRef.current) {
       updateVB();
     }
-  }, [bgMode, videoRef.current]);
+  }, [bgMode]);
 
   useEffect(() => {
     if (selectedCamera && selectedMic) startPreview();
@@ -524,21 +524,24 @@ const PreJoin = () => {
           <div className="meetingDetailWrapper">
             {/* LEFT PREVIEW */}
             <div className="leftMeetingDetail">
-              <video-player-container className="local-preview-container">
+              <video-player-container
+                className="local-preview-container"
+                style={{ width: "100%", height: "100%", background: "black" }}
+              >
                 {bgMode === "none" ? (
                   <video
                     ref={videoRef}
                     autoPlay
                     muted
                     playsInline
-                    className="previewVideo"
-                  />
+                    style={{ width: "100%", height: "100%" }}
+                  ></video>
                 ) : (
                   <video-player
                     ref={videoRef}
                     id="local-preview-video"
-                    className="previewVideo"
-                  />
+                    style={{ width: "100%", height: "100%" }}
+                  ></video-player>
                 )}
               </video-player-container>
               {isLoading && <div className="loading">Starting preview...</div>}
