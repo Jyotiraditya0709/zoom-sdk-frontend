@@ -16,7 +16,7 @@
     align-items: center;
     justify-content: space-between;
     flex-direction: column;
-    width: 100%;
+    width: 70%;
     -webkit-box-flex: 1;
     box-flex: 1;
     -webkit-flex-grow: 1;
@@ -91,17 +91,19 @@
     align-items: center;
     justify-content: center;
     position: relative;
+    min-height: 100px;
   }
 
   .joinerVideoBox.active {
     border: 2px solid #0e77d3;
+    min-height: 100px;
   }
 
   /* Add active speaker highlighting */
   .joinerVideoBox.active-speaker {
     border: 3px solid #00baff;
     box-shadow: 0 0 20px rgba(0, 186, 255, 0.5);
-    transform: scale(1.02);
+    transform: scale(1.01);
     transition: all 0.3s ease;
   }
 
@@ -129,11 +131,11 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 15px 20px;
+    padding: 15px 8px;
     padding-top: 0;
     flex-wrap: wrap;
     overflow-x: auto;
-    min-height: 80px;
+    min-height: 100px;
 
     .commonJoinderBtn {
       border-radius: 10px;
@@ -146,8 +148,8 @@
       gap: 6px;
       width: auto;
       min-width: 120px;
-      max-width: 140px;
-      min-height: 66px;
+      max-width: 150px;
+      min-height: 80px;
       outline: none;
       flex-shrink: 0;
 

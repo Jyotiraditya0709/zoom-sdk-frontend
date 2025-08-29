@@ -1,39 +1,42 @@
 .mainMeetingContainer {
-  width: 100%;
-  height: 100vh;
+ max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
 
   .videoCallContainer {
     display: flex;
-    align-items: center;
     justify-content: center;
     height: calc(100vh - 82px);
-    padding: 0 100px;
+    /* padding: 0 30px; */
     width: 100%;
   }
 
   .videoCallDetailBlock {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 20px;
     width: 100%;
     max-width: 1400px;
   }
 
   .meetingDetailWrapper {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: center;
     gap: 40px;
+    margin-top: 40px;
+    height: 100%;
   }
 
   .leftMeetingDetail {
-    width: 100%;
-    max-width: 730px;
-    height: 400px; /* Fixed height instead of min-height to prevent expansion */
+    flex: 1;
+    max-width: 800px;
     border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid #e0e0e0;
+    /* border: 1px solid #e0e0e0; */
     position: relative;
-    background: #000;
+    /* background: #000; */
+    aspect-ratio: 16/9;
+    min-height: 400px;
   }
 
   /* Video styling */
@@ -97,14 +100,16 @@
   .leftMeetingDetail video-player,
   .leftMeetingDetail video-player-container {
     max-width: 100%;
-    max-height: 100%;
+    height: 100%;
     min-width: 0;
-    min-height: 0;
+    min-height: 550px;
   }
 
   .rightMeetingDetail {
     width: 100%;
     max-width: 400px;
+    flex-shrink: 0;
+    margin-top: 40px;
   }
 
   .leftMeetingDetail .buttonZoomSetting {
@@ -119,15 +124,22 @@
   }
 
   .leftMeetingDetail .buttonZoomSetting button {
-    border-radius: 16px;
+    border-radius: 50%;
     border: 1px solid #e5e5e5;
-    background: #fafafa;
-    width: 44px;
-    height: 44px;
+    background: rgba(255, 255, 255, 0.9);
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     outline: none;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    svg {
+      min-width: 24px;
+      min-height: 24px;
+    }
   }
 
   .rightMeetingDetail h2 {
@@ -164,7 +176,7 @@
 
   .settingOptionGroup .dropdownMeeting {
     width: 100%;
-    padding: 16px 20px;
+    padding: 16px 35px 16px 20px;
     color: #737373;
     font-size: 14px;
     background: transparent;
@@ -222,9 +234,12 @@
 
   .bottomControls {
     display: flex;
-    width: 100%;
+    align-items: center;
     gap: 16px;
-    max-width: 800px;
+    margin-top: 10px;
+    padding: 8px 20px;
+    border-radius: 12px;
+    /* width: 100%; */
   }
 
   .bottomControls .commonTextBtn {
@@ -248,9 +263,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    width: 100%;
+    flex: 1;
+    min-width: 120px;
 
-    input {
+    input[type="range"] {
       width: 100%;
       flex: 1;
     }
@@ -291,11 +307,15 @@
 }
 
 .commonDetail {
+  margin-bottom: 22px;
+  
   span {
     color: #737373;
     font-size: 14px;
     font-weight: 500;
     line-height: 120%;
+    display: block;
+    margin-bottom: 6px;
   }
 
   p {
@@ -314,4 +334,41 @@
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .mainMeetingContainer {
+    .meetingDetailWrapper {
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .leftMeetingDetail {
+      max-width: 100%;
+      aspect-ratio: 16/9;
+    }
+
+    .rightMeetingDetail {
+      max-width: 100%;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .mainMeetingContainer {
+    .videoCallContainer {
+      padding: 0 20px;
+    }
+
+    .bottomControls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .bottomControls .commonTextBtn {
+      min-width: auto;
+    }
+  }
 }

@@ -33,14 +33,16 @@
 video,
 video-player,
 video-player-container {
-  width: 100%;
-  height: 100%;
+  display: block;     /* make them act like divs */
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
   object-fit: cover;
   border-radius: 16px;
-  display: block;
-  margin: 0;
-  padding: 0;
-  border: none;
+  overflow: hidden;
+  background: #000;
+  position: relative;
 }
 
 .local-preview-container {
@@ -53,6 +55,9 @@ video-player-container {
   position: relative;
   margin: 0;
   padding: 0;
+  width: 800px;
+height: 562px;
+flex-shrink: 0;
 }
 
 .local-preview-container video,

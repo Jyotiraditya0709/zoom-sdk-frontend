@@ -8,7 +8,7 @@
   overflow-y: auto;
 
   &.active {
-    max-width: 332px;
+    max-width: 350px;
   }
 
   .userListChartBox {
@@ -21,10 +21,11 @@
   .userItemsChartBox {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    /* justify-content: space-between; */
     gap: 8px;
-    width: 100%;
-    padding: 15px 18px;
+    /* width: 100%; */
+    /* padding: 15px 18px; */
+    padding: 8px;
   }
 
   .userItemsChartBox .avatar {

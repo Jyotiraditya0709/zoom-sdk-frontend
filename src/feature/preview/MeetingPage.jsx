@@ -2186,7 +2186,7 @@ const MeetingPage = () => {
             top: 0,
             right: 0,
             height: "100%",
-            width: 340,
+            width: 350,
             background: "#fff",
             boxShadow: "-2px 0 12px #0002",
             zIndex: 2000,

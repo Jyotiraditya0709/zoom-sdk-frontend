@@ -2104,7 +2104,7 @@ function JoinerScreen() {
           console.log("[SCREEN SHARE] Using video element for WebCodecs");
           // Ensure video element is properly set up
           if (shareRenderVideoRef.current) {
-            shareRenderVideoRef.current.style.width = "1280px";
+            shareRenderVideoRef.current.style.width = "850px";
             shareRenderVideoRef.current.style.height = "720px";
             // Ensure video element has proper attributes
             shareRenderVideoRef.current.autoplay = true;
@@ -2548,6 +2548,7 @@ function JoinerScreen() {
                 participants.length <= participants.length
                   ? "20px 100px"
                   : "20px 50px",
+                  width: isSharingScreen ? "80%" : "90%",
             }}
           >
             {participants.slice(0, 4).map((user, i) => (
@@ -2679,7 +2680,7 @@ function JoinerScreen() {
           {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
           <div
             style={{
-              width: "100%",
+              width: "80%",
               display: "flex",
               justifyContent: "center",
               margin: "16px 0",
@@ -2696,9 +2697,10 @@ function JoinerScreen() {
               style={{
                 display: "none",
                 maxWidth: "90vw",
-                maxHeight: "60vh",
+                maxHeight: "50vh",
                 borderRadius: 12,
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+
               }}
             />
             {/* Canvas element for screen sharing (fallback) */}
@@ -2710,7 +2712,7 @@ function JoinerScreen() {
               style={{
                 display: "none",
                 maxWidth: "90vw",
-                maxHeight: "60vh",
+                maxHeight: "50vh",
                 borderRadius: 12,
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
               }}
@@ -2723,21 +2725,23 @@ function JoinerScreen() {
               style={{
                 display: isRemoteSharing ? "block" : "none",
                 maxWidth: "90vw",
-                maxHeight: "60vh",
+                maxHeight: "50vh",
                 borderRadius: 12,
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+                width: "70%",
+                height: "100%",
               }}
             />
             {/* Canvas for remote share */}
             <canvas
               ref={remoteShareContainerRef}
               id="users-screen-share-content-canvas"
-              width="1920"
-              height="1080"
+              width="70%"
+              height="100%"
               style={{
                 display: isRemoteSharing ? "block" : "none",
                 maxWidth: "90vw",
-                maxHeight: "60vh",
+                maxHeight: "50vh",
                 borderRadius: 12,
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
               }}
@@ -2770,7 +2774,7 @@ function JoinerScreen() {
                 style={{
                   position: "absolute",
                   right: 0,
-                  bottom: 40,
+                  bottom: 55,
                   background: "#222",
                   color: "#fff",
                   border: "none",
@@ -2904,7 +2908,7 @@ function JoinerScreen() {
                 style={{
                   position: "absolute",
                   right: 0,
-                  bottom: 40,
+                  bottom: 55,
                   background: "#222",
                   color: "#fff",
                   border: "none",
@@ -3061,7 +3065,7 @@ function JoinerScreen() {
               </span>
               <span>
                 {showModals.participants
-                  ? "Close Participants"
+                  ? "Participants"
                   : "Participants"}
               </span>
             </button>
@@ -3127,7 +3131,7 @@ function JoinerScreen() {
                     width="20"
                     height="20"
                     viewBox="0 0 24 24"
-                    fill="currentColor"
+                    fill="black"
                   >
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                   </svg>
@@ -3465,7 +3469,7 @@ function JoinerScreen() {
             top: 0,
             right: 0,
             height: "100%",
-            width: 340,
+            width: 350,
             background: "#fff",
             boxShadow: "-2px 0 12px #0002",
             zIndex: 2000,
@@ -3717,7 +3721,7 @@ function JoinerScreen() {
             top: 0,
             right: 0,
             height: "100%",
-            width: 340,
+            width: 350,
             background: "#fff",
             boxShadow: "-2px 0 12px #0002",
             zIndex: 2000,

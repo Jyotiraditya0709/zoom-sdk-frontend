@@ -242,6 +242,10 @@ canvas {
 .video-control-group > button:first-of-type:hover {
   background-color: rgba(0, 0, 0, 0.1);
 }
+.control-button.video-control-group {
+  position: relative; /* anchor point for absolute children */
+  display: inline-block;
+}
 
 .video-options-menu {
   position: absolute;

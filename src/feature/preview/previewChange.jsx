@@ -543,11 +543,7 @@ const PreJoin = () => {
                     style={{ width: "100%", height: "100%" }}
                   ></video-player>
                 )}
-              </video-player-container>
-              {isLoading && <div className="loading">Starting preview...</div>}
-              {error && <div className="error">{error}</div>}
-
-              <div className="buttonZoomSetting">
+                 <div className="buttonZoomSetting">
                 <button onClick={() => setIsMute(!isMute)}>
                   {isMute ? <MicroPhone /> : <UnMicroPhone />}
                 </button>
@@ -555,13 +551,63 @@ const PreJoin = () => {
                   {isVideoOff ? <VideoCamera /> : <OffVideoCamera />}
                 </button>
               </div>
+              </video-player-container>
+              {isLoading && <div className="loading">Starting preview...</div>}
+              {error && <div className="error">{error}</div>}
+
+             
+
+                 <div className="bottomControls">
+            <button
+              className="commonTextBtn testMicrophone"
+              onClick={handleMicTest}
+            >
+              {micTestPhase === "recording"
+                ? "Recording..."
+                : micTestPhase === "playing"
+                  ? "Playing..."
+                  : isMicTesting
+                    ? "Stop"
+                    : "Test Microphone"}
+            </button>
+              <progress
+            id="mic-input-level"
+            value={micLevel}
+            max={100}
+            style={{}}
+          ></progress>
+          {micTestPlaybackWarning && (
+            <div style={{ color: "orange", marginTop: 4 }}>
+              {micTestPlaybackWarning}
+            </div>
+          )}
+
+            <button
+              className="commonTextBtn testSpeaker"
+              onClick={handleSpeakerTest}
+            >
+              Test Speaker
+            </button>
+
+            <div className="sliderMeetingWrapper">
+              {volume === 0 ? <NoSpeakerIcon /> : <SpeakerIcon />}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="slider"
+              />
+            </div>
+          </div>
             </div>
 
             {/* RIGHT SETTINGS */}
             <div className="rightMeetingDetail">
               <h2>Ready to Join?</h2>
 
-              <div className="colGap22">
+              <div >
                 <div className="commonDetail">
                   <span>Joinee: </span>
                   <p>{userName}</p>
@@ -671,51 +717,7 @@ const PreJoin = () => {
           </div>
 
           {/* Bottom Controls */}
-          <div className="bottomControls">
-            <button
-              className="commonTextBtn testMicrophone"
-              onClick={handleMicTest}
-            >
-              {micTestPhase === "recording"
-                ? "Recording..."
-                : micTestPhase === "playing"
-                  ? "Playing..."
-                  : isMicTesting
-                    ? "Stop"
-                    : "Test Microphone"}
-            </button>
-
-            <button
-              className="commonTextBtn testSpeaker"
-              onClick={handleSpeakerTest}
-            >
-              Test Speaker
-            </button>
-
-            <div className="sliderMeetingWrapper">
-              {volume === 0 ? <NoSpeakerIcon /> : <SpeakerIcon />}
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="slider"
-              />
-            </div>
-          </div>
-
-          <progress
-            id="mic-input-level"
-            value={micLevel}
-            max={100}
-            style={{ width: "100%", marginTop: 8 }}
-          ></progress>
-          {micTestPlaybackWarning && (
-            <div style={{ color: "orange", marginTop: 4 }}>
-              {micTestPlaybackWarning}
-            </div>
-          )}
+       
         </div>
       </div>
     </div>
