@@ -1594,7 +1594,7 @@ const MeetingPage = () => {
               borderRadius: 8,
               marginBottom: 8,
               boxShadow: "0 2px 8px #0006",
-              minWidth: 220,
+              width: 300,
               position: "relative",
               opacity: 1,
               transition: "opacity 0.4s",
@@ -1900,7 +1900,7 @@ const MeetingPage = () => {
                       await mediaStreamRef.current.switchCamera(e.target.value);
                     }
                   }}
-                  style={{ width: "100%" }}
+                  style={{ width: "50%" }}
                 >
                   {videoDevices.map((d) => (
                     <option key={d.deviceId} value={d.deviceId}>

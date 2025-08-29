@@ -80,6 +80,10 @@
     gap: 10px;
   }
 
+  .joinerVideoScreen.sharing-on {
+    display: flex !important;
+  }
+
   .joinerVideoScreen .joinerVideoBox {
     background: #fafafa;
     overflow: hidden;
@@ -134,8 +138,8 @@
     padding: 15px 8px;
     padding-top: 0;
     flex-wrap: wrap;
-    overflow-x: auto;
-    min-height: 100px;
+    overflow: visible;
+    min-height: 150px;
 
     .commonJoinderBtn {
       border-radius: 10px;
@@ -246,6 +250,8 @@
   position: relative;
   display: inline-block;
   margin-right: 8px;
+  z-index: 1000;
+  overflow: visible;
 }
 
 .video-options-toggle {
@@ -280,6 +286,9 @@
   animation: fadeIn 0.3s ease;
   border: 1px solid #333;
   backdrop-filter: blur(10px);
+  overflow: visible;
+  white-space: nowrap;
+  max-height: none;
 }
 
 @keyframes fadeIn {

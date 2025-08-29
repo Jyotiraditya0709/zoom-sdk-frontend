@@ -3,7 +3,7 @@ import { useZoom } from "../preview/ZoomContext";
 import axios from "axios";
 import ZoomVideo from "@zoom/videosdk";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { createPortal } from "react-dom";
+
 import "./JoinerScreen.css";
 import Header from "../../Layout/Header/Header";
 import {
@@ -2541,7 +2541,7 @@ function JoinerScreen() {
       <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
         <div className="joinerScreenBlock">
           <div
-            className={`joinerVideoScreen ${gridClass}`}
+            className={`joinerVideoScreen ${gridClass} ${(isSharingScreen || isRemoteSharing) ? "sharing-on" : ""}`}
             style={{
               padding:
                 participants.length >= 3 &&
@@ -2602,6 +2602,7 @@ function JoinerScreen() {
                         zIndex: 2,
                         textAlign: "center",
                         padding: 16,
+                        objectFit: "cover"
                       }}
                     >
                       {error}
@@ -2777,7 +2778,7 @@ function JoinerScreen() {
                   bottom: 55,
                   background: "#222",
                   color: "#fff",
-                  border: "none",
+                  border: "1px solid #e7e7e7",
                   borderRadius: 8,
                   padding: "2px 8px",
                   fontSize: 12,
@@ -2791,94 +2792,92 @@ function JoinerScreen() {
               >
                 <FaChevronUp />
               </button>
-              {showVideoOptions === "mic" &&
-                createPortal(
-                  <div
-                    className="video-options-menu"
+              {showVideoOptions === "mic" && (
+                <div
+                  className="video-options-menu"
+                  style={{
+                    position: "absolute",
+                    bottom: "105px",
+                    // left: "100%",
+                    // transform: "translateX(-50%)",
+                    background: "#222",
+                    color: "#fff",
+                    borderRadius: 10,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    padding: 16,
+                    zIndex: 9999,
+                    border: "1px solid #333",
+                    width: 250,
+                  }}
+                >
+                  <label
                     style={{
-                      position: "absolute",
-                      bottom: "105px",
-                      left: "433px",
-                      background: "#222",
-                      color: "#fff",
-                      borderRadius: 10,
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                      padding: 16,
-                      minWidth: 220,
-                      maxWidth: "220px",
-                      zIndex: 9999,
-                      border: "1px solid #333",
+                      display: "block",
+                      marginBottom: 8,
+                      fontSize: "14px",
+                      fontWeight: "500",
                     }}
                   >
-                    <label
+                    Microphone:
+                    <select
+                      value={selectedMic}
+                      onChange={async (e) => {
+                        await switchMicrophone(e.target.value);
+                      }}
                       style={{
-                        display: "block",
-                        marginBottom: 8,
+                        width: "60%",
+                        marginTop: 4,
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #444",
+                        background: "#333",
+                        color: "#fff",
                         fontSize: "14px",
-                        fontWeight: "500",
+                        outline: "none",
                       }}
                     >
-                      Microphone:
-                      <select
-                        value={selectedMic}
-                        onChange={async (e) => {
-                          await switchMicrophone(e.target.value);
-                        }}
-                        style={{
-                          width: "100%",
-                          marginTop: 4,
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid #444",
-                          background: "#333",
-                          color: "#fff",
-                          fontSize: "14px",
-                          outline: "none",
-                        }}
-                      >
-                        {audioDevices.map((d) => (
-                          <option key={d.deviceId} value={d.deviceId}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label
+                      {audioDevices.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: 8,
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Speaker:
+                    <select
+                      value={selectedSpeaker}
+                      onChange={async (e) => {
+                        await switchSpeaker(e.target.value);
+                      }}
                       style={{
-                        display: "block",
-                        marginBottom: 8,
+                        width: "60%",
+                        marginTop: 4,
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #444",
+                        background: "#333",
+                        color: "#fff",
                         fontSize: "14px",
-                        fontWeight: "500",
+                        outline: "none",
                       }}
                     >
-                      Speaker:
-                      <select
-                        value={selectedSpeaker}
-                        onChange={async (e) => {
-                          await switchSpeaker(e.target.value);
-                        }}
-                        style={{
-                          width: "100%",
-                          marginTop: 4,
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid #444",
-                          background: "#333",
-                          color: "#fff",
-                          fontSize: "14px",
-                          outline: "none",
-                        }}
-                      >
-                        {speakerDevices.map((d) => (
-                          <option key={d.deviceId} value={d.deviceId}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>,
-                  document.body
-                )}
+                      {speakerDevices.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Camera button with dropdown for camera and background selection */}
@@ -2911,7 +2910,7 @@ function JoinerScreen() {
                   bottom: 55,
                   background: "#222",
                   color: "#fff",
-                  border: "none",
+                  border: "1px solid #e7e7e7",
                   borderRadius: 8,
                   padding: "2px 8px",
                   fontSize: 12,
@@ -2932,99 +2931,96 @@ function JoinerScreen() {
               >
                 <FaChevronUp />
               </button>
-              {showVideoOptions === "video" &&
-                createPortal(
-                  <div
-                    className="video-options-menu"
+              {showVideoOptions === "video" && (
+                <div
+                  className="video-options-menu"
+                  style={{
+                    position: "absolute",
+                    bottom: 108,
+                    background: "#222",
+                    color: "#fff",
+                    borderRadius: 10,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    padding: 16,
+                    zIndex: 9999,
+                    border: "1px solid #333",
+                    width: 350,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <label
                     style={{
-                      position: "absolute",
-                      bottom: 50,
-                      left: 0,
-                      background: "#222",
-                      color: "#fff",
-                      borderRadius: 10,
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                      padding: 16,
-                      minWidth: 220,
-                      maxWidth: "220px",
-                      zIndex: 9999,
-                      border: "1px solid #333",
+                      display: "block",
+                      marginBottom: 8,
+                      fontSize: "14px",
+                      fontWeight: "500",
                     }}
                   >
-                    <label
+                    Camera:
+                    <select
+                      value={selectedCamera}
+                      onChange={async (e) => {
+                        await switchCamera(e.target.value);
+                      }}
                       style={{
-                        display: "block",
-                        marginBottom: 8,
+                        width: "70%",
+                        marginTop: 4,
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #444",
+                        background: "#333",
+                        color: "#fff",
                         fontSize: "14px",
-                        fontWeight: "500",
+                        outline: "none",
                       }}
                     >
-                      Camera:
-                      <select
-                        value={selectedCamera}
-                        onChange={async (e) => {
-                          await switchCamera(e.target.value);
-                        }}
-                        style={{
-                          width: "100%",
-                          marginTop: 4,
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid #444",
-                          background: "#333",
-                          color: "#fff",
-                          fontSize: "14px",
-                          outline: "none",
-                        }}
-                      >
-                        {videoDevices.map((d) => (
-                          <option key={d.deviceId} value={d.deviceId}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label
+                      {videoDevices.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: 8,
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Virtual Background:
+                    <select
+                      value={bgMode}
+                      onChange={async (e) => {
+                        console.log(
+                          "🎨 Background changed to",
+                          e.target.value
+                        );
+                        setBgMode(e.target.value);
+                        setShowVideoOptions(null);
+                        if (isVideoOn) {
+                          await handleBgChange(e);
+                        }
+                      }}
                       style={{
-                        display: "block",
-                        marginBottom: 8,
+                        width: "60%",
+                        marginTop: 4,
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #444",
+                        background: "#333",
+                        color: "#fff",
                         fontSize: "14px",
-                        fontWeight: "500",
+                        outline: "none",
                       }}
                     >
-                      Virtual Background:
-                      <select
-                        value={bgMode}
-                        onChange={async (e) => {
-                          console.log(
-                            "🎨 Background changed to",
-                            e.target.value
-                          );
-                          setBgMode(e.target.value);
-                          setShowVideoOptions(null);
-                          if (isVideoOn) {
-                            await handleBgChange(e);
-                          }
-                        }}
-                        style={{
-                          width: "100%",
-                          marginTop: 4,
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid #444",
-                          background: "#333",
-                          color: "#fff",
-                          fontSize: "14px",
-                          outline: "none",
-                        }}
-                      >
-                        <option value="none">None</option>
-                        <option value="blur">Blur</option>
-                        <option value="image">Image</option>
+                      <option value="none">None</option>
+                      <option value="blur">Blur</option>
+                      <option value="image">Image</option>
                       </select>
                     </label>
-                  </div>,
-                  document.body
+                  </div>
                 )}
             </div>
 
@@ -3513,11 +3509,13 @@ function JoinerScreen() {
                 onClick={() => handleModal("participants", false)}
                 style={{
                   background: "none",
-                  border: "none",
                   fontSize: 22,
                   color: "#888",
                   cursor: "pointer",
                   marginLeft: 8,
+                  border: "1px solid #101010",
+                  paddingLeft: 8,
+                  paddingRight: 8,
                 }}
                 aria-label="Close participants panel"
               >
@@ -3765,11 +3763,13 @@ function JoinerScreen() {
                 onClick={() => handleModal("info", false)}
                 style={{
                   background: "none",
-                  border: "none",
+                  border: "1px solid #101010",
                   fontSize: 22,
                   color: "#888",
                   cursor: "pointer",
                   marginLeft: 8,
+                  paddingLeft: 8,
+                  paddingRight: 8,
                 }}
                 aria-label="Close info panel"
               >
