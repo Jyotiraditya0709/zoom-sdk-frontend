@@ -168,7 +168,7 @@ function JoinerScreen() {
   const localUserIdRef = useRef(null);
   const localVideoTrackRef = useRef(null);
   const localAudioTrackRef = useRef(null);
-  const shareVideoRef = useRef(null);
+
   const shareCanvasRef = useRef(null);
   const shareRenderVideoRef = useRef(null);
   const cameraBtnRef = useRef(null);
@@ -1287,23 +1287,9 @@ function JoinerScreen() {
       }
     };
 
-    const handleShareReceived = ({ userId }) => {
-      if (shareVideoRef.current) {
-        mediaStreamRef.current.renderShare(
-          shareVideoRef.current,
-          userId,
-          1280,
-          720,
-          0,
-          0
-        );
-      }
-    };
-
     // Use client.on/off instead of mediaStream.on/off (like MeetingPage.jsx)
     client.on("share-content-started", handleShareStarted);
     client.on("share-content-stopped", handleShareStopped);
-    client.on("share-content-received", handleShareReceived);
     client.on("active-share-change", handleActiveShareChange);
 
     // Listen for browser screen sharing events to sync UI - ONLY for the user who is sharing
@@ -2407,8 +2393,20 @@ function JoinerScreen() {
   };
 
   // Centralized modal management (like MeetingPage.jsx)
-  const handleModal = (modal, state) =>
-    setShowModals((prev) => ({ ...prev, [modal]: state }));
+  const handleModal = (modal, state) => {
+    if (state) {
+      // If opening a modal, close all other modals first
+      setShowModals({
+        participants: false,
+        chat: false,
+        info: false,
+        [modal]: true,
+      });
+    } else {
+      // If closing a modal, just close that specific one
+      setShowModals((prev) => ({ ...prev, [modal]: false }));
+    }
+  };
 
   // Device switching functions (like MeetingPage.jsx)
   const switchCamera = async (deviceId) => {
@@ -2739,21 +2737,7 @@ function JoinerScreen() {
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
               }}
             />
-            {/* Video element for viewing other users' shared content */}
-            <video
-              ref={shareVideoRef}
-              autoPlay
-              playsInline
-              style={{
-                display: isRemoteSharing ? "block" : "none",
-                maxWidth: "90vw",
-                maxHeight: "50vh",
-                borderRadius: 12,
-                boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
-                width: "70%",
-                height: "100%",
-              }}
-            />
+
             {/* Canvas for remote share */}
             <canvas
               ref={remoteShareContainerRef}

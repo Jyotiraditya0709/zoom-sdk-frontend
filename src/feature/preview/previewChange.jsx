@@ -543,71 +543,136 @@ const PreJoin = () => {
                     style={{ width: "100%", height: "100%" }}
                   ></video-player>
                 )}
-                 <div className="buttonZoomSetting">
-                <button onClick={() => setIsMute(!isMute)}>
-                  {isMute ? <MicroPhone /> : <UnMicroPhone />}
-                </button>
-                <button onClick={() => setIsVideoOff(!isVideoOff)}>
-                  {isVideoOff ? <VideoCamera /> : <OffVideoCamera />}
-                </button>
-              </div>
+                <div className="buttonZoomSetting">
+                  <button
+                    onClick={async () => {
+                      if (localAudioTrack) {
+                        try {
+                          if (isMute) {
+                            await localAudioTrack.unmute();
+                          } else {
+                            await localAudioTrack.mute();
+                          }
+                          setIsMute(!isMute);
+                        } catch (err) {
+                          console.error("Error toggling audio:", err);
+                        }
+                      }
+                    }}
+                  >
+                    {isMute ? <MicroPhone /> : <UnMicroPhone />}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        if (isVideoOff) {
+                          // Turn camera back on - recreate the track
+                          if (!localVideoTrack) {
+                            localVideoTrack =
+                              ZoomVideo.createLocalVideoTrack(selectedCamera);
+                          }
+                          if (bgMode === "none") {
+                            await localVideoTrack.start(videoRef.current);
+                          } else if (bgMode === "blur") {
+                            await localVideoTrack.start(
+                              document.querySelector("#local-preview-video"),
+                              { imageUrl: "blur" }
+                            );
+                          } else if (bgMode === "image") {
+                            await localVideoTrack.start(
+                              document.querySelector("#local-preview-video"),
+                              {
+                                imageUrl: "/lib/vb-resource/background.jpg",
+                              }
+                            );
+                          }
+                        } else {
+                          // Turn camera off - completely release the track
+                          if (localVideoTrack) {
+                            await localVideoTrack.stop();
+
+                            // Clear the video element
+                            if (videoRef.current) {
+                              videoRef.current.srcObject = null;
+                            }
+
+                            // Stop all tracks in the media stream to release camera
+                            if (localVideoTrack.mediaStream) {
+                              localVideoTrack.mediaStream
+                                .getTracks()
+                                .forEach((track) => {
+                                  track.stop();
+                                });
+                            }
+
+                            // Release the track completely
+                            localVideoTrack = null;
+                          }
+                        }
+                        setIsVideoOff(!isVideoOff);
+                      } catch (err) {
+                        console.error("Error toggling video:", err);
+                      }
+                    }}
+                  >
+                    {isVideoOff ? <OffVideoCamera /> : <VideoCamera />}
+                  </button>
+                </div>
               </video-player-container>
               {isLoading && <div className="loading">Starting preview...</div>}
               {error && <div className="error">{error}</div>}
 
-             
+              <div className="bottomControls">
+                <button
+                  className="commonTextBtn testMicrophone"
+                  onClick={handleMicTest}
+                >
+                  {micTestPhase === "recording"
+                    ? "Recording..."
+                    : micTestPhase === "playing"
+                      ? "Playing..."
+                      : isMicTesting
+                        ? "Stop"
+                        : "Test Microphone"}
+                </button>
+                <progress
+                  id="mic-input-level"
+                  value={micLevel}
+                  max={100}
+                  style={{}}
+                ></progress>
+                {micTestPlaybackWarning && (
+                  <div style={{ color: "orange", marginTop: 4 }}>
+                    {micTestPlaybackWarning}
+                  </div>
+                )}
 
-                 <div className="bottomControls">
-            <button
-              className="commonTextBtn testMicrophone"
-              onClick={handleMicTest}
-            >
-              {micTestPhase === "recording"
-                ? "Recording..."
-                : micTestPhase === "playing"
-                  ? "Playing..."
-                  : isMicTesting
-                    ? "Stop"
-                    : "Test Microphone"}
-            </button>
-              <progress
-            id="mic-input-level"
-            value={micLevel}
-            max={100}
-            style={{}}
-          ></progress>
-          {micTestPlaybackWarning && (
-            <div style={{ color: "orange", marginTop: 4 }}>
-              {micTestPlaybackWarning}
-            </div>
-          )}
+                <button
+                  className="commonTextBtn testSpeaker"
+                  onClick={handleSpeakerTest}
+                >
+                  Test Speaker
+                </button>
 
-            <button
-              className="commonTextBtn testSpeaker"
-              onClick={handleSpeakerTest}
-            >
-              Test Speaker
-            </button>
-
-            <div className="sliderMeetingWrapper">
-              {volume === 0 ? <NoSpeakerIcon /> : <SpeakerIcon />}
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="slider"
-              />
-            </div>
-          </div>
+                <div className="sliderMeetingWrapper">
+                  {volume === 0 ? <NoSpeakerIcon /> : <SpeakerIcon />}
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={volume}
+                    onChange={handleVolumeChange}
+                    className="slider"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* RIGHT SETTINGS */}
             <div className="rightMeetingDetail">
               <h2>Ready to Join?</h2>
 
-              <div >
+              <div>
                 <div className="commonDetail">
                   <span>Joinee: </span>
                   <p>{userName}</p>
@@ -717,7 +782,6 @@ const PreJoin = () => {
           </div>
 
           {/* Bottom Controls */}
-       
         </div>
       </div>
     </div>
