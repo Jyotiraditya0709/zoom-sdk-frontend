@@ -1498,9 +1498,12 @@ function JoinerScreen() {
           hasVideo: item.bVideoOn,
         });
 
-        // Only show notification for non-local users or if it's not a rejoin
+        // Show notification for user join (duplicate detection now handled at container creation level)
         if (item.userId !== selfUserIdRef.current) {
           addNotification(`${displayName} joined the session.`);
+        } else {
+          // This is the local user joining
+          console.log(`👤 Local user ${item.userId} joined the session`);
         }
 
         // If user joined without video, don't create a video container
@@ -1704,23 +1707,36 @@ function JoinerScreen() {
           return; // Exit early for local user
         }
 
-        // Handle remote user removal (existing logic)
+        // Handle remote user removal (following Zoom guidance)
         console.log(
           `🚫 Complete removal of remote user: ${item.userId} (${item.displayName})`
         );
 
-        // Use the complete user removal function
+        // 1. Remove user from participants list immediately
+        setParticipants((prev) => {
+          const updated = prev.filter((p) => p.userId !== item.userId);
+          console.log(
+            `📊 Removed user ${item.userId} from participants list: ${prev.length} → ${updated.length}`
+          );
+          return updated;
+        });
+
+        // 2. Clean up video container directly (following Zoom guidance)
+        const container = document.getElementById(`video-${item.userId}`);
+        if (container) {
+          container.innerHTML = "";
+          console.log(`🧹 Cleaned up video container for user: ${item.userId}`);
+        }
+
+        // 3. Use the complete user removal function for thorough cleanup
         completeUserRemoval(item.userId);
 
-        // Additional detach video call
+        // 4. Additional detach video call
         detachVideo(item.userId);
 
         // Show notification for remote users
         addNotification(`${item.displayName || item.userId} left the session.`);
       });
-
-      // Update participants list (only for remote users, local user handling is above)
-      setParticipants(client.getAllUser());
     };
     client.on("user-added", handleUserAdded);
     client.on("user-removed", handleUserRemoved);
@@ -2584,8 +2600,58 @@ function JoinerScreen() {
               >
                 {/* Video container for Zoom SDK to attach video - like MeetingPage.jsx */}
                 <video-player-container
+                  id={`video-${user.userId}`}
                   ref={(el) => {
                     videoContainerRefs.current[user.userId] = el;
+
+                    // Check for duplicate user when container is created
+                    if (el) {
+                      // Check if there are multiple containers with the same user ID
+                      const existingContainers = document.querySelectorAll(
+                        `[id="video-${user.userId}"]`
+                      );
+                      if (existingContainers.length > 1) {
+                        console.log(
+                          `🚫 DUPLICATE CONTAINER DETECTED for user: ${user.userId}`
+                        );
+                        console.log(
+                          `🚫 Found ${existingContainers.length} containers for the same user`
+                        );
+
+                        // Keep only the latest container, remove the old ones
+                        for (
+                          let i = 0;
+                          i < existingContainers.length - 1;
+                          i++
+                        ) {
+                          const oldContainer = existingContainers[i];
+                          console.log(
+                            `⚡ INSTANTLY REMOVING OLD CONTAINER for user: ${user.userId}`
+                          );
+                          oldContainer.remove();
+                        }
+
+                        // Also remove from participants list
+                        setParticipants((prev) => {
+                          const filtered = prev.filter(
+                            (p) => p.userId !== user.userId
+                          );
+                          console.log(
+                            `⚡ INSTANTLY removed duplicate user ${user.userId} from participants: ${prev.length} → ${filtered.length}`
+                          );
+                          return filtered;
+                        });
+
+                        // Complete cleanup
+                        completeUserRemoval(user.userId);
+                        detachVideo(user.userId);
+
+                        console.log(
+                          `⚡ INSTANT REMOVAL COMPLETE for duplicate user: ${user.userId}`
+                        );
+                      }
+                    }
+
                     // Set aspect ratio if available (like MeetingPage.jsx)
                     if (el && aspectRatioRefs.current[user.userId]) {
                       el.style.aspectRatio =
