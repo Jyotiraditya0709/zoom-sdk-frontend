@@ -140,7 +140,17 @@ function JoinerScreen() {
   const mediaStreamRef = useRef(null);
   const videoContainerRefs = useRef({});
   const selfUserIdRef = useRef(null);
-  const VIDEO_QUALITY = 3; // 1: 360p, 3: 720p
+  // Dynamic video quality based on network conditions
+  const [videoQuality, setVideoQuality] = useState(3); // 1: 360p, 3: 720p
+  const VIDEO_QUALITY = videoQuality; // Use dynamic quality
+
+  // Environment detection for debugging
+  const isProduction =
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1";
+  console.log(`🌍 Environment: ${isProduction ? "Production" : "Development"}`);
+  console.log(`🌍 Hostname: ${window.location.hostname}`);
+  console.log(`🌍 Protocol: ${window.location.protocol}`);
 
   // zoom context
   const { getClient, cleanup, bgMode, setBgMode } = useZoom();
@@ -397,6 +407,15 @@ function JoinerScreen() {
             visibility: container.style.visibility,
           });
 
+          console.log(
+            `🎥 Attaching video with quality: ${VIDEO_QUALITY} (${
+              VIDEO_QUALITY === 1
+                ? "360p"
+                : VIDEO_QUALITY === 2
+                  ? "480p"
+                  : "720p"
+            })`
+          );
           const userVideo = await mediaStreamRef.current.attachVideo(
             userId,
             VIDEO_QUALITY
@@ -2551,6 +2570,7 @@ function JoinerScreen() {
                   ? "20px 100px"
                   : "20px 50px",
               width: isSharingScreen ? "80%" : "90%",
+              height: isSharingScreen ? "100%" : "70%",
             }}
           >
             {participants.slice(0, 4).map((user, i) => (
