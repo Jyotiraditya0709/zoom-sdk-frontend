@@ -82,6 +82,7 @@
 
   .joinerVideoScreen.sharing-on {
     display: flex !important;
+    max-height: 70px;
   }
 
   .joinerVideoScreen .joinerVideoBox {
