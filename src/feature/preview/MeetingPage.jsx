@@ -329,7 +329,7 @@ const MeetingPage = () => {
           setTimeout(() => {
             if (container && container.children.length > 0) {
               const videoElement = container.querySelector("video");
-              if (videoElement && !videoElement.playing) {
+              if (videoElement && videoElement.paused) {
                 console.log(
                   `🧹 Aggressive cleanup of non-playing video for user: ${userId}`
                 );

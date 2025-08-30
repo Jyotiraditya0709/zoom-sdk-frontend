@@ -503,7 +503,7 @@ function JoinerScreen() {
           setTimeout(() => {
             if (container && container.children.length > 0) {
               const videoElement = container.querySelector("video");
-              if (videoElement && !videoElement.playing) {
+              if (videoElement && videoElement.paused) {
                 console.log(
                   `🧹 Aggressive cleanup of non-playing video for user: ${userId}`
                 );
@@ -2541,14 +2541,16 @@ function JoinerScreen() {
       <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
         <div className="joinerScreenBlock">
           <div
-            className={`joinerVideoScreen ${gridClass} ${(isSharingScreen || isRemoteSharing) ? "sharing-on" : ""}`}
+            className={`joinerVideoScreen ${gridClass} ${
+              isSharingScreen || isRemoteSharing ? "sharing-on" : ""
+            }`}
             style={{
               padding:
                 participants.length >= 3 &&
                 participants.length <= participants.length
                   ? "20px 100px"
                   : "20px 50px",
-                  width: isSharingScreen ? "80%" : "90%",
+              width: isSharingScreen ? "80%" : "90%",
             }}
           >
             {participants.slice(0, 4).map((user, i) => (
@@ -2602,7 +2604,7 @@ function JoinerScreen() {
                         zIndex: 2,
                         textAlign: "center",
                         padding: 16,
-                        objectFit: "cover"
+                        objectFit: "cover",
                       }}
                     >
                       {error}
@@ -2701,7 +2703,6 @@ function JoinerScreen() {
                 maxHeight: "50vh",
                 borderRadius: 12,
                 boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
-
               }}
             />
             {/* Canvas element for screen sharing (fallback) */}
@@ -2993,10 +2994,7 @@ function JoinerScreen() {
                     <select
                       value={bgMode}
                       onChange={async (e) => {
-                        console.log(
-                          "🎨 Background changed to",
-                          e.target.value
-                        );
+                        console.log("🎨 Background changed to", e.target.value);
                         setBgMode(e.target.value);
                         setShowVideoOptions(null);
                         if (isVideoOn) {
@@ -3018,10 +3016,10 @@ function JoinerScreen() {
                       <option value="none">None</option>
                       <option value="blur">Blur</option>
                       <option value="image">Image</option>
-                      </select>
-                    </label>
-                  </div>
-                )}
+                    </select>
+                  </label>
+                </div>
+              )}
             </div>
 
             <button
@@ -3060,9 +3058,7 @@ function JoinerScreen() {
                 {showModals.participants && <span></span>}
               </span>
               <span>
-                {showModals.participants
-                  ? "Participants"
-                  : "Participants"}
+                {showModals.participants ? "Participants" : "Participants"}
               </span>
             </button>
 
@@ -3123,12 +3119,7 @@ function JoinerScreen() {
                   onClick={handleStartAnnotation}
                   disabled={localUserRemoved}
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="black"
-                  >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="black">
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                   </svg>
                   <span>Annotate</span>

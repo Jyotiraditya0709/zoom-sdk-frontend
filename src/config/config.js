@@ -2,7 +2,7 @@
 const config = {
   // Backend URL - change this for production
   BACKEND_URL:
-    import.meta.env.VITE_BACKEND_URL || "https://zoom-sdk.mastersunion.org/",
+    import.meta.env.VITE_BACKEND_URL || "https://zoom-sdk.mastersunion.org",
 
   // API endpoints
   API_ENDPOINTS: {
