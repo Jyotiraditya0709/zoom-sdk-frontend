@@ -406,6 +406,11 @@ function JoinerScreen() {
             display: container.style.display,
             visibility: container.style.visibility,
           });
+          
+          // Log environment info for debugging
+          console.log(`🌍 Environment: ${isProduction ? 'Production' : 'Development'}`);
+          console.log(`🌍 Hostname: ${window.location.hostname}`);
+          console.log(`🌍 Protocol: ${window.location.protocol}`);
 
           console.log(
             `🎥 Attaching video with quality: ${VIDEO_QUALITY} (${
@@ -1010,6 +1015,30 @@ function JoinerScreen() {
         ...prev,
         [payload.userId]: payload.level,
       }));
+      
+      // Log network quality changes for debugging
+      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level}`);
+      
+      // If network quality is poor, log it for debugging
+      if (payload.level === 'Poor' || payload.level === 'Very Poor') {
+        console.log(`⚠️ Poor network quality detected for user ${payload.userId}`);
+      }
+    });
+
+    // Add connection state monitoring
+    client.on("connection-change", (payload) => {
+      console.log(`🔗 Connection state changed: ${payload.state}`);
+      
+      if (payload.state === 'Reconnecting') {
+        console.log('🔄 Attempting to reconnect...');
+        addNotification('Reconnecting to meeting...');
+      } else if (payload.state === 'Connected') {
+        console.log('✅ Successfully connected');
+        addNotification('Connected to meeting');
+      } else if (payload.state === 'Disconnected') {
+        console.log('❌ Disconnected from meeting');
+        addNotification('Disconnected from meeting');
+      }
     });
 
     // Dynamic video aspect ratio
@@ -1138,6 +1167,26 @@ function JoinerScreen() {
           patchJsMedia: true,
           enforceVirtualBackground: true,
           virtualBackground: { isSupport: true },
+          // Add TURN/STUN server configuration for production environments
+          webRTC: {
+            iceServers: [
+              { urls: 'stun:stun.zoom.us:3478' },
+              { urls: 'stun:stun1.zoom.us:3478' },
+              { 
+                urls: 'turn:turn.zoom.us:3478',
+                username: 'zoom',
+                credential: 'zoom'
+              },
+              { 
+                urls: 'turn:turn1.zoom.us:3478',
+                username: 'zoom',
+                credential: 'zoom'
+              }
+            ],
+            iceCandidatePoolSize: 10,
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
+          }
         });
         const signature = await getSignature();
         if (!signature) return;
@@ -1834,6 +1883,30 @@ function JoinerScreen() {
         ...prev,
         [payload.userId]: payload.level,
       }));
+      
+      // Log network quality changes for debugging
+      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level}`);
+      
+      // If network quality is poor, log it for debugging
+      if (payload.level === 'Poor' || payload.level === 'Very Poor') {
+        console.log(`⚠️ Poor network quality detected for user ${payload.userId}`);
+      }
+    });
+
+    // Add connection state monitoring
+    client.on("connection-change", (payload) => {
+      console.log(`🔗 Connection state changed: ${payload.state}`);
+      
+      if (payload.state === 'Reconnecting') {
+        console.log('🔄 Attempting to reconnect...');
+        addNotification('Reconnecting to meeting...');
+      } else if (payload.state === 'Connected') {
+        console.log('✅ Successfully connected');
+        addNotification('Connected to meeting');
+      } else if (payload.state === 'Disconnected') {
+        console.log('❌ Disconnected from meeting');
+        addNotification('Disconnected from meeting');
+      }
     });
 
     // Dynamic video aspect ratio

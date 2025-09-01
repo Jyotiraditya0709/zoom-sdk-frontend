@@ -766,6 +766,26 @@ const MeetingPage = () => {
           patchJsMedia: true,
           enforceVirtualBackground: true,
           virtualBackground: { isSupport: true },
+          // Add TURN/STUN server configuration for production environments
+          webRTC: {
+            iceServers: [
+              { urls: 'stun:stun.zoom.us:3478' },
+              { urls: 'stun:stun1.zoom.us:3478' },
+              { 
+                urls: 'turn:turn.zoom.us:3478',
+                username: 'zoom',
+                credential: 'zoom'
+              },
+              { 
+                urls: 'turn:turn1.zoom.us:3478',
+                username: 'zoom',
+                credential: 'zoom'
+              }
+            ],
+            iceCandidatePoolSize: 10,
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
+          }
         });
         const signature = await getSignature();
         if (!signature) return;
