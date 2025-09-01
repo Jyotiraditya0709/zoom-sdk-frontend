@@ -242,6 +242,20 @@ const MeetingPage = () => {
     };
   }, [location.search, meetingId, userId]);
   const isHost = role === 1;
+  
+  // Check SharedArrayBuffer support (critical for Zoom SDK remote video)
+  const isProduction = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+  const hasSharedArrayBuffer = typeof SharedArrayBuffer === 'function';
+  const hasCrossOriginIsolation = crossOriginIsolated;
+  console.log(`🔒 SharedArrayBuffer available: ${hasSharedArrayBuffer}`);
+  console.log(`🔒 Cross-origin isolated: ${hasCrossOriginIsolation}`);
+  
+  if (isProduction && !hasSharedArrayBuffer) {
+    console.error(`❌ CRITICAL: SharedArrayBuffer not available in production!`);
+    console.error(`❌ This will cause remote video to not display.`);
+    console.error(`❌ Server needs Cross-Origin-Opener-Policy: same-origin`);
+    console.error(`❌ Server needs Cross-Origin-Embedder-Policy: require-corp`);
+  }
 
   const attachVideo = useCallback(
     async (userId) => {

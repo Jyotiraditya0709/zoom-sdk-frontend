@@ -151,6 +151,22 @@ function JoinerScreen() {
   console.log(`🌍 Environment: ${isProduction ? "Production" : "Development"}`);
   console.log(`🌍 Hostname: ${window.location.hostname}`);
   console.log(`🌍 Protocol: ${window.location.protocol}`);
+  
+  // Check SharedArrayBuffer support (critical for Zoom SDK remote video)
+  const hasSharedArrayBuffer = typeof SharedArrayBuffer === 'function';
+  const hasCrossOriginIsolation = crossOriginIsolated;
+  console.log(`🔒 SharedArrayBuffer available: ${hasSharedArrayBuffer}`);
+  console.log(`🔒 Cross-origin isolated: ${hasCrossOriginIsolation}`);
+  
+  if (isProduction && !hasSharedArrayBuffer) {
+    console.error(`❌ CRITICAL: SharedArrayBuffer not available in production!`);
+    console.error(`❌ This will cause remote video to not display.`);
+    console.error(`❌ Server needs Cross-Origin-Opener-Policy: same-origin`);
+    console.error(`❌ Server needs Cross-Origin-Embedder-Policy: require-corp`);
+    
+   
+    setError("⚠️ Remote video may not display properly. Please refresh the page or contact support if the issue persists.");
+  }
 
   // zoom context
   const { getClient, cleanup, bgMode, setBgMode } = useZoom();
