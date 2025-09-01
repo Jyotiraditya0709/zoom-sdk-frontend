@@ -1,0 +1,25 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing dependencies..."
+        - npm ci
+        - echo "Dependencies installed"
+    build:
+      commands:
+        - echo "Starting build..."
+        - npm run build
+        - echo "Build completed"
+        - ls -la dist/
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Cross-Origin-Opener-Policy'
+          value: 'same-origin'
+        - key: 'Cross-Origin-Embedder-Policy'
+          value: 'require-corp'
