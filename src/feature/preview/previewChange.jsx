@@ -4,10 +4,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "./PreJoin.css";
 import {
   MicroPhone,
-  NoSpeakerIcon,
   OffVideoCamera,
   RightArrow,
-  SpeakerIcon,
   UnMicroPhone,
   VideoCamera,
 } from "../../icon/icon";
@@ -71,6 +69,7 @@ const PreJoin = () => {
     bgMode,
     setBgMode,
     cleanup: contextCleanup,
+    updateContext,
   } = useZoom();
 
   // Add local state for role
@@ -85,15 +84,27 @@ const PreJoin = () => {
   const [error, setError] = useState("");
   const [isMicTesting, setIsMicTesting] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
-  const [micTestPhase, setMicTestPhase] = useState("idle"); // idle | recording | playing
+  const [micTestPhase, setMicTestPhase] = useState("idle"); // idle | recording | ready | playing
   const [micTestPlaybackTimeout, setMicTestPlaybackTimeout] = useState(null);
-  const [micTestPlaybackWarning, setMicTestPlaybackWarning] = useState("");
+  const [micTestCountdown, setMicTestCountdown] = useState(4);
   const microPhoneTesterRef = useRef(null);
+  
+  // Custom microphone test using Web Audio API
+  const [customMicTest, setCustomMicTest] = useState({
+    mediaRecorder: null,
+    audioChunks: [],
+    audioBlob: null,
+    audioUrl: null,
+    stream: null
+  });
 
   // Add missing state variables
   const [isMute, setIsMute] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [volume, setVolume] = useState(50);
+  
+  // Add permission state tracking
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  const [hasMicPermission, setHasMicPermission] = useState(false);
 
   // Add agenda state
   const [agendaData, setAgendaData] = useState(null);
@@ -102,10 +113,9 @@ const PreJoin = () => {
 
   const client = useRef(null);
 
-  // Volume slider change
-  const handleVolumeChange = (e) => {
-    setVolume(Number(e.target.value));
-  };
+
+
+
 
   // Fetch agenda data from database
   const fetchAgendaData = async (meetingId, userId) => {
@@ -192,7 +202,17 @@ const PreJoin = () => {
   useEffect(() => {
     const fetchDevices = async () => {
       try {
+        // Request permissions first
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
+        // Stop the test stream immediately
+        stream.getTracks().forEach(track => track.stop());
+        
         const devices = await ZoomVideo.getDevices();
+        
         const cams = devices.filter((d) => d.kind === "videoinput");
         const mics = devices.filter((d) => d.kind === "audioinput");
         const speakers = devices.filter((d) => d.kind === "audiooutput");
@@ -200,14 +220,24 @@ const PreJoin = () => {
         setVideoDevices(cams);
         setAudioDevices(mics);
         setSpeakerDevices(speakers);
-        setSelectedCamera(cams[0]?.deviceId || "");
-        setSelectedMic(mics[0]?.deviceId || "");
-        setSelectedSpeaker(speakers[0]?.deviceId || "");
+        
+        if (cams.length > 0) setSelectedCamera(cams[0].deviceId);
+        if (mics.length > 0) setSelectedMic(mics[0].deviceId);
+        if (speakers.length > 0) setSelectedSpeaker(speakers[0].deviceId);
+        
+        // Set initial permission states
+        setHasCameraPermission(true);
+        setHasMicPermission(true);
+        setIsVideoOff(false); // Camera should be ON by default
+        setIsMute(false); // Mic should be ON by default
+        
       } catch (err) {
         console.error("Error fetching devices:", err);
-        setError(
-          "Failed to fetch devices. Please allow camera/mic permissions."
-        );
+        if (err.name === 'NotAllowedError') {
+          setError("Please allow camera and microphone permissions to continue.");
+        } else {
+          setError("Failed to fetch devices. Please check your camera/microphone.");
+        }
       }
     };
     fetchDevices();
@@ -235,37 +265,61 @@ const PreJoin = () => {
         enforceVirtualBackground: true,
         virtualBackground: {
           isSupport: true,
-          // resources: {
-          //   dir: "/lib",
-          // },
         },
       });
-      // Create and start video track
-      if (!localVideoTrack) {
-        localVideoTrack = ZoomVideo.createLocalVideoTrack(selectedCamera);
-      }
-      if (bgMode === "none") {
-        await localVideoTrack.start(videoRef.current);
-        await localVideoTrack.updateVirtualBackground(undefined);
-      } else if (bgMode === "blur") {
-        await localVideoTrack.start(
-          document.querySelector("#local-preview-video"),
-          { imageUrl: "blur" }
-        );
-      } else if (bgMode === "image") {
-        await localVideoTrack.start(
-          document.querySelector("#local-preview-video"),
-          {
-            imageUrl: "/lib/vb-resource/background.jpg",
+      
+
+      
+      // Create and start video track (only if video is not off)
+      if (!isVideoOff && selectedCamera) {
+        // Always create a new video track for device changes
+        if (localVideoTrack) {
+          try {
+            await localVideoTrack.stop();
+          } catch (err) {
+            console.warn("Video track stop warning:", err.message);
           }
-        );
+          localVideoTrack = null;
+        }
+        
+          localVideoTrack = ZoomVideo.createLocalVideoTrack(selectedCamera);
+        
+        // Determine the correct video element based on background mode
+        const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+        
+        if (!videoElement) {
+          throw new Error(`Video element not found for background mode: ${bgMode}`);
+        }
+        
+        if (bgMode === "none") {
+          await localVideoTrack.start(videoElement);
+          await localVideoTrack.updateVirtualBackground(undefined);
+        } else if (bgMode === "blur") {
+          await localVideoTrack.start(videoElement, { imageUrl: "blur" });
+        } else if (bgMode === "image") {
+          await localVideoTrack.start(videoElement, {
+              imageUrl: "/lib/vb-resource/background.jpg",
+          });
+        }
       }
-      // Create and start audio track
-      if (!localAudioTrack) {
+      
+      // Create and start audio track (only if mic is not muted)
+      if (!isMute && selectedMic) {
+        // Always create a new audio track for device changes
+        if (localAudioTrack) {
+          try {
+            await localAudioTrack.stop();
+          } catch (err) {
+            console.warn("Audio track stop warning:", err.message);
+          }
+          localAudioTrack = null;
+        }
+        
         localAudioTrack = ZoomVideo.createLocalAudioTrack(selectedMic);
+        await localAudioTrack.start();
+        await localAudioTrack.unmute();
       }
-      await localAudioTrack.start();
-      await localAudioTrack.unmute();
+      
     } catch (err) {
       // Suppress the "play() request was interrupted" warning for the user
       if (
@@ -278,6 +332,18 @@ const PreJoin = () => {
         console.warn("Preview warning:", err.message);
         return;
       }
+      
+      // Handle specific Zoom SDK errors
+      if (err.message?.includes("VideoAlreadyStartedError")) {
+        console.warn("Video already started, continuing...");
+        return;
+      }
+      
+      if (err.message?.includes("AudioAlreadyStartedError")) {
+        console.warn("Audio already started, continuing...");
+        return;
+      }
+      
       if (err.name === "NotReadableError") {
         setError(
           "Camera or microphone is already in use by another application. Please close other apps and try again."
@@ -292,8 +358,14 @@ const PreJoin = () => {
 
   // ========== Update Virtual Background on Change ==========
   useEffect(() => {
+    let isUpdating = false;
+    let updateTimeout = null;
+    
     const updateVB = async () => {
-      if (!localVideoTrack) return;
+      if (!localVideoTrack || isVideoOff || isUpdating) return;
+      
+      isUpdating = true;
+      
       try {
         // Only stop if the track is started (SDK may not expose isStarted, so try-catch is safest)
         try {
@@ -305,43 +377,39 @@ const PreJoin = () => {
             throw err;
           }
         }
+        
+        // Determine the correct video element based on background mode
+        const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+        
+        if (!videoElement) {
+          throw new Error(`Video element not found for background mode: ${bgMode}`);
+        }
+        
         if (bgMode === "none") {
-          await localVideoTrack.start(videoRef.current);
+          await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
         } else if (bgMode === "blur") {
-          await localVideoTrack.start(
-            document.querySelector("#local-preview-video"),
-            { imageUrl: "blur" }
-          );
+          await localVideoTrack.start(videoElement, { imageUrl: "blur" });
         } else if (bgMode === "image") {
-          await localVideoTrack.start(
-            document.querySelector("#local-preview-video"),
-            {
+          await localVideoTrack.start(videoElement, {
               imageUrl: "/lib/vb-resource/background.jpg",
-            }
-          );
+          });
         }
       } catch (err) {
         if (err.message && err.message.includes("VideoNotStartedError")) {
           // Try to start the video anyway
           try {
+            const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+            
             if (bgMode === "none") {
-              await localVideoTrack.start(videoRef.current);
+              await localVideoTrack.start(videoElement);
               await localVideoTrack.updateVirtualBackground(undefined);
             } else if (bgMode === "blur") {
-              await localVideoTrack.start(
-                document.querySelector("#local-preview-video"),
-                {
-                  imageUrl: "blur",
-                }
-              );
+              await localVideoTrack.start(videoElement, { imageUrl: "blur" });
             } else if (bgMode === "image") {
-              await localVideoTrack.start(
-                document.querySelector("#local-preview-video"),
-                {
+              await localVideoTrack.start(videoElement, {
                   imageUrl: "/lib/vb-resource/background.jpg",
-                }
-              );
+              });
             }
           } catch (e) {
             setError(
@@ -350,28 +418,82 @@ const PreJoin = () => {
           }
           return;
         }
+        console.error("Virtual background update error:", err);
+        if (err.message?.includes("Cannot start video with virtual background")) {
+          setError("Virtual background not supported. Please try refreshing the page or check your browser compatibility.");
+        } else {
         setError(
           "Failed to update virtual background: " + (err.reason || err.message)
         );
+        }
+      } finally {
+        isUpdating = false;
       }
     };
-    // Only run if the video element is mounted and bgMode changes
-    if (videoRef.current) {
+    
+    // Debounce rapid background mode changes
+    if (updateTimeout) {
+      clearTimeout(updateTimeout);
+    }
+    
+    updateTimeout = setTimeout(() => {
+      // Only run if the video element is mounted, bgMode changes, and video is not off
+      if (videoRef.current && !isVideoOff) {
       updateVB();
     }
-  }, [bgMode]);
+    }, 100); // Small delay to batch rapid changes
+    
+    return () => {
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+      }
+    };
+  }, [bgMode, isVideoOff]);
 
   useEffect(() => {
-    if (selectedCamera && selectedMic) startPreview();
+    if (selectedCamera && selectedMic && hasCameraPermission && hasMicPermission) {
+      // Minimal delay to prevent rapid successive calls
+      const timeoutId = setTimeout(() => {
+      startPreview();
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCamera, selectedMic]);
+  }, [selectedCamera, selectedMic, hasCameraPermission, hasMicPermission]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clean up microphone test if active
+      if (microPhoneTesterRef.current) {
+        try {
+          microPhoneTesterRef.current.stop();
+          microPhoneTesterRef.current = null;
+        } catch (err) {
+          console.error("Error cleaning up microphone test:", err);
+        }
+      }
+      
+      // Clean up speaker test if active
+      if (speakerTesterRef.current) {
+        try {
+          speakerTesterRef.current.destroy();
+          speakerTesterRef.current = null;
+        } catch (err) {
+          console.error("Error cleaning up speaker test:", err);
+        }
+      }
+      
+      // Clear any timeouts
+      if (micTestPlaybackTimeout) {
+        clearTimeout(micTestPlaybackTimeout);
+      }
+      
+      // Clean up context
       contextCleanup();
     };
-  }, []);
+  }, [contextCleanup, micTestPlaybackTimeout]);
 
   // ========== Join Meeting Handler ==========
   const handleJoin = async () => {
@@ -386,6 +508,16 @@ const PreJoin = () => {
     localVideoTrack = null;
     localAudioTrack = null;
 
+    // Update context with current selections before joining
+    updateContext({
+      selectedCamera,
+      selectedMic,
+      selectedSpeaker,
+      bgMode,
+      userName,
+      sessionName
+    });
+
     // The context will be updated with the latest user/session name from the input fields
     await contextCleanup(); // Clean up any other context-related resources
 
@@ -395,113 +527,267 @@ const PreJoin = () => {
     const userId = params.get("userId");
 
     if (meetingId && userId) {
-      // Navigate to meeting with URL parameters
-      navigate(`/meeting/${meetingId}/${userId}?role=${role}`);
+      // Navigate to meeting with URL parameters and device selections
+      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}`);
     } else {
       // Fallback to old format
       navigate(
         `/meeting?session=${encodeURIComponent(
           sessionName
-        )}&user=${encodeURIComponent(userName)}&role=${role}`
+        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}`
       );
     }
   };
 
-  // ========== Mic Testing Feature ==========
-  const handleMicTest = () => {
+  // ========== Enhanced Mic Testing Feature ==========
+  const handleMicTest = async () => {
+    // Check if microphone permission is granted
+    if (!hasMicPermission) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        setHasMicPermission(true);
+      } catch (err) {
+        setError("Microphone permission is required to test audio. Please allow microphone access.");
+        return;
+      }
+    }
+
     if (!localAudioTrack) {
       setError("Please start preview first");
       return;
     }
+
+    // If already testing, stop the test
     if (microPhoneTesterRef.current) {
-      microPhoneTesterRef.current.stop();
-      microPhoneTesterRef.current = null;
-      setIsMicTesting(false);
-      setMicLevel(0);
-      setMicTestPhase("idle");
-      setMicTestPlaybackWarning("");
-      if (micTestPlaybackTimeout) {
-        clearTimeout(micTestPlaybackTimeout);
-        setMicTestPlaybackTimeout(null);
+      try {
+        microPhoneTesterRef.current.stop();
+        microPhoneTesterRef.current = null;
+        setIsMicTesting(false);
+        setMicLevel(0);
+        setMicTestPhase("idle");
+        if (micTestPlaybackTimeout) {
+          clearTimeout(micTestPlaybackTimeout);
+          setMicTestPlaybackTimeout(null);
+        }
+      } catch (err) {
+        console.error("Error stopping microphone test:", err);
       }
       return;
     }
+
     try {
       setIsMicTesting(true);
       setMicTestPhase("recording");
-      setMicTestPlaybackWarning("");
-      microPhoneTesterRef.current = localAudioTrack.testMicrophone({
-        microphoneId: selectedMic,
-        speakerId: selectedSpeaker,
-        recordAndPlay: true,
-        onAnalyseFrequency: (v) => {
-          setMicLevel(Math.round(v * 100));
-        },
-        onStartRecording: () => {
-          setMicTestPhase("recording");
-        },
-        onStartPlayRecording: () => {
-          setMicTestPhase("playing");
-          if (micTestPlaybackTimeout) {
-            clearTimeout(micTestPlaybackTimeout);
-            setMicTestPlaybackTimeout(null);
-          }
-        },
-        onStopPlayRecording: () => {
-          microPhoneTesterRef.current = null;
-          setIsMicTesting(false);
-          setMicLevel(0);
-          setMicTestPhase("idle");
-          setMicTestPlaybackWarning("");
-          if (micTestPlaybackTimeout) {
-            clearTimeout(micTestPlaybackTimeout);
-            setMicTestPlaybackTimeout(null);
-          }
-        },
+      setError(""); // Clear any previous errors
+
+      // Use Web Audio API for reliable recording
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          deviceId: selectedMic ? { exact: selectedMic } : undefined,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        } 
       });
-      // Fallback: if playback doesn't start after 5 seconds, show warning
-      const timeout = setTimeout(() => {
-        if (micTestPhase === "recording") {
-          setMicTestPlaybackWarning(
-            "Playback not supported in this environment or browser. You may not hear your recording."
-          );
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const audioChunks = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Stop audio level monitoring
+        if (audioContext && audioContext.state !== 'closed') {
+          audioContext.close();
         }
-      }, 5000);
-      setMicTestPlaybackTimeout(timeout);
+        
+        setCustomMicTest(prev => ({
+          ...prev,
+          audioBlob,
+          audioUrl,
+          stream: null
+        }));
+        
+          setMicTestPhase("ready");
+        setMicTestCountdown(0);
+          console.log("✅ Recording completed, ready for playback");
+        
+        // Automatically play back after 1 second
+        setTimeout(() => {
+          handleCustomPlayback(audioUrl);
+        }, 1000);
+      };
+
+      // Start recording
+      mediaRecorder.start();
+      setCustomMicTest(prev => ({ ...prev, mediaRecorder, audioChunks: [], stream }));
+      console.log("🎤 Started recording microphone test");
+      
+      // Set initial mic level to show it's working
+      setMicLevel(10);
+
+      // Start countdown timer
+      const countdownInterval = setInterval(() => {
+        setMicTestCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            // Automatically stop recording after 4 seconds
+            if (mediaRecorder.state === "recording") {
+              console.log("🛑 Stopping recording automatically after 4 seconds");
+              mediaRecorder.stop();
+              stream.getTracks().forEach(track => track.stop());
+            }
+            return 0;
+          }
+          // Simulate mic level changes during countdown for testing
+          if (mediaRecorder.state === "recording") {
+            setMicLevel(prev => Math.min(100, prev + Math.floor(Math.random() * 20)));
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Monitor audio levels
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      source.connect(analyser);
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const updateLevel = () => {
+        // Check if we're still recording (either by phase or mediaRecorder state)
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          analyser.getByteFrequencyData(dataArray);
+          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+          const level = Math.round((average / 255) * 100);
+          setMicLevel(level);
+          console.log("🎤 Mic level:", level, "raw average:", average);
+          requestAnimationFrame(updateLevel);
+        }
+      };
+      updateLevel();
+
     } catch (err) {
-      console.error("Error testing microphone:", err);
-      setError("Failed to test microphone");
+      console.error("❌ Error testing microphone:", err);
+      
+      // Provide more specific error messages
+      let errorMessage = "Failed to test microphone";
+      if (err.name === "NotAllowedError") {
+        errorMessage = "Microphone access denied. Please allow microphone permissions.";
+      } else if (err.name === "NotFoundError") {
+        errorMessage = "Microphone not found. Please check your microphone connection.";
+      } else if (err.name === "NotReadableError") {
+        errorMessage = "Microphone is already in use by another application.";
+      } else if (err.message) {
+        errorMessage = `Microphone test failed: ${err.message}`;
+      }
+      
+      setError(errorMessage);
       setIsMicTesting(false);
       setMicLevel(0);
       setMicTestPhase("idle");
-      setMicTestPlaybackWarning("");
-      if (micTestPlaybackTimeout) {
-        clearTimeout(micTestPlaybackTimeout);
-        setMicTestPlaybackTimeout(null);
-      }
+    }
+  };
+
+  // ========== Play Recording Feature ==========
+  const handlePlayRecording = async () => {
+    if (!microPhoneTesterRef.current || micTestPhase !== "ready") {
+      return;
+    }
+
+    try {
+      setMicTestPhase("playing");
+      
+      // Play the recorded audio
+      await microPhoneTesterRef.current.playRecording();
+      
+      // Set a timeout to reset the state after playback
+      const timeout = setTimeout(() => {
+        setMicTestPhase("idle");
+        setIsMicTesting(false);
+        setMicLevel(0);
+        microPhoneTesterRef.current = null;
+      }, 3000); // Assume 3 seconds for playback
+      
+      setMicTestPlaybackTimeout(timeout);
+      
+    } catch (err) {
+      console.error("❌ Error playing recording:", err);
+      setMicTestPhase("ready");
+    }
+  };
+
+  // ========== Custom Playback Function ==========
+  const handleCustomPlayback = (audioUrl) => {
+    try {
+      setMicTestPhase("playing");
+      console.log("🎵 Starting custom playback...");
+      
+      const audio = new Audio(audioUrl);
+      audio.onended = () => {
+        console.log("✅ Playback completed");
+        setMicTestPhase("idle");
+        setIsMicTesting(false);
+        setMicLevel(0);
+        setMicTestCountdown(4);
+        setCustomMicTest(prev => ({ ...prev, audioUrl: null }));
+      };
+      
+      audio.onerror = (err) => {
+        console.error("❌ Playback error:", err);
+        setError("Failed to play recording");
+      setMicTestPhase("ready");
+      };
+      
+      audio.play();
+      console.log("✅ Custom playback started successfully");
+      
+    } catch (err) {
+      console.error("❌ Error in custom playback:", err);
+      setError("Failed to play recording");
+      setMicTestPhase("ready");
     }
   };
 
   // ========== Speaker Test ==========
-  let speakerTester;
+  const [isSpeakerTesting, setIsSpeakerTesting] = useState(false);
+  const speakerTesterRef = useRef(null);
+  
   const handleSpeakerTest = () => {
     if (!localAudioTrack) {
       setError("Please start preview first");
       return;
     }
-    const levelElm = document.querySelector("#speaker-output-level");
-    if (speakerTester) {
-      speakerTester.destroy();
-      speakerTester = null;
+    
+    // If already testing, stop the test
+    if (isSpeakerTesting && speakerTesterRef.current) {
+      try {
+        speakerTesterRef.current.destroy();
+        speakerTesterRef.current = null;
+        setIsSpeakerTesting(false);
+        console.log("🔇 Speaker test stopped");
+      } catch (err) {
+        console.error("Error stopping speaker test:", err);
+      }
       return;
     }
+    
+    // Start speaker test
     try {
-      speakerTester = localAudioTrack.testSpeaker({
+      speakerTesterRef.current = localAudioTrack.testSpeaker({
         speakerId: selectedSpeaker,
         onAnalyseFrequency: (v) => {
-          if (levelElm) levelElm.value = v;
+          // We don't need to track speaker output level
         },
       });
+      setIsSpeakerTesting(true);
+      console.log("🔊 Speaker test started");
     } catch (err) {
       console.error("Error testing speaker:", err);
       setError("Failed to test speaker");
@@ -546,21 +832,30 @@ const PreJoin = () => {
                 <div className="buttonZoomSetting">
                   <button
                     onClick={async () => {
-                      if (localAudioTrack) {
-                        try {
-                          if (isMute) {
-                            await localAudioTrack.unmute();
-                          } else {
-                            await localAudioTrack.mute();
+                      try {
+                        if (isMute) {
+                          // Unmute - start audio track
+                          if (!localAudioTrack) {
+                            localAudioTrack = ZoomVideo.createLocalAudioTrack(selectedMic);
                           }
-                          setIsMute(!isMute);
-                        } catch (err) {
-                          console.error("Error toggling audio:", err);
+                          await localAudioTrack.start();
+                          await localAudioTrack.unmute();
+                          setIsMute(false);
+                        } else {
+                          // Mute - stop audio track
+                          if (localAudioTrack) {
+                            await localAudioTrack.stop();
+                            localAudioTrack = null;
+                          }
+                          setIsMute(true);
                         }
+                      } catch (err) {
+                        console.error("Error toggling audio:", err);
+                        setError("Failed to toggle audio: " + err.message);
                       }
                     }}
                   >
-                    {isMute ? <MicroPhone /> : <UnMicroPhone />}
+                    {isMute ? <UnMicroPhone /> : <MicroPhone />}
                   </button>
                   <button
                     onClick={async () => {
@@ -571,20 +866,17 @@ const PreJoin = () => {
                             localVideoTrack =
                               ZoomVideo.createLocalVideoTrack(selectedCamera);
                           }
+                          // Determine the correct video element based on background mode
+                          const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+                          
                           if (bgMode === "none") {
-                            await localVideoTrack.start(videoRef.current);
+                            await localVideoTrack.start(videoElement);
                           } else if (bgMode === "blur") {
-                            await localVideoTrack.start(
-                              document.querySelector("#local-preview-video"),
-                              { imageUrl: "blur" }
-                            );
+                            await localVideoTrack.start(videoElement, { imageUrl: "blur" });
                           } else if (bgMode === "image") {
-                            await localVideoTrack.start(
-                              document.querySelector("#local-preview-video"),
-                              {
+                            await localVideoTrack.start(videoElement, {
                                 imageUrl: "/lib/vb-resource/background.jpg",
-                              }
-                            );
+                            });
                           }
                         } else {
                           // Turn camera off - completely release the track
@@ -612,6 +904,7 @@ const PreJoin = () => {
                         setIsVideoOff(!isVideoOff);
                       } catch (err) {
                         console.error("Error toggling video:", err);
+                        setError("Failed to toggle video: " + err.message);
                       }
                     }}
                   >
@@ -623,48 +916,66 @@ const PreJoin = () => {
               {error && <div className="error">{error}</div>}
 
               <div className="bottomControls">
-                <button
-                  className="commonTextBtn testMicrophone"
-                  onClick={handleMicTest}
-                >
-                  {micTestPhase === "recording"
-                    ? "Recording..."
-                    : micTestPhase === "playing"
-                      ? "Playing..."
-                      : isMicTesting
-                        ? "Stop"
-                        : "Test Microphone"}
-                </button>
-                <progress
-                  id="mic-input-level"
-                  value={micLevel}
-                  max={100}
-                  style={{}}
-                ></progress>
-                {micTestPlaybackWarning && (
-                  <div style={{ color: "orange", marginTop: 4 }}>
-                    {micTestPlaybackWarning}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+                  {/* Test Microphone Button */}
+                  <button
+                    className={`commonTextBtn testMicrophone ${
+                      micTestPhase === "recording" ? "recording" : 
+                      micTestPhase === "playing" ? "playing" :
+                      micTestPhase === "ready" ? "ready" : ""
+                    }`}
+                    onClick={handleMicTest}
+                    disabled={!hasMicPermission}
+                  >
+                    {micTestPhase === "recording" && <span className="recording-dot"></span>}
+                    {micTestPhase === "playing" && <span className="playing-dot"></span>}
+                    {micTestPhase === "recording"
+                      ? `Recording... (${micTestCountdown}s)`
+                      : micTestPhase === "playing"
+                        ? "Playing..."
+                        : micTestPhase === "ready"
+                          ? "Stop Test"
+                          : "Test Microphone"}
+                  </button>
+                  
+                  {/* Microphone level indicator with decibel display - positioned to the side */}
+                  <div className="mic-level-container">
+                    <div className="mic-level-label">
+                      <span>Mic Level</span>
+                      <span className={`mic-level-value ${micLevel === 0 ? 'silent' : ''}`}>
+                        {micLevel > 0 ? `${micLevel} dB` : 'Silent'}
+                      </span>
+                    </div>
+                    <progress
+                      id="mic-input-level"
+                      value={micLevel}
+                      max={100}
+                      style={{ width: '120px' }}
+                    ></progress>
                   </div>
-                )}
+                  
+                  {/* Play Recording Button (only show when ready) */}
+                  {micTestPhase === "ready" && (
+                    <button
+                      className="commonTextBtn playRecording"
+                      onClick={handlePlayRecording}
+                    >
+                      <span className="playing-dot"></span>
+                      Play Recording
+                    </button>
+                  )}
+                </div>
 
                 <button
-                  className="commonTextBtn testSpeaker"
+                  className={`commonTextBtn testSpeaker ${
+                    isSpeakerTesting ? "testing" : ""
+                  }`}
                   onClick={handleSpeakerTest}
                 >
-                  Test Speaker
+                  {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
                 </button>
 
-                <div className="sliderMeetingWrapper">
-                  {volume === 0 ? <NoSpeakerIcon /> : <SpeakerIcon />}
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={volume}
-                    onChange={handleVolumeChange}
-                    className="slider"
-                  />
-                </div>
+
               </div>
             </div>
 
@@ -703,6 +1014,8 @@ const PreJoin = () => {
                     </p>
                   )}
                 </div>
+                
+
               </div>
 
               <div className="colGap12 settingOptionGroup">
@@ -778,6 +1091,8 @@ const PreJoin = () => {
                   </>
                 )}
               </button>
+              
+
             </div>
           </div>
 
@@ -789,3 +1104,5 @@ const PreJoin = () => {
 };
 
 export default PreJoin;
+
+

@@ -1091,6 +1091,21 @@ function JoinerScreen() {
     };
 
     client.on("chat-on-message", (payload) => {
+      // Handle recording status messages from host
+      if (payload.message.includes("🔴 LIVE - This meeting is being recorded")) {
+        // Host started recording - update local state for all participants
+        setShowRecordingNotice(true);
+        addNotification("🔴 LIVE - This meeting is being recorded");
+        playRecordingBeep();
+        console.log("📹 Recording started (notified via chat)");
+      } else if (payload.message.includes("⏹️ Recording has stopped")) {
+        // Host stopped recording - update local state for all participants
+        setShowRecordingNotice(false);
+        addNotification("⏹️ Recording has stopped");
+        playRecordingBeep();
+        console.log("📹 Recording stopped (notified via chat)");
+      }
+
       setChatMessages((prev) => {
         // Check if this message already exists to prevent duplicates
         const messageExists = prev.some(
@@ -1290,13 +1305,23 @@ function JoinerScreen() {
 
           // Cloud recording logic
           recordingClientRef.current = client.getRecordingClient();
-          // If not host, just show the notice if recording is active
-          if (
-            !isHost &&
-            recordingClientRef.current.getCloudRecordingStatus() === "recording"
-          ) {
-            setShowRecordingNotice(true);
-          }
+          
+            // 🆕 Set up automatic recording when BOTH mentor AND mentee join
+  const checkMentorMenteeJoined = () => {
+    // Check if we have both mentor and mentee in the meeting
+    const hasMentor = participants.some(p => p.role === 'host' || p.isHost);
+    const hasMentee = participants.some(p => p.role === 'attendee' || !p.isHost);
+    
+    if (hasMentor && hasMentee && !showRecordingNotice) {
+      console.log("✅ Both mentor and mentee joined - starting automatic recording");
+      startAutomaticRecording();
+    }
+  };
+  
+  // Check when participants change
+  if (participants.length > 0) {
+    checkMentorMenteeJoined();
+  }
         }, 500); // Small delay to allow React to render containers
 
         const setupEventListeners = () => {
@@ -1566,6 +1591,12 @@ function JoinerScreen() {
         // Show notification for user join (duplicate detection now handled at container creation level)
         if (item.userId !== selfUserIdRef.current) {
           addNotification(`${displayName} joined the session.`);
+          
+          // Check if recording is already active and inform new participant
+          if (showRecordingNotice) {
+            addNotification("🔴 LIVE - This meeting is being recorded");
+            playRecordingBeep();
+          }
         } else {
           // This is the local user joining
           console.log(`👤 Local user ${item.userId} joined the session`);
@@ -1663,8 +1694,8 @@ function JoinerScreen() {
 
     // Enhanced user removal handler that properly handles local user removal
     // due to leaveOnPageUnload (refresh/close tab/browser)
-    const handleUserRemoved = (payload) => {
-      payload.forEach((item) => {
+    const handleUserRemoved = async (payload) => {
+      payload.forEach(async (item) => {
         const isLocalUser = item.userId === selfUserIdRef.current;
 
         console.log("[USER] User left:", {
@@ -1758,15 +1789,15 @@ function JoinerScreen() {
                   }`
                 );
               } else {
-                navigate("/meeting-left");
+                await redirectToMeetingEnd("user_left");
               }
             } catch (err) {
               console.error("Failed to parse meeting exit info:", err);
-              navigate("/meeting-left");
+              await redirectToMeetingEnd("user_left");
             }
           } else {
-            // No stored info, navigate to meeting-left
-            navigate("/meeting-left");
+            // No stored info, redirect to MeetingRedirect
+            await redirectToMeetingEnd("user_left");
           }
 
           return; // Exit early for local user
@@ -1807,7 +1838,7 @@ function JoinerScreen() {
     client.on("user-removed", handleUserRemoved);
 
     // Connection status handling
-    client.on("connection-change", (payload) => {
+    client.on("connection-change", async (payload) => {
       console.log("🔗 Connection change:", payload);
 
       if (payload.state === "Closed") {
@@ -1824,7 +1855,13 @@ function JoinerScreen() {
             ? "The host has ended the meeting."
             : `Session ended: ${payload.reason || "Closed by host or network"}`
         );
-        navigate("/meeting-left");
+        
+        // Redirect based on reason
+        if (payload.reason === "ended by host") {
+          await redirectToMeetingEnd("host_ended");
+        } else {
+          await redirectToMeetingEnd("meeting_completed");
+        }
       } else if (payload.state === "Reconnecting") {
         addNotification(`Reconnecting to session...`);
       } else if (payload.state === "Connected") {
@@ -1842,7 +1879,7 @@ function JoinerScreen() {
         addNotification(
           `Session failed: ${payload.reason || payload.errorCode}`
         );
-        navigate("/meeting-left");
+        await redirectToMeetingEnd("meeting_completed");
       }
     });
 
@@ -1910,7 +1947,7 @@ function JoinerScreen() {
     });
 
     // Add connection state monitoring
-    client.on("connection-change", (payload) => {
+    client.on("connection-change", async (payload) => {
       console.log(`🔗 Connection state changed: ${payload.state}`);
       
       if (payload.state === 'Reconnecting') {
@@ -1970,7 +2007,6 @@ function JoinerScreen() {
       // Clean up screen sharing event handlers
       client.off("share-content-started", handleShareStarted);
       client.off("share-content-stopped", handleShareStopped);
-      client.off("share-content-received", handleShareReceived);
       client.off("active-share-change", handleActiveShareChange);
 
       // Clean up error handling event listeners
@@ -2293,61 +2329,176 @@ function JoinerScreen() {
   };
 
   // Recording control functions (host only)
-  const startRecording = async () => {
-    if (!recordingClientRef.current) return;
+  // 🆕 Automatic Recording Control
+  const startAutomaticRecording = async () => {
+    if (!recordingClientRef.current || !isHost) return;
+    
     try {
       const res = await recordingClientRef.current.startCloudRecording();
-      if (res === "") {
-        setRecordingStatus("recording");
-        setShowRecordingNotice(true);
-        addNotification("Recording started");
-      }
+              if (res === "") {
+          setShowRecordingNotice(true);
+          // Show professional recording notification to both host and participants
+          addNotification("🔴 LIVE - This meeting is being recorded");
+          // Play recording beep sound for both host and participants
+          playRecordingBeep();
+          
+          // Broadcast recording status to all participants via chat
+          try {
+            const client = clientRef.current;
+            if (client) {
+              const chatClient = client.getChatClient();
+              if (chatClient) {
+                await chatClient.sendToAll("🔴 LIVE - This meeting is being recorded");
+              }
+            }
+          } catch (err) {
+            console.warn("Could not broadcast recording status:", err);
+          }
+          
+          console.log("✅ Automatic recording started");
+        }
     } catch (err) {
-      console.error("Failed to start recording:", err);
-      setError("Failed to start recording");
+      console.error("❌ Failed to start automatic recording:", err);
+      // Don't show error to user, just log it
     }
   };
 
-  const pauseRecording = async () => {
-    if (!recordingClientRef.current) return;
-    try {
-      const res = await recordingClientRef.current.pauseCloudRecording();
-      if (res === "") {
-        setRecordingStatus("paused");
-        addNotification("Recording paused");
-      }
-    } catch (err) {
-      console.error("Failed to pause recording:", err);
-      setError("Failed to pause recording");
-    }
-  };
-
-  const resumeRecording = async () => {
-    if (!recordingClientRef.current) return;
-    try {
-      const res = await recordingClientRef.current.resumeCloudRecording();
-      if (res === "") {
-        setRecordingStatus("recording");
-        addNotification("Recording resumed");
-      }
-    } catch (err) {
-      console.error("Failed to resume recording:", err);
-      setError("Failed to resume recording");
-    }
-  };
-
-  const stopRecording = async () => {
-    if (!recordingClientRef.current) return;
+  const stopAutomaticRecording = async () => {
+    if (!recordingClientRef.current || !isHost) return;
     try {
       const res = await recordingClientRef.current.stopCloudRecording();
-      if (res === "") {
-        setRecordingStatus("stopped");
-        setShowRecordingNotice(false);
-        addNotification("Recording stopped");
-      }
+              if (res === "") {
+          setShowRecordingNotice(false);
+          // Show professional recording stop notification to both host and participants
+          addNotification("⏹️ Recording has stopped");
+          // Play recording stop beep sound for both host and participants
+          playRecordingBeep();
+          
+          // Broadcast recording stop status to all participants via chat
+          try {
+            const client = clientRef.current;
+            if (client) {
+              const chatClient = client.getChatClient();
+              if (chatClient) {
+                await chatClient.sendToAll("⏹️ Recording has stopped");
+              }
+            }
+          } catch (err) {
+            console.warn("Could not broadcast recording stop status:", err);
+          }
+          
+          console.log("✅ Automatic recording stopped");
+        }
     } catch (err) {
-      console.error("Failed to stop recording:", err);
-      setError("Failed to stop recording");
+      console.error("❌ Failed to stop automatic recording:", err);
+    }
+  };
+
+  // 🆕 Monitor participant changes for automatic recording
+  useEffect(() => {
+    if (participants.length > 0) {
+      const hasMentor = participants.some(p => p.role === 'host' || p.isHost);
+      const hasMentee = participants.some(p => p.role === 'attendee' || !p.isHost);
+      
+      if (hasMentor && hasMentee && !showRecordingNotice) {
+        console.log("✅ Both mentor and mentee joined - starting automatic recording");
+        if (isHost) {
+          // Only host starts the actual recording
+          startAutomaticRecording();
+        } else {
+          // For participants, just update their local state to show recording indicator
+          setShowRecordingNotice(true);
+          addNotification("🔴 LIVE - This meeting is being recorded");
+          playRecordingBeep();
+        }
+      } else if ((!hasMentor || !hasMentee) && showRecordingNotice) {
+        // Either mentor or mentee left - stop recording
+        console.log("❌ Mentor or mentee left - stopping automatic recording");
+        if (isHost) {
+          // Only host stops the actual recording
+          stopAutomaticRecording();
+        } else {
+          // For participants, just update their local state to hide recording indicator
+          setShowRecordingNotice(false);
+          addNotification("⏹️ Recording has stopped");
+          playRecordingBeep();
+        }
+      }
+    }
+  }, [participants, showRecordingNotice, isHost]);
+
+  // Function to play recording beep sound (similar to Zoom)
+  const playRecordingBeep = () => {
+    try {
+      // Create audio context for beep sound
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Set beep properties (800Hz, short duration - similar to Zoom)
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.type = 'sine';
+      
+      // Fade in/out for smooth sound
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+      
+      // Clean up audio context after beep
+      setTimeout(() => {
+        audioContext.close();
+      }, 500);
+    } catch (err) {
+      console.warn("Could not play recording beep:", err);
+    }
+  };
+
+  // Function to redirect to MeetingRedirect with appropriate data
+  const redirectToMeetingEnd = async (endReason) => {
+    // Get meeting data from context or props
+    const redirectLink = sessionName ? await getMeetingRedirectLink(sessionName) : null;
+    
+    const meetingData = {
+      redirectLink: redirectLink,
+      meetingStatus: "completed",
+      endReason: endReason,
+      meetingId: sessionName,
+      userId: userName,
+      role: role
+    };
+
+    // Navigate to MeetingRedirect with meeting data
+    navigate("/meeting-redirect", { 
+      state: { meetingData } 
+    });
+  };
+
+  // Helper function to get redirect link from meeting data
+  const getMeetingRedirectLink = async (meetingId) => {
+    if (!meetingId) return null;
+    
+    try {
+      // Fetch meeting info from backend to get redirectLink
+      const response = await axios.get(
+        config.getApiUrl(
+          `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${userName}`
+        )
+      );
+      
+      if (response.data?.IsSuccess && response.data?.Data?.redirectLink) {
+        return response.data.Data.redirectLink;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error("Failed to fetch meeting redirect link:", err);
+      return null;
     }
   };
 
@@ -2395,15 +2546,8 @@ function JoinerScreen() {
 
       addNotification("Meeting ended successfully");
 
-      // Navigate to exit page
-      navigate(
-        "/meeting-exit?meetingId=" +
-          encodeURIComponent(sessionName) +
-          "&userId=" +
-          encodeURIComponent(userName) +
-          "&role=" +
-          role
-      );
+      // Redirect to MeetingRedirect instead of meeting-exit
+      await redirectToMeetingEnd("host_ended");
     } catch (err) {
       console.error("Failed to end meeting:", err);
 
@@ -2417,15 +2561,8 @@ function JoinerScreen() {
         console.error("Fallback leave failed:", fallbackErr);
       }
 
-      // Navigate anyway
-      navigate(
-        "/meeting-exit?meetingId=" +
-          encodeURIComponent(sessionName) +
-          "&userId=" +
-          encodeURIComponent(userName) +
-          "&role=" +
-          role
-      );
+      // Redirect anyway
+      await redirectToMeetingEnd("host_ended");
     }
   };
 
@@ -2440,14 +2577,9 @@ function JoinerScreen() {
         setError("Failed to leave meeting.");
       }
     }
-    navigate(
-      "/meeting-exit?meetingId=" +
-        encodeURIComponent(sessionName) +
-        "&userId=" +
-        encodeURIComponent(userName) +
-        "&role=" +
-        role
-    );
+    
+    // Redirect to MeetingRedirect instead of meeting-exit
+    await redirectToMeetingEnd("user_left");
   };
 
   const confirmLeaveSession = async () => {
@@ -2477,8 +2609,8 @@ function JoinerScreen() {
 
       addNotification("You have left the meeting");
 
-      // Navigate to exit page
-      navigate("/meeting-left");
+      // Redirect to MeetingRedirect
+      redirectToMeetingEnd("user_left");
     } catch (err) {
       console.error("Error leaving session:", err);
 
@@ -2492,8 +2624,8 @@ function JoinerScreen() {
         console.error("Fallback leave failed:", fallbackErr);
       }
 
-      // Navigate anyway
-      navigate("/meeting-left");
+      // Redirect anyway
+      redirectToMeetingEnd("user_left");
     }
   };
 
@@ -2642,7 +2774,7 @@ function JoinerScreen() {
     return (
       <div className="error-page">
         Error: {error}{" "}
-        <button onClick={() => navigate("/meeting-left")}>Go Back</button>
+        <button onClick={async () => await redirectToMeetingEnd("user_left")}>Go Back</button>
       </div>
     );
   if (localUserRemoved) return <div>Redirecting...</div>;
@@ -2660,8 +2792,42 @@ function JoinerScreen() {
         showTimer={true}
       />
 
-      <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
-        <div className="joinerScreenBlock">
+              <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
+          {/* Clean Recording Indicator */}
+          {showRecordingNotice && (
+            <div
+              style={{
+                position: "absolute",
+                top: "10px",
+                right: "20px",
+                background: "#dc3545",
+                color: "#fff",
+                padding: "6px 12px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: "600",
+                zIndex: 100,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 2px 8px rgba(220, 53, 69, 0.3)",
+                animation: "pulse 2s infinite",
+              }}
+            >
+              <div
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  background: "#fff",
+                  borderRadius: "50%",
+                  animation: "pulse 1s infinite",
+                }}
+              />
+              REC
+            </div>
+          )}
+          
+          <div className="joinerScreenBlock">
           <div
             className={`joinerVideoScreen ${gridClass} ${
               isSharingScreen || isRemoteSharing ? "sharing-on" : ""
@@ -3285,73 +3451,19 @@ function JoinerScreen() {
                 </button>
               ))}
 
-            {/* Recording button - different behavior for host vs participant */}
-            {isHost ? (
-              <>
-                {recordingStatus === "stopped" && (
-                  <button
-                    className="commonJoinderBtn recordingSetting"
-                    onClick={startRecording}
-                    disabled={localUserRemoved}
-                  >
-                    <RecordingIcon />
-                    <span>Start</span>
-                  </button>
-                )}
-                {recordingStatus === "recording" && (
-                  <>
-                    <button
-                      className="commonJoinderBtn recordingSetting active"
-                      onClick={pauseRecording}
-                      disabled={localUserRemoved}
-                    >
-                      <RecordingIcon />
-                      <span>Pause</span>
-                    </button>
-                    <button
-                      className="commonJoinderBtn recordingSetting"
-                      onClick={stopRecording}
-                      disabled={localUserRemoved}
-                    >
-                      <RecordingIcon />
-                      <span>Stop</span>
-                    </button>
-                  </>
-                )}
-                {recordingStatus === "paused" && (
-                  <>
-                    <button
-                      className="commonJoinderBtn recordingSetting active"
-                      onClick={resumeRecording}
-                      disabled={localUserRemoved}
-                    >
-                      <RecordingIcon />
-                      <span>Resume</span>
-                    </button>
-                    <button
-                      className="commonJoinderBtn recordingSetting"
-                      onClick={stopRecording}
-                      disabled={localUserRemoved}
-                    >
-                      <RecordingIcon />
-                      <span>Stop</span>
-                    </button>
-                  </>
-                )}
-              </>
-            ) : (
-              <button
-                className={`commonJoinderBtn recordingSetting ${
-                  showRecordingNotice ? "active" : ""
-                }`}
-                disabled={true}
-              >
-                <RecordingIcon />
-                <span>
-                  {showRecordingNotice ? "Recording Active" : "Recording"}
-                </span>
-              </button>
-            )}
+            {/* 🆕 Automatic Recording Status - No Manual Controls */}
+            <button
+              className={`commonJoinderBtn recordingSetting ${
+                showRecordingNotice ? "active" : ""
+              }`}
+              disabled={true}
+              title="Recording starts automatically when both mentor and mentee join"
+            >
+              <RecordingIcon />
+              <span>Recording</span>
+            </button>
+
+            {/* Recording Banner - Removed duplicate notification */}
 
             {isHost ? (
               <button
@@ -3412,28 +3524,7 @@ function JoinerScreen() {
         />
       </div>
 
-      {/* Recording Notice */}
-      {showRecordingNotice && (
-        <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#e53935",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: "8px",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <span style={{ fontSize: "12px" }}>●</span>
-          This meeting is being recorded
-        </div>
-      )}
+      {/* Recording Notice - Removed duplicate notification */}
 
       {/* End Meeting Confirmation Modal */}
       {showEndMeetingConfirm && (
@@ -3844,7 +3935,7 @@ function JoinerScreen() {
             <div
               key={notification.id}
               style={{
-                background: "#00baff",
+                background: notification.msg.includes("recording") ? "#dc3545" : "#00baff",
                 color: "#fff",
                 padding: "8px 12px",
                 borderRadius: "6px",
@@ -3852,9 +3943,26 @@ function JoinerScreen() {
                 maxWidth: "300px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
                 animation: "slideIn 0.3s ease-out",
+                fontWeight: notification.msg.includes("recording") ? "600" : "400",
+                border: notification.msg.includes("recording") ? "1px solid #c82333" : "none",
+                position: "relative",
+                overflow: "hidden",
               }}
             >
               {notification.msg}
+              {notification.msg.includes("recording") && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "2px",
+                    background: "#fff",
+                    animation: "pulse 2s infinite",
+                  }}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -4256,6 +4364,18 @@ function JoinerScreen() {
           }
           to {
             transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+          100% {
             opacity: 1;
           }
         }

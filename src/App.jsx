@@ -6,6 +6,7 @@ import MeetingLeft from "./feature/preview/MeetingLeft";
 import Feedback from "./feature/preview/Feedback";
 import MeetingValidator from "./feature/preview/MeetingValidator";
 import MeetingExit from "./feature/preview/MeetingExit";
+import MeetingRedirect from "./feature/preview/MeetingRedirect";
 import { ZoomProvider } from "./feature/preview/ZoomContext";
 import JoinerScreen from "./feature/preview/JoinerScreen";
 
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/meeting-left" element={<MeetingLeft />} />
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/meeting-exit" element={<MeetingExit />} />
+        <Route path="/meeting-redirect" element={<MeetingRedirect />} />
       </Routes>
     </ZoomProvider>
   );

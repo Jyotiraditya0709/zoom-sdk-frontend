@@ -336,6 +336,151 @@
   word-break: break-word;
 }
 
+/* Enhanced Microphone Test Button Styles */
+.testMicrophone {
+  position: relative;
+  transition: all 0.3s ease;
+  border: 1px solid #171717;
+  background: #fff;
+  color: #404040;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.testMicrophone:hover {
+  background: #f8f9fa;
+  border-color: #0056b3;
+  color: #0056b3;
+}
+
+.testMicrophone.recording {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.testMicrophone.playing {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.testMicrophone:disabled {
+  background: #e9ecef;
+  border-color: #dee2e6;
+  color: #6c757d;
+  cursor: not-allowed;
+  animation: none;
+}
+
+/* Play Recording Button Styles */
+.playRecording {
+  border-radius: 6px;
+  border: 1px solid #28a745;
+  background: #28a745;
+  padding: 10px 20px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 120%;
+  width: 100%;
+  max-width: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.playRecording:hover {
+  background: #218838;
+  border-color: #218838;
+}
+
+.playRecording:disabled {
+  background: #e9ecef;
+  border-color: #dee2e6;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Recording indicator dot */
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dc3545;
+  animation: blink 1s infinite;
+  display: inline-block;
+}
+
+.playing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #28a745;
+  animation: pulse 1s infinite;
+  display: inline-block;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
+
+/* Enhanced progress bar for microphone level */
+#mic-input-level {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e9ecef;
+  border: none;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+#mic-input-level::-webkit-progress-bar {
+  background: #e9ecef;
+  border-radius: 3px;
+}
+
+#mic-input-level::-webkit-progress-value {
+  background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+#mic-input-level::-moz-progress-bar {
+  background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+  border-radius: 3px;
+}
+
+
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
   .mainMeetingContainer {

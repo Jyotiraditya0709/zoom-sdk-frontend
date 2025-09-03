@@ -242,7 +242,7 @@ const MeetingPage = () => {
     };
   }, [location.search, meetingId, userId]);
   const isHost = role === 1;
-  
+
   // Check SharedArrayBuffer support (critical for Zoom SDK remote video)
   const isProduction = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
   const hasSharedArrayBuffer = typeof SharedArrayBuffer === 'function';

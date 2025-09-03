@@ -317,3 +317,79 @@
 .joinerName .fa-signal:hover {
   transform: scale(1.1);
 }
+
+/* 🆕 Recording Banner Styles */
+.recording-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ff4757, #ff3742);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  z-index: 1000;
+  animation: recordingPulse 2s ease-in-out infinite;
+}
+
+.recording-banner svg {
+  width: 20px;
+  height: 20px;
+  fill: white;
+}
+
+@keyframes recordingPulse {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(255, 71, 87, 0.5);
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+/* 🆕 Recording Status Bar Styles */
+.recording-status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, #ff4757, #ff3742);
+  color: white;
+  padding: 8px 0;
+  z-index: 1001;
+  text-align: center;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  animation: recordingBlink 1.5s ease-in-out infinite;
+}
+
+@keyframes recordingBlink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
