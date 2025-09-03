@@ -1,7 +1,19 @@
 .mainMeetingContainer {
- max-width: none !important;
+  max-width: none !important;
   width: 100% !important;
   margin: 0 !important;
+  
+  /* Ensure header is always visible */
+  .headerMain {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1000 !important;
+    position: relative !important;
+    width: 100% !important;
+    background: #fff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+  }
 
   .videoCallContainer {
     display: flex;

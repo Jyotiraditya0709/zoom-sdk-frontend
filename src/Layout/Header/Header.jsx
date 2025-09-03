@@ -13,6 +13,46 @@ const Header = ({
   const location = useLocation();
   const pathname = location.pathname;
   const [timer, setTimer] = useState("00:00:00");
+  const [isVisible, setIsVisible] = useState(true);
+
+  // Ensure header visibility after mount (fixes refresh issues in production)
+  useEffect(() => {
+    // Force header to be visible after component mounts
+    setIsVisible(true);
+    
+    // Additional check after a short delay to handle any CSS loading issues
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+      console.log("🔍 Header visibility check - ensuring header is visible");
+      
+      // Force DOM update to ensure header is visible
+      const headerElement = document.querySelector('.headerMain');
+      if (headerElement) {
+        headerElement.style.display = 'block';
+        headerElement.style.visibility = 'visible';
+        headerElement.style.opacity = '1';
+        headerElement.style.zIndex = '1000';
+        console.log("🔧 Forced header visibility in DOM");
+      }
+    }, 100);
+    
+    // Additional check after CSS is fully loaded
+    const cssTimer = setTimeout(() => {
+      setIsVisible(true);
+      const headerElement = document.querySelector('.headerMain');
+      if (headerElement) {
+        headerElement.style.display = 'block';
+        headerElement.style.visibility = 'visible';
+        headerElement.style.opacity = '1';
+        console.log("🔧 Final header visibility check after CSS load");
+      }
+    }, 500);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(cssTimer);
+    };
+  }, []);
 
   // Timer functionality
   useEffect(() => {
@@ -53,6 +93,12 @@ const Header = ({
           pathname.includes("/meeting/")) &&
         "borderBottom"
       }`}
+      style={{
+        display: isVisible ? 'block' : 'none',
+        visibility: isVisible ? 'visible' : 'hidden',
+        opacity: isVisible ? 1 : 0,
+      }}
+      data-testid="header-component"
     >
       {pathname === "/pre-join" && (
         <div className="headerContentOne">
