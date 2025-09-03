@@ -18,7 +18,12 @@ const Header = ({
   // Ensure header visibility after mount (fixes refresh issues in production)
   useEffect(() => {
     // Force header to be visible after component mounts
+    console.log("Header code is here");
     setIsVisible(true);
+    
+    // Debug logging
+    console.log("🔍 Header component mounted with pathname:", pathname);
+    console.log("🔍 Header props:", { userEmail, userName, meetingTitle, showTimer });
     
     // Additional check after a short delay to handle any CSS loading issues
     const timer = setTimeout(() => {
@@ -33,6 +38,8 @@ const Header = ({
         headerElement.style.opacity = '1';
         headerElement.style.zIndex = '1000';
         console.log("🔧 Forced header visibility in DOM");
+      } else {
+        console.warn("⚠️ Header element not found in DOM");
       }
     }, 100);
     
@@ -45,6 +52,8 @@ const Header = ({
         headerElement.style.visibility = 'visible';
         headerElement.style.opacity = '1';
         console.log("🔧 Final header visibility check after CSS load");
+      } else {
+        console.warn("⚠️ Header element still not found after CSS load");
       }
     }, 500);
     
@@ -52,7 +61,7 @@ const Header = ({
       clearTimeout(timer);
       clearTimeout(cssTimer);
     };
-  }, []);
+  }, [pathname, userEmail, userName, meetingTitle, showTimer]);
 
   // Timer functionality
   useEffect(() => {
@@ -94,13 +103,21 @@ const Header = ({
         "borderBottom"
       }`}
       style={{
-        display: isVisible ? 'block' : 'none',
-        visibility: isVisible ? 'visible' : 'hidden',
-        opacity: isVisible ? 1 : 0,
+        display: 'block !important',
+        visibility: 'visible !important',
+        opacity: 1,
+        width: '100%',
+        background: '#fff',
+        borderBottom: '1px solid #e0e0e0',
+        padding: '12px 20px',
+        zIndex: 1000,
+        position: 'relative',
+        minHeight: '60px',
+        boxSizing: 'border-box',
       }}
       data-testid="header-component"
     >
-      {pathname === "/pre-join" && (
+      {(pathname === "/pre-join" || pathname.includes("pre-join")) && (
         <div className="headerContentOne">
           <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
           <div className="profileDetailHeader">
@@ -145,6 +162,40 @@ const Header = ({
                 <WatchIcon /> {timer}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Fallback header content - always show if no other content matches */}
+      {!pathname.includes("/pre-join") && 
+       !pathname.includes("/joiner-screen") && 
+       !pathname.includes("/screen-share") && 
+       !pathname.includes("/meeting/") && (
+        <div className="headerContentOne">
+          <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
+          <div className="profileDetailHeader">
+            <div className="profileName">
+              <span className="emailText">{userEmail}</span>
+              <span className="nameText">{userName}</span>
+            </div>
+            <div className="profileImage">
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  backgroundColor: "#00baff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "16px",
+                }}
+              >
+                {userName ? userName.charAt(0).toUpperCase() : "U"}
+              </div>
+            </div>
           </div>
         </div>
       )}

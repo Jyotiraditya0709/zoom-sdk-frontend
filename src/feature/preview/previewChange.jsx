@@ -796,6 +796,7 @@ const PreJoin = () => {
 
   return (
     <div className="mainMeetingContainer">
+      {/* Header Component */}
       <Header
         userEmail={`${userName}@example.com`}
         userName={userName}
