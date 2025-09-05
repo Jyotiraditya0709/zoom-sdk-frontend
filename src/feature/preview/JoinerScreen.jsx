@@ -3479,6 +3479,7 @@ function JoinerScreen() {
                 className="leaveMeetingButton"
                 onClick={handleLeave}
                 disabled={localUserRemoved}
+                style={{ background: "#e53935",minHeight: "50px" }}
               >
                 Leave Meeting
               </button>
