@@ -5,6 +5,7 @@ import "./PreJoin.css";
 import {
   MicroPhone,
   OffVideoCamera,
+  PolygonIcon,
   RightArrow,
   UnMicroPhone,
   VideoCamera,
@@ -917,9 +918,14 @@ const PreJoin = () => {
               {error && <div className="error">{error}</div>}
 
               <div className="bottomControls">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
-                  {/* Test Microphone Button */}
-                  <button
+                <div className="bottomControlsLeft">
+                  <div className="instructions">< PolygonIcon />Check your mic and camera from the menu above (...)</div>
+                  <div className="instructions">< PolygonIcon /> Test your audio/ video and ensure you have a stable internet connection.</div>
+                  <div className="instructions">< PolygonIcon /> This session will be recorded for future reference.</div>
+                </div>
+                 <div className="bottomControlsRight">
+                  <div className="buttonGroup">
+                            <button
                     className={`commonTextBtn testMicrophone ${
                       micTestPhase === "recording" ? "recording" : 
                       micTestPhase === "playing" ? "playing" :
@@ -939,8 +945,29 @@ const PreJoin = () => {
                           : "Test Microphone"}
                   </button>
                   
-                  {/* Microphone level indicator with decibel display - positioned to the side */}
-                  <div className="mic-level-container">
+                  
+                  
+                  {micTestPhase === "ready" && (
+                    <button
+                      className="commonTextBtn playRecording"
+                      onClick={handlePlayRecording}
+                    >
+                      <span className="playing-dot"></span>
+                      Play Recording
+                    </button>
+                  )}
+
+                <button
+                  className={`commonTextBtn testSpeaker ${
+                    isSpeakerTesting ? "testing" : ""
+                  }`}
+                  onClick={handleSpeakerTest}
+                >
+                  {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
+                </button>
+                  </div>
+
+                {/* <div className="mic-level-container">
                     <div className="mic-level-label">
                       <span>Mic Level</span>
                       <span className={`mic-level-value ${micLevel === 0 ? 'silent' : ''}`}>
@@ -953,28 +980,8 @@ const PreJoin = () => {
                       max={100}
                       style={{ width: '120px' }}
                     ></progress>
-                  </div>
-                  
-                  {/* Play Recording Button (only show when ready) */}
-                  {micTestPhase === "ready" && (
-                    <button
-                      className="commonTextBtn playRecording"
-                      onClick={handlePlayRecording}
-                    >
-                      <span className="playing-dot"></span>
-                      Play Recording
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  className={`commonTextBtn testSpeaker ${
-                    isSpeakerTesting ? "testing" : ""
-                  }`}
-                  onClick={handleSpeakerTest}
-                >
-                  {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
-                </button>
+                  </div> */}
+                 </div>
 
 
               </div>

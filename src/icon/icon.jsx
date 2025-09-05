@@ -396,3 +396,12 @@ export const SendIcon = ({ className, color, onClick }) => {
     </svg>
   );
 };
+
+export const PolygonIcon = () => {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="10" viewBox="0 0 9 10" fill="none">
+      <path d="M0.062177 2.77758C0.0621768 1.23798 1.72884 0.275728 3.06218 1.04553L7.56218 3.6436C8.89551 4.4134 8.89551 6.3379 7.56217 7.1077L3.06218 9.70578C1.72884 10.4756 0.0621765 9.51333 0.0621768 7.97373L0.062177 2.77758Z" fill="#D9D9D9" />
+    </svg>
+  );
+}
+ 
