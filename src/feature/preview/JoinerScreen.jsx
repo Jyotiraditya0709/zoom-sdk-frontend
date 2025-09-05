@@ -3025,7 +3025,7 @@ function JoinerScreen() {
               width: "80%",
               display: "flex",
               justifyContent: "center",
-              margin: "16px 0",
+              margin: "16px 0px 0px 0px",
               position: "relative",
               zIndex: 10,
             }}
@@ -3469,7 +3469,7 @@ function JoinerScreen() {
               <button
                 className="leaveMeetingButton"
                 onClick={handleEndMeeting}
-                style={{ background: "#e53935" }}
+                style={{ background: "#e53935",minHeight: "50px" }}
                 disabled={localUserRemoved}
               >
                 End Meeting

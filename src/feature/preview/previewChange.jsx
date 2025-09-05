@@ -921,7 +921,6 @@ const PreJoin = () => {
                 <div className="bottomControlsLeft">
                   <div className="instructions">< PolygonIcon />Check your mic and camera from the menu above (...)</div>
                   <div className="instructions">< PolygonIcon /> Test your audio/ video and ensure you have a stable internet connection.</div>
-                  <div className="instructions">< PolygonIcon /> This session will be recorded for future reference.</div>
                 </div>
                  <div className="bottomControlsRight">
                   <div className="buttonGroup">
@@ -1084,6 +1083,11 @@ const PreJoin = () => {
                     <option value="image">Image</option>
                   </select>
                 </div>
+                
+                <div className="agreeText"><input type="checkbox"/>This session will be recorded for future reference.</div>
+
+
+                
               </div>
 
               <button

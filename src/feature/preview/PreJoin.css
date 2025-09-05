@@ -178,6 +178,14 @@
   .settingOptionGroup {
     width: 100%;
     margin-top: 22px;
+
+    .agreeText {
+      color: #000;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
   }
 
   .settingOptionGroup .dropdownWrapper {

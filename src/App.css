@@ -127,7 +127,7 @@ body {
   background-color: black;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #ccc;
+  border: 1px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
