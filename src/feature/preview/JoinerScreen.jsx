@@ -126,7 +126,7 @@ function JoinerScreen() {
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [isRemoteSharing, setIsRemoteSharing] = useState(false);
   const [currentSharerId, setCurrentSharerId] = useState(null);
-  const [isAnnotating, setIsAnnotating] = useState(false);
+  // const [isAnnotating, setIsAnnotating] = useState(false);
   const [showRecordingNotice, setShowRecordingNotice] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
@@ -1558,14 +1558,14 @@ function JoinerScreen() {
     }, 2000); // Check every 2 seconds
 
     // Optional: Listen for annotation privilege changes
-    client.on(
-      "annotation-privilege-change",
-      ({ userId, isAnnotationEnabled }) => {
-        if (!isAnnotationEnabled && isAnnotating) {
-          stopAnnotation();
-        }
-      }
-    );
+    // client.on(
+    //   "annotation-privilege-change",
+    //   ({ userId, isAnnotationEnabled }) => {
+    //     if (!isAnnotationEnabled && isAnnotating) {
+    //       stopAnnotation();
+    //     }
+    //   }
+    // );
 
     // Listen for active speaker changes
     client.on("video-active-change", (payload) => {
@@ -2120,34 +2120,34 @@ function JoinerScreen() {
     }
   }, [isVideoOn, attachVideo, detachVideo, bgMode]);
 
-  const handleStartAnnotation = async () => {
-    try {
-      if (!mediaStreamRef.current) return;
-      await mediaStreamRef.current.startAnnotation();
-      const annotationController =
-        mediaStreamRef.current.getAnnotationController();
-      await annotationController.setToolType(1); // pen
-      await annotationController.setToolWidth(8);
-      setIsAnnotating(true);
-      addNotification("Annotation started");
-    } catch (err) {
-      console.error("Failed to start annotation", err);
-      setError(
-        "Failed to start annotation: " + (err.message || "Unknown error")
-      );
-    }
-  };
+  // const handleStartAnnotation = async () => {
+  //   try {
+  //     if (!mediaStreamRef.current) return;
+  //     await mediaStreamRef.current.startAnnotation();
+  //     const annotationController =
+  //       mediaStreamRef.current.getAnnotationController();
+  //     await annotationController.setToolType(1); // pen
+  //     await annotationController.setToolWidth(8);
+  //     setIsAnnotating(true);
+  //     addNotification("Annotation started");
+  //   } catch (err) {
+  //     console.error("Failed to start annotation", err);
+  //     setError(
+  //       "Failed to start annotation: " + (err.message || "Unknown error")
+  //     );
+  //   }
+  // };
 
-  const stopAnnotation = async () => {
-    if (!mediaStreamRef.current) return;
-    try {
-      await mediaStreamRef.current.stopAnnotation();
-      setIsAnnotating(false);
-      addNotification("Annotation stopped");
-    } catch (err) {
-      console.error("Failed to stop annotation", err);
-    }
-  };
+  // const stopAnnotation = async () => {
+  //   if (!mediaStreamRef.current) return;
+  //   try {
+  //     await mediaStreamRef.current.stopAnnotation();
+  //     setIsAnnotating(false);
+  //     addNotification("Annotation stopped");
+  //   } catch (err) {
+  //     console.error("Failed to stop annotation", err);
+  //   }
+  // };
 
   const handleBgChange = async (e) => {
     const newBgMode = e.target.value;
@@ -3421,7 +3421,7 @@ function JoinerScreen() {
             </button>
 
             {/* Annotation Button (only show if sharing or viewing share) */}
-            {(isSharingScreen || isRemoteSharing) &&
+            {/* {(isSharingScreen || isRemoteSharing) &&
               (isAnnotating ? (
                 <button
                   className="commonJoinderBtn annotationSetting active"
@@ -3449,7 +3449,7 @@ function JoinerScreen() {
                   </svg>
                   <span>Annotate</span>
                 </button>
-              ))}
+              ))} */}
 
             {/* 🆕 Automatic Recording Status - No Manual Controls */}
             <button

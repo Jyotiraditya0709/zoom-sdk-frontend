@@ -112,6 +112,10 @@ const PreJoin = () => {
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaError, setAgendaError] = useState("");
 
+  // Add recording consent state
+  const [recordingConsent, setRecordingConsent] = useState(false);
+  const [showConsentError, setShowConsentError] = useState(false);
+
   const client = useRef(null);
 
 
@@ -498,6 +502,15 @@ const PreJoin = () => {
 
   // ========== Join Meeting Handler ==========
   const handleJoin = async () => {
+    // Check recording consent first
+    if (!recordingConsent) {
+      setShowConsentError(true);
+      return;
+    }
+    
+    // Clear any previous consent error
+    setShowConsentError(false);
+    
     // Stop the preview tracks to release the camera and microphone
     if (localVideoTrack) {
       await localVideoTrack.stop();
@@ -1084,7 +1097,33 @@ const PreJoin = () => {
                   </select>
                 </div>
                 
-                <div className="agreeText"><input type="checkbox"/>This session will be recorded for future reference.</div>
+                <div className="agreeText">
+                  <input 
+                    type="checkbox" 
+                    checked={recordingConsent}
+                    onChange={(e) => {
+                      setRecordingConsent(e.target.checked);
+                      // Clear consent error when user checks the box
+                      if (e.target.checked) {
+                        setShowConsentError(false);
+                      }
+                    }}
+                  />
+                  This session will be recorded for future reference.
+                </div>
+                {showConsentError && (
+                  <div className="warning-message" style={{ 
+                    color: "#dc2626", 
+                    fontSize: "14px", 
+                    marginTop: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}>
+                    <span>⚠️</span>
+                    <span>You must agree to recording to join the session.</span>
+                  </div>
+                )}
 
 
                 
