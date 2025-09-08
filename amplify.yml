@@ -7,7 +7,7 @@ frontend:
         - node --version
         - npm --version
         - npm cache clean --force
-        - npm ci --prefer-offline --no-audit --no-fund
+        - npm ci --prefer-offline --no-audit --no-fund --no-optional
         - echo "Dependencies installed successfully"
     build:
       commands:
