@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import "./Header.css";
 import { useLocation } from "react-router-dom";
 import { WatchIcon } from "../../icon/icon";
+import DynamicLogo from "../../components/DynamicLogo";
+import { useOrgId } from "../../hooks/useOrgId";
 
 const Header = ({
   userEmail = "VictorWadhwa26@gmail.com",
@@ -12,6 +14,7 @@ const Header = ({
 }) => {
   const location = useLocation();
   const pathname = location.pathname;
+  const orgId = useOrgId();
   const [timer, setTimer] = useState("00:00:00");
   const [isVisible, setIsVisible] = useState(true);
 
@@ -96,30 +99,30 @@ const Header = ({
 
   return (
     <div
-      className={`headerMain ${
-        (pathname === "/joiner-screen" ||
-          pathname === "/screen-share" ||
-          pathname.includes("/meeting/")) &&
-        "borderBottom"
-      }`}
-      style={{
-        display: 'block !important',
-        visibility: 'visible !important',
-        opacity: 1,
-        width: '100%',
-        background: '#fff',
-        borderBottom: '1px solid #e0e0e0',
-        padding: '12px 20px',
-        zIndex: 1000,
-        position: 'relative',
-        minHeight: '60px',
-        boxSizing: 'border-box',
-      }}
-      data-testid="header-component"
-    >
+        className={`headerMain ${
+          (pathname === "/joiner-screen" ||
+            pathname === "/screen-share" ||
+            pathname.includes("/meeting/")) &&
+          "borderBottom"
+        }`}
+        style={{
+          display: 'block !important',
+          visibility: 'visible !important',
+          opacity: 1,
+          width: '100%',
+          background: '#fff',
+          borderBottom: '1px solid #e0e0e0',
+          padding: '12px 20px',
+          zIndex: 1000,
+          position: 'relative',
+          minHeight: '60px',
+          boxSizing: 'border-box',
+        }}
+        data-testid="header-component"
+      >
       {(pathname === "/pre-join" || pathname.includes("pre-join")) && (
         <div className="headerContentOne">
-          <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
+          <DynamicLogo orgId={orgId} alt="Logo" />
           <div className="profileDetailHeader">
             <div className="profileName">
               <span className="emailText">{userEmail}</span>
@@ -152,7 +155,7 @@ const Header = ({
         pathname.includes("/meeting/")) && (
         <div className="headerContentTwo">
           <div className="headerLeftJoinerScreen">
-            <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
+            <DynamicLogo orgId={orgId} alt="Logo" />
             <span className="headerDescription">{meetingTitle}</span>
           </div>
 
@@ -172,7 +175,7 @@ const Header = ({
        !pathname.includes("/screen-share") && 
        !pathname.includes("/meeting/") && (
         <div className="headerContentOne">
-          <img src="/assest/svg/getPrepped.svg" alt="getPrepped" />
+          <DynamicLogo orgId={orgId} alt="Logo" />
           <div className="profileDetailHeader">
             <div className="profileName">
               <span className="emailText">{userEmail}</span>
