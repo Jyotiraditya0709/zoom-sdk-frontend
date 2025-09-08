@@ -6,8 +6,11 @@ frontend:
         - echo "Installing dependencies..."
         - node --version
         - npm --version
+        - echo "Cleaning up existing lock files and node_modules..."
+        - rm -rf node_modules package-lock.json
         - npm cache clean --force
-        - npm ci --prefer-offline --no-audit --no-fund --no-optional
+        - echo "Installing fresh dependencies with legacy peer deps..."
+        - npm install --legacy-peer-deps
         - echo "Dependencies installed successfully"
     build:
       commands:
