@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ZoomVideo from "@zoom/videosdk";
 import { useZoom } from "../preview/ZoomContext";
 import MeetingLeft from "./MeetingLeft";
+import ChatSidebar from "./ChatSidebar/ChatSidebar";
 import "./MeetingPage.css";
 import config from "../../config/config.js";
 import {
@@ -2029,189 +2030,19 @@ const MeetingPage = () => {
           </button>
         )}
       </div>
-      {showModals.chat && (
-        <div
-          className="modal chat-modal"
-          style={{
-            position: "fixed",
-            top: 0,
-            right: 0,
-            height: "100%",
-            width: 340,
-            background: "#fff",
-            boxShadow: "-2px 0 12px #0002",
-            zIndex: 2100,
-            display: "flex",
-            flexDirection: "column",
-            borderLeft: "1px solid #e0e0e0",
-            padding: 0,
-            animation: "slideInRight 0.3s",
-          }}
-          onClick={() => handleModal("chat", false)}
-        >
-          <div
-            className="modal-content"
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              padding: 0,
-              background: "#f8f9fa",
-              borderRadius: 0,
-              boxShadow: "none",
-              minWidth: 0,
-              minHeight: 0,
-              height: "100%",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "18px 24px 12px 24px",
-                borderBottom: "1px solid #e0e0e0",
-                background: "#fff",
-              }}
-            >
-              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>Chat</h3>
-              <button
-                onClick={() => handleModal("chat", false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: 22,
-                  color: "#888",
-                  cursor: "pointer",
-                  marginLeft: 8,
-                }}
-                aria-label="Close chat panel"
-              >
-                ×
-              </button>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "16px 0 0 0",
-                minHeight: 0,
-              }}
-            >
-              {chatMessages.length === 0 ? (
-                <div
-                  style={{ color: "#888", textAlign: "center", marginTop: 32 }}
-                >
-                  No messages yet.
-                </div>
-              ) : (
-                chatMessages.map((msg, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      padding: "8px 24px 8px 24px",
-                      fontSize: 15,
-                      gap: 8,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: "#226",
-                        minWidth: 60,
-                        flexShrink: 0,
-                        textAlign: "right",
-                        marginRight: 8,
-                      }}
-                    >
-                      {msg.sender}:
-                    </div>
-                    <div
-                      style={{
-                        color: "#222",
-                        wordBreak: "break-word",
-                        flex: 1,
-                      }}
-                    >
-                      {msg.content}
-                    </div>
-                    <div
-                      style={{
-                        color: "#aaa",
-                        fontSize: 12,
-                        marginLeft: 8,
-                        minWidth: 48,
-                        textAlign: "right",
-                      }}
-                    >
-                      {msg.timestamp}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <form
-              onSubmit={sendChatMessage}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                padding: "18px 24px 18px 24px",
-                borderTop: "1px solid #e0e0e0",
-                background: "#fff",
-                position: "relative",
-              }}
-            >
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type a message..."
-                style={{
-                  padding: "10px 12px",
-                  border: "1px solid #cfd8dc",
-                  borderRadius: 8,
-                  fontSize: 15,
-                  outline: "none",
-                  marginBottom: 0,
-                  background: "#f8f9fa",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  color: "#222", // Ensure text is visible
-                }}
-                autoFocus
-              />
-              <button
-                type="submit"
-                style={{
-                  background: "#1976f6",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 0",
-                  fontWeight: 600,
-                  fontSize: 16,
-                  cursor: "pointer",
-                  transition: "background 0.2s",
-                  marginTop: 0,
-                  width: "100%",
-                }}
-              >
-                Send
-              </button>
-            </form>
-          </div>
-          <style>{`
-            @keyframes slideInRight {
-              from { transform: translateX(100%); opacity: 0; }
-              to { transform: translateX(0); opacity: 1; }
-            }
-          `}</style>
-        </div>
-      )}
+      <ChatSidebar
+        isChatOpen={showModals.chat}
+        setIsChatOpen={(state) => handleModal("chat", state)}
+        participants={participants}
+        chatMessages={chatMessages}
+        onSendMessage={(message) => {
+          if (message && message.trim()) {
+            setChatInput(message);
+            sendChatMessage({ preventDefault: () => {} });
+          }
+        }}
+        userName={userName}
+      />
       {showModals.participants && (
         <div
           className="modal participants-modal"
