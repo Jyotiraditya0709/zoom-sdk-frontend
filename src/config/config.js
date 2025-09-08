@@ -13,6 +13,7 @@ const config = {
   },
 
   // Get full URL for an endpoint
+  //mew comment added
   getApiUrl: (endpoint) => {
     return `${config.BACKEND_URL}${endpoint}`;
   },
