@@ -4,14 +4,19 @@ frontend:
     preBuild:
       commands:
         - echo "Installing dependencies..."
-        - npm ci
-        - echo "Dependencies installed"
+        - node --version
+        - npm --version
+        - npm cache clean --force
+        - npm ci --prefer-offline --no-audit --no-fund
+        - echo "Dependencies installed successfully"
     build:
       commands:
-        - echo "Starting build..."
+        - echo "Starting build process..."
         - npm run build
-        - echo "Build completed"
+        - echo "Build completed successfully"
         - ls -la dist/
+        - echo "Build artifacts:"
+        - find dist -type f -name "*.js" -o -name "*.css" -o -name "*.html" | head -10
   artifacts:
     baseDirectory: dist
     files:
