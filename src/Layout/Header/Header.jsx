@@ -14,7 +14,7 @@ const Header = ({
 }) => {
   const location = useLocation();
   const pathname = location.pathname;
-  const orgId = useOrgId();
+  const { orgId, isLoading } = useOrgId();
   const [timer, setTimer] = useState("00:00:00");
   const [isVisible, setIsVisible] = useState(true);
 
@@ -122,7 +122,7 @@ const Header = ({
       >
       {(pathname === "/pre-join" || pathname.includes("pre-join")) && (
         <div className="headerContentOne">
-          <DynamicLogo orgId={orgId} alt="Logo" />
+          {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" />}
           <div className="profileDetailHeader">
             <div className="profileName">
               <span className="emailText">{userEmail}</span>
@@ -155,7 +155,7 @@ const Header = ({
         pathname.includes("/meeting/")) && (
         <div className="headerContentTwo">
           <div className="headerLeftJoinerScreen">
-            <DynamicLogo orgId={orgId} alt="Logo" />
+            {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" />}
             <span className="headerDescription">{meetingTitle}</span>
           </div>
 
@@ -175,7 +175,7 @@ const Header = ({
        !pathname.includes("/screen-share") && 
        !pathname.includes("/meeting/") && (
         <div className="headerContentOne">
-          <DynamicLogo orgId={orgId} alt="Logo" />
+          {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" />}
           <div className="profileDetailHeader">
             <div className="profileName">
               <span className="emailText">{userEmail}</span>

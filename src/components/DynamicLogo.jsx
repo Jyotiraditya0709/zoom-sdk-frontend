@@ -9,12 +9,17 @@ const DynamicLogo = ({ orgId, className = "", alt = "Logo", ...props }) => {
       case '00324e7c-0a3e-40d6-a583-ae54105c6322':
         return '/assest/svg/tetrLogo.svg';
       default:
-        // Default logo (current getPrepped.svg)
-        return '/assest/svg/getPrepped.svg';
+        // Return null to show no logo instead of default
+        return null;
     }
   };
 
   const logoSrc = getLogoSrc(orgId);
+
+  // Don't render anything if no valid orgId is provided
+  if (!logoSrc) {
+    return null;
+  }
 
   return (
     <img 
