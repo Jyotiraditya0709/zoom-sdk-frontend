@@ -558,14 +558,14 @@ const PreJoin = () => {
     const userId = params.get("userId");
 
     if (meetingId && userId) {
-      // Navigate to meeting with URL parameters and device selections
-      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}`);
+      // Navigate to meeting with URL parameters and device selections including camera/mic states
+      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}`);
     } else {
       // Fallback to old format
       navigate(
         `/meeting?session=${encodeURIComponent(
           sessionName
-        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}`
+        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}`
       );
     }
   };

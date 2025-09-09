@@ -381,7 +381,7 @@ function JoinerScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const { meetingId, userId } = useParams();
-  const { sessionName, userName, displayName, role, userType } =
+  const { sessionName, userName, displayName, role, userType, initialVideoOff, initialMute } =
     React.useMemo(() => {
       const params = new URLSearchParams(location.search);
 
@@ -394,6 +394,8 @@ function JoinerScreen() {
         fullUrl: location.href,
         roleParam: params.get("role"),
         userTypeParam: params.get("userType"),
+        videoOffParam: params.get("videoOff"),
+        muteParam: params.get("mute"),
       });
 
       return {
@@ -404,10 +406,25 @@ function JoinerScreen() {
         userType:
           params.get("userType") ||
           (parseInt(params.get("role") || "1", 10) === 1 ? "mentor" : "mentee"),
+        initialVideoOff: params.get("videoOff") === "true",
+        initialMute: params.get("mute") === "true",
       };
     }, [location.search, meetingId, userId]);
 
   const isHost = role === 1;
+
+  // Set initial camera/mic states based on URL parameters
+  useEffect(() => {
+    console.log("🎯 Setting initial states from URL:", {
+      initialVideoOff,
+      initialMute,
+      isVideoOn: !initialVideoOff,
+      isAudioOn: !initialMute
+    });
+    
+    setIsVideoOn(!initialVideoOff);
+    setIsAudioOn(!initialMute);
+  }, [initialVideoOff, initialMute]);
 
   const attachVideo = useCallback(
     async (userId) => {
@@ -1254,37 +1271,46 @@ function JoinerScreen() {
         setParticipants(client.getAllUser());
 
         setTimeout(async () => {
-          // Start audio
-          await mediaStreamRef.current.startAudio();
-          setIsAudioOn(true);
+          // Start audio only if not muted from preview
+          if (!initialMute) {
+            await mediaStreamRef.current.startAudio();
+            setIsAudioOn(true);
+            console.log("🎤 Audio started (not muted from preview)");
+          } else {
+            console.log("🎤 Audio not started (muted from preview)");
+          }
 
-          // Start and attach self video with initial background mode
-          try {
-            let vbOptions = {};
-            if (bgMode === "blur") {
-              vbOptions = { virtualBackground: { imageUrl: "blur" } };
-            } else if (bgMode === "image") {
-              vbOptions = {
-                virtualBackground: {
-                  imageUrl: "/lib/vb-resource/background.jpg",
-                },
-              };
-            }
+          // Start and attach self video only if not off from preview
+          if (!initialVideoOff) {
+            try {
+              let vbOptions = {};
+              if (bgMode === "blur") {
+                vbOptions = { virtualBackground: { imageUrl: "blur" } };
+              } else if (bgMode === "image") {
+                vbOptions = {
+                  virtualBackground: {
+                    imageUrl: "/lib/vb-resource/background.jpg",
+                  },
+                };
+              }
 
-            await mediaStreamRef.current.startVideo(vbOptions);
-            setIsVideoOn(true);
-            await attachVideo(selfUserIdRef.current);
-            console.log("📹 Video started with background:", bgMode);
-          } catch (e) {
-            if (e?.errorCode === 6105) {
-              // Camera is still starting, show a small message and optionally retry
-              setError("Camera is still starting, please wait and try again.");
-              // Optionally, retry after 1 second:
-              // setTimeout(() => toggleVideo(), 1000);
-              return;
+              await mediaStreamRef.current.startVideo(vbOptions);
+              setIsVideoOn(true);
+              await attachVideo(selfUserIdRef.current);
+              console.log("📹 Video started with background:", bgMode);
+            } catch (e) {
+              if (e?.errorCode === 6105) {
+                // Camera is still starting, show a small message and optionally retry
+                setError("Camera is still starting, please wait and try again.");
+                // Optionally, retry after 1 second:
+                // setTimeout(() => toggleVideo(), 1000);
+                return;
+              }
+              console.error("Failed to start self video", e);
+              setError("Could not start camera. Check permissions.");
             }
-            console.error("Failed to start self video", e);
-            setError("Could not start camera. Check permissions.");
+          } else {
+            console.log("📹 Video not started (off from preview)");
           }
 
           // Attach videos for users already in the session
