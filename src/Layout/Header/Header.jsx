@@ -122,7 +122,7 @@ const Header = ({
       >
       {(pathname === "/pre-join" || pathname.includes("pre-join")) && (
         <div className="headerContentOne">
-          {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" />}
+          {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" className="logoOrg" />}
           <div className="profileDetailHeader">
             <div className="profileName">
               <span className="emailText">{userEmail}</span>
