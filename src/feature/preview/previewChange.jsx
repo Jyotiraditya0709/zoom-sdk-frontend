@@ -289,22 +289,26 @@ const PreJoin = () => {
         
           localVideoTrack = ZoomVideo.createLocalVideoTrack(selectedCamera);
         
-        // Determine the correct video element based on background mode
-        const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+        // Always use the video-player element for virtual backgrounds
+        const videoElement = document.querySelector("#local-preview-video");
         
         if (!videoElement) {
           throw new Error(`Video element not found for background mode: ${bgMode}`);
         }
         
-        if (bgMode === "none") {
+        // Apply virtual background options when starting the track
+        let vbOptions = {};
+        if (bgMode === "blur") {
+          vbOptions = { imageUrl: "blur" };
+        } else if (bgMode === "image") {
+          vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
+        }
+        
+        if (Object.keys(vbOptions).length > 0) {
+          await localVideoTrack.start(videoElement, vbOptions);
+        } else {
           await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
-        } else if (bgMode === "blur") {
-          await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-        } else if (bgMode === "image") {
-          await localVideoTrack.start(videoElement, {
-              imageUrl: "/lib/vb-resource/background.jpg",
-          });
         }
       }
       
@@ -383,22 +387,26 @@ const PreJoin = () => {
           }
         }
         
-        // Determine the correct video element based on background mode
-        const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+        // Always use the video-player element for virtual backgrounds
+        const videoElement = document.querySelector("#local-preview-video");
         
         if (!videoElement) {
           throw new Error(`Video element not found for background mode: ${bgMode}`);
         }
         
-        if (bgMode === "none") {
+        // Apply virtual background options when starting the track
+        let vbOptions = {};
+        if (bgMode === "blur") {
+          vbOptions = { imageUrl: "blur" };
+        } else if (bgMode === "image") {
+          vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
+        }
+        
+        if (Object.keys(vbOptions).length > 0) {
+          await localVideoTrack.start(videoElement, vbOptions);
+        } else {
           await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
-        } else if (bgMode === "blur") {
-          await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-        } else if (bgMode === "image") {
-          await localVideoTrack.start(videoElement, {
-              imageUrl: "/lib/vb-resource/background.jpg",
-          });
         }
       } catch (err) {
         if (err.message && err.message.includes("VideoNotStartedError")) {
@@ -426,10 +434,19 @@ const PreJoin = () => {
         console.error("Virtual background update error:", err);
         if (err.message?.includes("Cannot start video with virtual background")) {
           setError("Virtual background not supported. Please try refreshing the page or check your browser compatibility.");
+        } else if (err.message?.includes("virtual background")) {
+          console.warn("Virtual background not supported, falling back to normal video");
+          // Fallback to normal video without virtual background
+          try {
+            await localVideoTrack.start(videoElement);
+            await localVideoTrack.updateVirtualBackground(undefined);
+          } catch (fallbackErr) {
+            setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
+          }
         } else {
-        setError(
-          "Failed to update virtual background: " + (err.reason || err.message)
-        );
+          setError(
+            "Failed to update virtual background: " + (err.reason || err.message)
+          );
         }
       } finally {
         isUpdating = false;
@@ -829,21 +846,12 @@ const PreJoin = () => {
                 className="local-preview-container"
                 style={{ width: "100%", height: "100%", background: "black" }}
               >
-                {bgMode === "none" ? (
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    style={{ width: "100%", height: "100%" }}
-                  ></video>
-                ) : (
-                  <video-player
-                    ref={videoRef}
-                    id="local-preview-video"
-                    style={{ width: "100%", height: "100%" }}
-                  ></video-player>
-                )}
+                {/* Always use video-player for virtual backgrounds */}
+                <video-player
+                  ref={videoRef}
+                  id="local-preview-video"
+                  style={{ width: "100%", height: "100%" }}
+                ></video-player>
                 <div className="buttonZoomSetting">
                   <button
                     onClick={async () => {

@@ -10,13 +10,18 @@ export const useOrgId = () => {
   
   // If not in URL, try to get from meeting context
   let meetingOrgId = null;
+  let isLoading = false;
   try {
-    const { orgId } = useMeeting();
+    const { orgId, loading } = useMeeting();
     meetingOrgId = orgId;
+    isLoading = loading;
   } catch (error) {
     // Meeting context not available, continue with URL orgId
   }
   
   // Return URL orgId if available, otherwise meeting orgId, otherwise null
-  return urlOrgId || meetingOrgId;
+  return {
+    orgId: urlOrgId || meetingOrgId,
+    isLoading: isLoading && !urlOrgId // Only show loading if we're waiting for meeting data and no URL orgId
+  };
 };
