@@ -289,14 +289,24 @@ const PreJoin = () => {
 
         localVideoTrack = ZoomVideo.createLocalVideoTrack(selectedCamera);
 
-        // Determine the correct video element based on background mode
-        const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+        // Always use the video-player element for virtual backgrounds
+        const videoElement = document.querySelector("#local-preview-video");
 
         if (!videoElement) {
           throw new Error(`Video element not found for background mode: ${bgMode}`);
         }
 
-        if (bgMode === "none") {
+        // Apply virtual background options when starting the track
+        let vbOptions = {};
+        if (bgMode === "blur") {
+          vbOptions = { imageUrl: "blur" };
+        } else if (bgMode === "image") {
+          vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
+        }
+        
+        if (Object.keys(vbOptions).length > 0) {
+          await localVideoTrack.start(videoElement, vbOptions);
+        } else {
           await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
         } else if (bgMode === "blur") {
@@ -383,14 +393,24 @@ const PreJoin = () => {
           }
         }
 
-        // Determine the correct video element based on background mode
-        const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+        // Always use the video-player element for virtual backgrounds
+        const videoElement = document.querySelector("#local-preview-video");
 
         if (!videoElement) {
           throw new Error(`Video element not found for background mode: ${bgMode}`);
         }
 
-        if (bgMode === "none") {
+        // Apply virtual background options when starting the track
+        let vbOptions = {};
+        if (bgMode === "blur") {
+          vbOptions = { imageUrl: "blur" };
+        } else if (bgMode === "image") {
+          vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
+        }
+        
+        if (Object.keys(vbOptions).length > 0) {
+          await localVideoTrack.start(videoElement, vbOptions);
+        } else {
           await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
         } else if (bgMode === "blur") {
@@ -426,6 +446,15 @@ const PreJoin = () => {
         console.error("Virtual background update error:", err);
         if (err.message?.includes("Cannot start video with virtual background")) {
           setError("Virtual background not supported. Please try refreshing the page or check your browser compatibility.");
+        } else if (err.message?.includes("virtual background")) {
+          console.warn("Virtual background not supported, falling back to normal video");
+          // Fallback to normal video without virtual background
+          try {
+            await localVideoTrack.start(videoElement);
+            await localVideoTrack.updateVirtualBackground(undefined);
+          } catch (fallbackErr) {
+            setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
+          }
         } else {
           setError(
             "Failed to update virtual background: " + (err.reason || err.message)
@@ -541,14 +570,14 @@ const PreJoin = () => {
     const userId = params.get("userId");
 
     if (meetingId && userId) {
-      // Navigate to meeting with URL parameters and device selections
-      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}`);
+      // Navigate to meeting with URL parameters and device selections including camera/mic states
+      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}`);
     } else {
       // Fallback to old format
       navigate(
         `/meeting?session=${encodeURIComponent(
           sessionName
-        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}`
+        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}`
       );
     }
   };
