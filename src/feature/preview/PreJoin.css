@@ -18,7 +18,7 @@
   .videoCallContainer {
     display: flex;
     justify-content: center;
-    height: calc(100vh - 70px);
+    height: calc(100vh - 82px);
     /* padding: 0 30px; */
     width: 100%;
   }
@@ -618,7 +618,7 @@
 
   .mainMeetingContainer {
     .videoCallContainer {
-      height: calc(100vh - 87px);
+      height: calc(100vh - 114px);
     }}
 
   .mainMeetingContainer {

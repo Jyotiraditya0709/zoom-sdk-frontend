@@ -303,18 +303,12 @@ const PreJoin = () => {
         } else if (bgMode === "image") {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
         }
-        
+
         if (Object.keys(vbOptions).length > 0) {
           await localVideoTrack.start(videoElement, vbOptions);
         } else {
           await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
-        } else if (bgMode === "blur") {
-          await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-        } else if (bgMode === "image") {
-          await localVideoTrack.start(videoElement, {
-            imageUrl: "/lib/vb-resource/background.jpg",
-          });
         }
       }
 
@@ -407,18 +401,12 @@ const PreJoin = () => {
         } else if (bgMode === "image") {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
         }
-        
+
         if (Object.keys(vbOptions).length > 0) {
           await localVideoTrack.start(videoElement, vbOptions);
         } else {
           await localVideoTrack.start(videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
-        } else if (bgMode === "blur") {
-          await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-        } else if (bgMode === "image") {
-          await localVideoTrack.start(videoElement, {
-            imageUrl: "/lib/vb-resource/background.jpg",
-          });
         }
       } catch (err) {
         if (err.message && err.message.includes("VideoNotStartedError")) {
@@ -859,21 +847,12 @@ const PreJoin = () => {
                   className="local-preview-container"
                   style={{ width: "100%", height: "100%", background: "black" }}
                 >
-                  {bgMode === "none" ? (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      style={{ width: "100%", height: "100%" }}
-                    ></video>
-                  ) : (
-                    <video-player
-                      ref={videoRef}
-                      id="local-preview-video"
-                      style={{ width: "100%", height: "100%" }}
-                    ></video-player>
-                  )}
+                  {/* Always use video-player for virtual backgrounds */}
+                  <video-player
+                    ref={videoRef}
+                    id="local-preview-video"
+                    style={{ width: "100%", height: "100%" }}
+                  ></video-player>
                   <div className="buttonZoomSetting">
                     <button
                       onClick={async () => {
@@ -963,15 +942,15 @@ const PreJoin = () => {
 
               <div className="bottomControls">
                 <div className="bottomControlsLeft">
-                  <div className="instructions">< PolygonIcon />Check your mic and camera from icons shown above</div>
+                  <div className="instructions">< PolygonIcon />Check your mic and camera from the menu above (...)</div>
                   <div className="instructions">< PolygonIcon /> Test your audio/ video and ensure you have a stable internet connection.</div>
                 </div>
                 <div className="bottomControlsRight mobHide">
                   <div className="buttonGroup">
                     <button
                       className={`commonTextBtn testMicrophone ${micTestPhase === "recording" ? "recording" :
-                        micTestPhase === "playing" ? "playing" :
-                          micTestPhase === "ready" ? "ready" : ""
+                          micTestPhase === "playing" ? "playing" :
+                            micTestPhase === "ready" ? "ready" : ""
                         }`}
                       onClick={handleMicTest}
                       disabled={!hasMicPermission}
@@ -1126,6 +1105,8 @@ const PreJoin = () => {
                   </select>
                 </div>
               </div>
+
+
               <div className="agreeText">
                 <input
                   type="checkbox"
@@ -1140,9 +1121,15 @@ const PreJoin = () => {
                 />
                 This session will be recorded for future reference.
               </div>
-
               {showConsentError && (
-                <div className="warning-message">
+                <div className="warning-message" style={{
+                  color: "#dc2626",
+                  fontSize: "14px",
+                  marginTop: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}>
                   <span>⚠️</span>
                   <span>You must agree to recording to join the session.</span>
                 </div>
