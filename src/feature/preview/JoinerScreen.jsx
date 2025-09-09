@@ -1274,6 +1274,7 @@ function JoinerScreen() {
             await mediaStreamRef.current.startVideo(vbOptions);
             setIsVideoOn(true);
             await attachVideo(selfUserIdRef.current);
+            console.log("📹 Video started with background:", bgMode);
           } catch (e) {
             if (e?.errorCode === 6105) {
               // Camera is still starting, show a small message and optionally retry
@@ -2098,10 +2099,24 @@ function JoinerScreen() {
           };
         }
 
-        await mediaStreamRef.current.startVideo(vbOptions);
-        await attachVideo(selfUserIdRef.current);
-        setIsVideoOn(true);
-        console.log("📹 Video started with background:", bgMode);
+        try {
+          await mediaStreamRef.current.startVideo(vbOptions);
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
+          console.log("📹 Video started with background:", bgMode);
+        } catch (vbErr) {
+          if (vbErr.message?.includes("virtual background")) {
+            console.warn("Virtual background not supported, falling back to normal video");
+            // Fallback to normal video without virtual background
+            await mediaStreamRef.current.startVideo();
+            await attachVideo(selfUserIdRef.current);
+            setIsVideoOn(true);
+            setBgMode("none"); // Reset to none since VB failed
+            console.log("📹 Video started without virtual background (fallback)");
+          } else {
+            throw vbErr; // Re-throw if it's not a VB error
+          }
+        }
       }
       // Force update participants to reflect local video state
       if (clientRef.current) setParticipants(clientRef.current.getAllUser());
@@ -2179,12 +2194,27 @@ function JoinerScreen() {
       await attachVideo(selfUserIdRef.current);
     } catch (err) {
       console.error("Error updating VB:", err);
-      setError("Failed to switch background.");
-      // If it fails, try to restart video without VB
-      if (!isVideoOn) {
-        await mediaStreamRef.current.startVideo();
-        await attachVideo(selfUserIdRef.current);
-        setIsVideoOn(true);
+      
+      if (err.message?.includes("virtual background")) {
+        console.warn("Virtual background not supported, falling back to normal video");
+        setError("Virtual background not supported, using normal video.");
+        // Fallback to normal video without virtual background
+        try {
+          await mediaStreamRef.current.startVideo();
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
+          setBgMode("none"); // Reset to none since VB failed
+        } catch (fallbackErr) {
+          setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
+        }
+      } else {
+        setError("Failed to switch background.");
+        // If it fails, try to restart video without VB
+        if (!isVideoOn) {
+          await mediaStreamRef.current.startVideo();
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
+        }
       }
     }
   };
@@ -2922,7 +2952,13 @@ function JoinerScreen() {
                       el.style.justifyContent = "center";
                     }
                   }}
-                ></video-player-container>
+                >
+                  {/* Add video-player element for virtual backgrounds */}
+                  <video-player 
+                    id={`video-player-${user.userId}`}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </video-player-container>
                 {/* Show error if local video fails */}
                 {user.userId === localUserIdRef.current &&
                   error &&
