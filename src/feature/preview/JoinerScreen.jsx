@@ -1359,7 +1359,7 @@ function JoinerScreen() {
               let vbOptions = {};
               if (bgMode === "blur") {
                 vbOptions = { virtualBackground: { imageUrl: "blur" } };
-              } else if (bgMode === "Tetr Backgroung") {
+              } else if (bgMode === "image") {
                 vbOptions = {
                   virtualBackground: {
                     imageUrl: "/lib/vb-resource/background.jpg",
