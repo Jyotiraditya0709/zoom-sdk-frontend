@@ -1101,7 +1101,7 @@ const PreJoin = () => {
                   >
                     <option value="none">None</option>
                     <option value="blur">Blur</option>
-                    <option value="image">Image</option>
+                    <option value="image">Tetr Background</option>
                   </select>
                 </div>
               </div>
