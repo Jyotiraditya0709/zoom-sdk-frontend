@@ -155,7 +155,7 @@ const Header = ({
         pathname.includes("/meeting/")) && (
         <div className="headerContentTwo">
           <div className="headerLeftJoinerScreen">
-            {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" />}
+            {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" className="logoOrg" />}
             <span className="headerDescription">{meetingTitle}</span>
           </div>
 

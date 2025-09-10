@@ -258,11 +258,11 @@ export const WatchIcon = ({ className, onClick, color }) => {
     </svg>
   );
 };
-export const ChatIcon = ({ className, onClick, color }) => {
+export const ChatIcon = ({ className, onClick, color ,size}) => {
   return (
     <svg
-      width="19"
-      height="18"
+      width={size || "19"}
+      height={size || "18"}
       viewBox="0 0 19 18"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

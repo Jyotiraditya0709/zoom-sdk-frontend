@@ -12,6 +12,7 @@ const ChatSidebar = ({
 }) => {
   const [msg, setMsg] = useState("");
   const messagesEndRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -48,10 +49,32 @@ const ChatSidebar = ({
     return message.sender;
   };
 
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target)
+      ) {
+        setIsChatOpen(false);
+      }
+    };
+
+    if (isChatOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isChatOpen, setIsChatOpen]);
+
   if (!isChatOpen) return null;
 
   return (
-    <div className="simple-chat-sidebar">
+    <div className="simple-chat-sidebar" ref={sidebarRef}>
       {/* Header */}
       <div className="chat-header">
         <h3 className="chat-title">In-call messages</h3>
@@ -71,13 +94,13 @@ const ChatSidebar = ({
                                  message.content?.includes('LIVE') || 
                                  message.content?.includes('recording') ||
                                  message.content?.includes('meeting');
-          
+
           // Handle messages with invalid content (like raw IDs)
           const isValidMessage = message.content && 
                                 typeof message.content === 'string' && 
-                                message.content.length > 0 &&
+            message.content.length > 0 &&
                                 !message.content.match(/^[a-f0-9-]{36}$/i); // Not a UUID
-          
+
           if (!isValidMessage && !isSystemMessage) {
             return null; // Skip invalid messages
           }
