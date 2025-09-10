@@ -27,20 +27,32 @@ self.addEventListener('fetch', event => {
     if (event.request.mode === 'navigate' && shouldApplyHeaders(url)) {
       event.respondWith(
         fetch(event.request).then(response => {
-          // Clone the response to modify headers
-          const newResponse = new Response(response.body, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: new Headers(response.headers)
-          });
-          
-          // Apply cross-origin isolation headers
-          Object.entries(CROSS_ORIGIN_ISOLATION_HEADERS).forEach(([key, value]) => {
-            newResponse.headers.set(key, value);
-          });
-          
-          console.log('🔒 Applied cross-origin isolation headers for:', url);
-          return newResponse;
+          // Check if response is valid (status 200-599)
+          if (response.status >= 200 && response.status <= 599) {
+            // Clone the response to modify headers
+            const newResponse = new Response(response.body, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: new Headers(response.headers)
+            });
+            
+            // Apply cross-origin isolation headers
+            Object.entries(CROSS_ORIGIN_ISOLATION_HEADERS).forEach(([key, value]) => {
+              newResponse.headers.set(key, value);
+            });
+            
+            console.log('🔒 Applied cross-origin isolation headers for:', url);
+            return newResponse;
+          } else {
+            // For invalid responses, return the original response without modification
+            console.warn('⚠️ Invalid response status for:', url, 'status:', response.status);
+            return response;
+          }
+        }).catch(error => {
+          // Handle network errors gracefully
+          console.error('❌ Network error for:', url, error);
+          // Let the browser handle the error naturally
+          return fetch(event.request);
         })
       );
     }

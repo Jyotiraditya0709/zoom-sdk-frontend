@@ -897,7 +897,7 @@ const PreJoin = () => {
                               await localVideoTrack.start(videoElement);
                             } else if (bgMode === "blur") {
                               await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-                            } else if (bgMode === "image") {
+                            } else if (bgMode === "Tetr Background") {
                               await localVideoTrack.start(videoElement, {
                                 imageUrl: "/lib/vb-resource/background.jpg",
                               });
@@ -1101,7 +1101,7 @@ const PreJoin = () => {
                   >
                     <option value="none">None</option>
                     <option value="blur">Blur</option>
-                    <option value="image">Image</option>
+                    <option value="image">Tetr Background</option>
                   </select>
                 </div>
               </div>
