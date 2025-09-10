@@ -89,7 +89,7 @@ const PreJoin = () => {
   const [micTestPlaybackTimeout, setMicTestPlaybackTimeout] = useState(null);
   const [micTestCountdown, setMicTestCountdown] = useState(4);
   const microPhoneTesterRef = useRef(null);
-  
+
   // Custom microphone test using Web Audio API
   const [customMicTest, setCustomMicTest] = useState({
     mediaRecorder: null,
@@ -102,7 +102,7 @@ const PreJoin = () => {
   // Add missing state variables
   const [isMute, setIsMute] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  
+
   // Add permission state tracking
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [hasMicPermission, setHasMicPermission] = useState(false);
@@ -208,16 +208,16 @@ const PreJoin = () => {
     const fetchDevices = async () => {
       try {
         // Request permissions first
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
-          audio: true 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
         });
-        
+
         // Stop the test stream immediately
         stream.getTracks().forEach(track => track.stop());
-        
+
         const devices = await ZoomVideo.getDevices();
-        
+
         const cams = devices.filter((d) => d.kind === "videoinput");
         const mics = devices.filter((d) => d.kind === "audioinput");
         const speakers = devices.filter((d) => d.kind === "audiooutput");
@@ -225,17 +225,17 @@ const PreJoin = () => {
         setVideoDevices(cams);
         setAudioDevices(mics);
         setSpeakerDevices(speakers);
-        
+
         if (cams.length > 0) setSelectedCamera(cams[0].deviceId);
         if (mics.length > 0) setSelectedMic(mics[0].deviceId);
         if (speakers.length > 0) setSelectedSpeaker(speakers[0].deviceId);
-        
+
         // Set initial permission states
         setHasCameraPermission(true);
         setHasMicPermission(true);
         setIsVideoOff(false); // Camera should be ON by default
         setIsMute(false); // Mic should be ON by default
-        
+
       } catch (err) {
         console.error("Error fetching devices:", err);
         if (err.name === 'NotAllowedError') {
@@ -272,9 +272,9 @@ const PreJoin = () => {
           isSupport: true,
         },
       });
-      
 
-      
+
+
       // Create and start video track (only if video is not off)
       if (!isVideoOff && selectedCamera) {
         // Always create a new video track for device changes
@@ -286,16 +286,16 @@ const PreJoin = () => {
           }
           localVideoTrack = null;
         }
-        
-          localVideoTrack = ZoomVideo.createLocalVideoTrack(selectedCamera);
-        
+
+        localVideoTrack = ZoomVideo.createLocalVideoTrack(selectedCamera);
+
         // Always use the video-player element for virtual backgrounds
         const videoElement = document.querySelector("#local-preview-video");
-        
+
         if (!videoElement) {
           throw new Error(`Video element not found for background mode: ${bgMode}`);
         }
-        
+
         // Apply virtual background options when starting the track
         let vbOptions = {};
         if (bgMode === "blur") {
@@ -303,7 +303,7 @@ const PreJoin = () => {
         } else if (bgMode === "image") {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
         }
-        
+
         if (Object.keys(vbOptions).length > 0) {
           await localVideoTrack.start(videoElement, vbOptions);
         } else {
@@ -311,7 +311,7 @@ const PreJoin = () => {
           await localVideoTrack.updateVirtualBackground(undefined);
         }
       }
-      
+
       // Create and start audio track (only if mic is not muted)
       if (!isMute && selectedMic) {
         // Always create a new audio track for device changes
@@ -323,12 +323,12 @@ const PreJoin = () => {
           }
           localAudioTrack = null;
         }
-        
+
         localAudioTrack = ZoomVideo.createLocalAudioTrack(selectedMic);
         await localAudioTrack.start();
         await localAudioTrack.unmute();
       }
-      
+
     } catch (err) {
       // Suppress the "play() request was interrupted" warning for the user
       if (
@@ -341,18 +341,18 @@ const PreJoin = () => {
         console.warn("Preview warning:", err.message);
         return;
       }
-      
+
       // Handle specific Zoom SDK errors
       if (err.message?.includes("VideoAlreadyStartedError")) {
         console.warn("Video already started, continuing...");
         return;
       }
-      
+
       if (err.message?.includes("AudioAlreadyStartedError")) {
         console.warn("Audio already started, continuing...");
         return;
       }
-      
+
       if (err.name === "NotReadableError") {
         setError(
           "Camera or microphone is already in use by another application. Please close other apps and try again."
@@ -369,12 +369,12 @@ const PreJoin = () => {
   useEffect(() => {
     let isUpdating = false;
     let updateTimeout = null;
-    
+
     const updateVB = async () => {
       if (!localVideoTrack || isVideoOff || isUpdating) return;
-      
+
       isUpdating = true;
-      
+
       try {
         // Only stop if the track is started (SDK may not expose isStarted, so try-catch is safest)
         try {
@@ -386,14 +386,14 @@ const PreJoin = () => {
             throw err;
           }
         }
-        
+
         // Always use the video-player element for virtual backgrounds
         const videoElement = document.querySelector("#local-preview-video");
-        
+
         if (!videoElement) {
           throw new Error(`Video element not found for background mode: ${bgMode}`);
         }
-        
+
         // Apply virtual background options when starting the track
         let vbOptions = {};
         if (bgMode === "blur") {
@@ -401,7 +401,7 @@ const PreJoin = () => {
         } else if (bgMode === "image") {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
         }
-        
+
         if (Object.keys(vbOptions).length > 0) {
           await localVideoTrack.start(videoElement, vbOptions);
         } else {
@@ -413,7 +413,7 @@ const PreJoin = () => {
           // Try to start the video anyway
           try {
             const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
-            
+
             if (bgMode === "none") {
               await localVideoTrack.start(videoElement);
               await localVideoTrack.updateVirtualBackground(undefined);
@@ -421,7 +421,7 @@ const PreJoin = () => {
               await localVideoTrack.start(videoElement, { imageUrl: "blur" });
             } else if (bgMode === "image") {
               await localVideoTrack.start(videoElement, {
-                  imageUrl: "/lib/vb-resource/background.jpg",
+                imageUrl: "/lib/vb-resource/background.jpg",
               });
             }
           } catch (e) {
@@ -452,19 +452,19 @@ const PreJoin = () => {
         isUpdating = false;
       }
     };
-    
+
     // Debounce rapid background mode changes
     if (updateTimeout) {
       clearTimeout(updateTimeout);
     }
-    
+
     updateTimeout = setTimeout(() => {
       // Only run if the video element is mounted, bgMode changes, and video is not off
       if (videoRef.current && !isVideoOff) {
-      updateVB();
-    }
+        updateVB();
+      }
     }, 100); // Small delay to batch rapid changes
-    
+
     return () => {
       if (updateTimeout) {
         clearTimeout(updateTimeout);
@@ -476,9 +476,9 @@ const PreJoin = () => {
     if (selectedCamera && selectedMic && hasCameraPermission && hasMicPermission) {
       // Minimal delay to prevent rapid successive calls
       const timeoutId = setTimeout(() => {
-      startPreview();
+        startPreview();
       }, 50);
-      
+
       return () => clearTimeout(timeoutId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -496,7 +496,7 @@ const PreJoin = () => {
           console.error("Error cleaning up microphone test:", err);
         }
       }
-      
+
       // Clean up speaker test if active
       if (speakerTesterRef.current) {
         try {
@@ -506,12 +506,12 @@ const PreJoin = () => {
           console.error("Error cleaning up speaker test:", err);
         }
       }
-      
+
       // Clear any timeouts
       if (micTestPlaybackTimeout) {
         clearTimeout(micTestPlaybackTimeout);
       }
-      
+
       // Clean up context
       contextCleanup();
     };
@@ -524,10 +524,10 @@ const PreJoin = () => {
       setShowConsentError(true);
       return;
     }
-    
+
     // Clear any previous consent error
     setShowConsentError(false);
-    
+
     // Stop the preview tracks to release the camera and microphone
     if (localVideoTrack) {
       await localVideoTrack.stop();
@@ -613,13 +613,13 @@ const PreJoin = () => {
       setError(""); // Clear any previous errors
 
       // Use Web Audio API for reliable recording
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: { 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
           deviceId: selectedMic ? { exact: selectedMic } : undefined,
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false
-        } 
+        }
       });
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -632,23 +632,23 @@ const PreJoin = () => {
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        
+
         // Stop audio level monitoring
         if (audioContext && audioContext.state !== 'closed') {
           audioContext.close();
         }
-        
+
         setCustomMicTest(prev => ({
           ...prev,
           audioBlob,
           audioUrl,
           stream: null
         }));
-        
-          setMicTestPhase("ready");
+
+        setMicTestPhase("ready");
         setMicTestCountdown(0);
-          console.log("✅ Recording completed, ready for playback");
-        
+        console.log("✅ Recording completed, ready for playback");
+
         // Automatically play back after 1 second
         setTimeout(() => {
           handleCustomPlayback(audioUrl);
@@ -659,7 +659,7 @@ const PreJoin = () => {
       mediaRecorder.start();
       setCustomMicTest(prev => ({ ...prev, mediaRecorder, audioChunks: [], stream }));
       console.log("🎤 Started recording microphone test");
-      
+
       // Set initial mic level to show it's working
       setMicLevel(10);
 
@@ -689,7 +689,7 @@ const PreJoin = () => {
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       source.connect(analyser);
-      
+
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       const updateLevel = () => {
         // Check if we're still recording (either by phase or mediaRecorder state)
@@ -706,7 +706,7 @@ const PreJoin = () => {
 
     } catch (err) {
       console.error("❌ Error testing microphone:", err);
-      
+
       // Provide more specific error messages
       let errorMessage = "Failed to test microphone";
       if (err.name === "NotAllowedError") {
@@ -718,7 +718,7 @@ const PreJoin = () => {
       } else if (err.message) {
         errorMessage = `Microphone test failed: ${err.message}`;
       }
-      
+
       setError(errorMessage);
       setIsMicTesting(false);
       setMicLevel(0);
@@ -734,10 +734,10 @@ const PreJoin = () => {
 
     try {
       setMicTestPhase("playing");
-      
+
       // Play the recorded audio
       await microPhoneTesterRef.current.playRecording();
-      
+
       // Set a timeout to reset the state after playback
       const timeout = setTimeout(() => {
         setMicTestPhase("idle");
@@ -745,9 +745,9 @@ const PreJoin = () => {
         setMicLevel(0);
         microPhoneTesterRef.current = null;
       }, 3000); // Assume 3 seconds for playback
-      
+
       setMicTestPlaybackTimeout(timeout);
-      
+
     } catch (err) {
       console.error("❌ Error playing recording:", err);
       setMicTestPhase("ready");
@@ -759,7 +759,7 @@ const PreJoin = () => {
     try {
       setMicTestPhase("playing");
       console.log("🎵 Starting custom playback...");
-      
+
       const audio = new Audio(audioUrl);
       audio.onended = () => {
         console.log("✅ Playback completed");
@@ -769,16 +769,16 @@ const PreJoin = () => {
         setMicTestCountdown(4);
         setCustomMicTest(prev => ({ ...prev, audioUrl: null }));
       };
-      
+
       audio.onerror = (err) => {
         console.error("❌ Playback error:", err);
         setError("Failed to play recording");
-      setMicTestPhase("ready");
+        setMicTestPhase("ready");
       };
-      
+
       audio.play();
       console.log("✅ Custom playback started successfully");
-      
+
     } catch (err) {
       console.error("❌ Error in custom playback:", err);
       setError("Failed to play recording");
@@ -789,13 +789,13 @@ const PreJoin = () => {
   // ========== Speaker Test ==========
   const [isSpeakerTesting, setIsSpeakerTesting] = useState(false);
   const speakerTesterRef = useRef(null);
-  
+
   const handleSpeakerTest = () => {
     if (!localAudioTrack) {
       setError("Please start preview first");
       return;
     }
-    
+
     // If already testing, stop the test
     if (isSpeakerTesting && speakerTesterRef.current) {
       try {
@@ -808,7 +808,7 @@ const PreJoin = () => {
       }
       return;
     }
-    
+
     // Start speaker test
     try {
       speakerTesterRef.current = localAudioTrack.testSpeaker({
@@ -842,99 +842,101 @@ const PreJoin = () => {
           <div className="meetingDetailWrapper">
             {/* LEFT PREVIEW */}
             <div className="leftMeetingDetail">
-              <video-player-container
-                className="local-preview-container"
-                style={{ width: "100%", height: "100%", background: "black" }}
-              >
-                {/* Always use video-player for virtual backgrounds */}
-                <video-player
-                  ref={videoRef}
-                  id="local-preview-video"
-                  style={{ width: "100%", height: "100%" }}
-                ></video-player>
-                <div className="buttonZoomSetting">
-                  <button
-                    onClick={async () => {
-                      try {
-                        if (isMute) {
-                          // Unmute - start audio track
-                          if (!localAudioTrack) {
-                            localAudioTrack = ZoomVideo.createLocalAudioTrack(selectedMic);
+              <div className="videoBoxPreJoin">
+                <video-player-container
+                  className="local-preview-container"
+                  style={{ width: "100%", height: "100%", background: "black" }}
+                >
+                  {/* Always use video-player for virtual backgrounds */}
+                  <video-player
+                    ref={videoRef}
+                    id="local-preview-video"
+                    style={{ width: "100%", height: "100%" }}
+                  ></video-player>
+                  <div className="buttonZoomSetting">
+                    <button
+                      onClick={async () => {
+                        try {
+                          if (isMute) {
+                            // Unmute - start audio track
+                            if (!localAudioTrack) {
+                              localAudioTrack = ZoomVideo.createLocalAudioTrack(selectedMic);
+                            }
+                            await localAudioTrack.start();
+                            await localAudioTrack.unmute();
+                            setIsMute(false);
+                          } else {
+                            // Mute - stop audio track
+                            if (localAudioTrack) {
+                              await localAudioTrack.stop();
+                              localAudioTrack = null;
+                            }
+                            setIsMute(true);
                           }
-                          await localAudioTrack.start();
-                          await localAudioTrack.unmute();
-                          setIsMute(false);
-                        } else {
-                          // Mute - stop audio track
-                          if (localAudioTrack) {
-                            await localAudioTrack.stop();
-                            localAudioTrack = null;
-                          }
-                          setIsMute(true);
+                        } catch (err) {
+                          console.error("Error toggling audio:", err);
+                          setError("Failed to toggle audio: " + err.message);
                         }
-                      } catch (err) {
-                        console.error("Error toggling audio:", err);
-                        setError("Failed to toggle audio: " + err.message);
-                      }
-                    }}
-                  >
-                    {isMute ? <UnMicroPhone /> : <MicroPhone />}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        if (isVideoOff) {
-                          // Turn camera back on - recreate the track
-                          if (!localVideoTrack) {
-                            localVideoTrack =
-                              ZoomVideo.createLocalVideoTrack(selectedCamera);
-                          }
-                          // Determine the correct video element based on background mode
-                          const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
-                          
-                          if (bgMode === "none") {
-                            await localVideoTrack.start(videoElement);
-                          } else if (bgMode === "blur") {
-                            await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-                          } else if (bgMode === "image") {
-                            await localVideoTrack.start(videoElement, {
+                      }}
+                    >
+                      {isMute ? <UnMicroPhone /> : <MicroPhone />}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          if (isVideoOff) {
+                            // Turn camera back on - recreate the track
+                            if (!localVideoTrack) {
+                              localVideoTrack =
+                                ZoomVideo.createLocalVideoTrack(selectedCamera);
+                            }
+                            // Determine the correct video element based on background mode
+                            const videoElement = bgMode === "none" ? videoRef.current : document.querySelector("#local-preview-video");
+
+                            if (bgMode === "none") {
+                              await localVideoTrack.start(videoElement);
+                            } else if (bgMode === "blur") {
+                              await localVideoTrack.start(videoElement, { imageUrl: "blur" });
+                            } else if (bgMode === "image") {
+                              await localVideoTrack.start(videoElement, {
                                 imageUrl: "/lib/vb-resource/background.jpg",
-                            });
-                          }
-                        } else {
-                          // Turn camera off - completely release the track
-                          if (localVideoTrack) {
-                            await localVideoTrack.stop();
-
-                            // Clear the video element
-                            if (videoRef.current) {
-                              videoRef.current.srcObject = null;
+                              });
                             }
+                          } else {
+                            // Turn camera off - completely release the track
+                            if (localVideoTrack) {
+                              await localVideoTrack.stop();
 
-                            // Stop all tracks in the media stream to release camera
-                            if (localVideoTrack.mediaStream) {
-                              localVideoTrack.mediaStream
-                                .getTracks()
-                                .forEach((track) => {
-                                  track.stop();
-                                });
+                              // Clear the video element
+                              if (videoRef.current) {
+                                videoRef.current.srcObject = null;
+                              }
+
+                              // Stop all tracks in the media stream to release camera
+                              if (localVideoTrack.mediaStream) {
+                                localVideoTrack.mediaStream
+                                  .getTracks()
+                                  .forEach((track) => {
+                                    track.stop();
+                                  });
+                              }
+
+                              // Release the track completely
+                              localVideoTrack = null;
                             }
-
-                            // Release the track completely
-                            localVideoTrack = null;
                           }
+                          setIsVideoOff(!isVideoOff);
+                        } catch (err) {
+                          console.error("Error toggling video:", err);
+                          setError("Failed to toggle video: " + err.message);
                         }
-                        setIsVideoOff(!isVideoOff);
-                      } catch (err) {
-                        console.error("Error toggling video:", err);
-                        setError("Failed to toggle video: " + err.message);
-                      }
-                    }}
-                  >
-                    {isVideoOff ? <OffVideoCamera /> : <VideoCamera />}
-                  </button>
-                </div>
-              </video-player-container>
+                      }}
+                    >
+                      {isVideoOff ? <OffVideoCamera /> : <VideoCamera />}
+                    </button>
+                  </div>
+                </video-player-container>
+              </div>
               {isLoading && <div className="loading">Starting preview...</div>}
               {error && <div className="error">{error}</div>}
 
@@ -943,51 +945,49 @@ const PreJoin = () => {
                   <div className="instructions">< PolygonIcon />Check your mic and camera from the menu above (...)</div>
                   <div className="instructions">< PolygonIcon /> Test your audio/ video and ensure you have a stable internet connection.</div>
                 </div>
-                 <div className="bottomControlsRight">
+                <div className="bottomControlsRight mobHide">
                   <div className="buttonGroup">
-                            <button
-                    className={`commonTextBtn testMicrophone ${
-                      micTestPhase === "recording" ? "recording" : 
-                      micTestPhase === "playing" ? "playing" :
-                      micTestPhase === "ready" ? "ready" : ""
-                    }`}
-                    onClick={handleMicTest}
-                    disabled={!hasMicPermission}
-                  >
-                    {micTestPhase === "recording" && <span className="recording-dot"></span>}
-                    {micTestPhase === "playing" && <span className="playing-dot"></span>}
-                    {micTestPhase === "recording"
-                      ? `Recording... (${micTestCountdown}s)`
-                      : micTestPhase === "playing"
-                        ? "Playing..."
-                        : micTestPhase === "ready"
-                          ? "Stop Test"
-                          : "Test Microphone"}
-                  </button>
-                  
-                  
-                  
-                  {micTestPhase === "ready" && (
                     <button
-                      className="commonTextBtn playRecording"
-                      onClick={handlePlayRecording}
+                      className={`commonTextBtn testMicrophone ${micTestPhase === "recording" ? "recording" :
+                          micTestPhase === "playing" ? "playing" :
+                            micTestPhase === "ready" ? "ready" : ""
+                        }`}
+                      onClick={handleMicTest}
+                      disabled={!hasMicPermission}
                     >
-                      <span className="playing-dot"></span>
-                      Play Recording
+                      {micTestPhase === "recording" && <span className="recording-dot"></span>}
+                      {micTestPhase === "playing" && <span className="playing-dot"></span>}
+                      {micTestPhase === "recording"
+                        ? `Recording... (${micTestCountdown}s)`
+                        : micTestPhase === "playing"
+                          ? "Playing..."
+                          : micTestPhase === "ready"
+                            ? "Stop Test"
+                            : "Test Microphone"}
                     </button>
-                  )}
 
-                <button
-                  className={`commonTextBtn testSpeaker ${
-                    isSpeakerTesting ? "testing" : ""
-                  }`}
-                  onClick={handleSpeakerTest}
-                >
-                  {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
-                </button>
+
+
+                    {micTestPhase === "ready" && (
+                      <button
+                        className="commonTextBtn playRecording"
+                        onClick={handlePlayRecording}
+                      >
+                        <span className="playing-dot"></span>
+                        Play Recording
+                      </button>
+                    )}
+
+                    <button
+                      className={`commonTextBtn testSpeaker ${isSpeakerTesting ? "testing" : ""
+                        }`}
+                      onClick={handleSpeakerTest}
+                    >
+                      {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
+                    </button>
                   </div>
 
-                {/* <div className="mic-level-container">
+                  {/* <div className="mic-level-container">
                     <div className="mic-level-label">
                       <span>Mic Level</span>
                       <span className={`mic-level-value ${micLevel === 0 ? 'silent' : ''}`}>
@@ -1001,7 +1001,7 @@ const PreJoin = () => {
                       style={{ width: '120px' }}
                     ></progress>
                   </div> */}
-                 </div>
+                </div>
 
 
               </div>
@@ -1042,11 +1042,11 @@ const PreJoin = () => {
                     </p>
                   )}
                 </div>
-                
+
 
               </div>
 
-              <div className="colGap12 settingOptionGroup">
+              <div className="colGap12 settingOptionGroup mobHide">
                 {/* Camera */}
                 <div className="dropdownWrapper">
                   <select
@@ -1104,38 +1104,36 @@ const PreJoin = () => {
                     <option value="image">Image</option>
                   </select>
                 </div>
-                
-                <div className="agreeText">
-                  <input 
-                    type="checkbox" 
-                    checked={recordingConsent}
-                    onChange={(e) => {
-                      setRecordingConsent(e.target.checked);
-                      // Clear consent error when user checks the box
-                      if (e.target.checked) {
-                        setShowConsentError(false);
-                      }
-                    }}
-                  />
-                  This session will be recorded for future reference.
-                </div>
-                {showConsentError && (
-                  <div className="warning-message" style={{ 
-                    color: "#dc2626", 
-                    fontSize: "14px", 
-                    marginTop: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}>
-                    <span>⚠️</span>
-                    <span>You must agree to recording to join the session.</span>
-                  </div>
-                )}
-
-
-                
               </div>
+
+
+              <div className="agreeText">
+                <input
+                  type="checkbox"
+                  checked={recordingConsent}
+                  onChange={(e) => {
+                    setRecordingConsent(e.target.checked);
+                    // Clear consent error when user checks the box
+                    if (e.target.checked) {
+                      setShowConsentError(false);
+                    }
+                  }}
+                />
+                This session will be recorded for future reference.
+              </div>
+              {showConsentError && (
+                <div className="warning-message" style={{
+                  color: "#dc2626",
+                  fontSize: "14px",
+                  marginTop: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}>
+                  <span>⚠️</span>
+                  <span>You must agree to recording to join the session.</span>
+                </div>
+              )}
 
               <button
                 className="joinMeeting"
@@ -1150,7 +1148,7 @@ const PreJoin = () => {
                   </>
                 )}
               </button>
-              
+
 
             </div>
           </div>

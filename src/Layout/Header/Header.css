@@ -24,6 +24,11 @@
     min-height: 40px !important;
     position: relative !important;
     z-index: 1001 !important;
+
+    .logoOrg {
+      width: 100%;
+      max-width: 140px;
+    }
   }
 
   .profileDetailHeader {
@@ -112,5 +117,11 @@
     font-size: 12px;
     font-weight: 400;
     margin-right: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainMeetingContainer .headerContentOne .logoOrg {
+    max-width: 110px;
   }
 }
