@@ -897,7 +897,7 @@ const PreJoin = () => {
                               await localVideoTrack.start(videoElement);
                             } else if (bgMode === "blur") {
                               await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-                            } else if (bgMode === "image") {
+                            } else if (bgMode === "Tetr Background") {
                               await localVideoTrack.start(videoElement, {
                                 imageUrl: "/lib/vb-resource/background.jpg",
                               });
