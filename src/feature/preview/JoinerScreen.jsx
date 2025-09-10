@@ -1367,6 +1367,13 @@ function JoinerScreen() {
                 };
               }
 
+              // Ensure video container is visible before starting video
+              const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+              if (localContainer) {
+                localContainer.style.display = "flex";
+                console.log("📹 Showing local video container (initial video start)");
+              }
+              
               await mediaStreamRef.current.startVideo(vbOptions);
               setIsVideoOn(true);
               await attachVideo(selfUserIdRef.current);
@@ -2206,33 +2213,33 @@ function JoinerScreen() {
         }
 
         try {
-          await mediaStreamRef.current.startVideo(vbOptions);
-          await attachVideo(selfUserIdRef.current);
-          setIsVideoOn(true);
-          
-          // Show the video container when video is turned on
+          // Show the video container BEFORE starting video and attaching
           const localContainer = videoContainerRefs.current[selfUserIdRef.current];
           if (localContainer) {
             localContainer.style.display = "flex";
-            console.log("📹 Showing local video container (camera turned on)");
+            console.log("📹 Showing local video container (camera turning on)");
           }
+          
+          await mediaStreamRef.current.startVideo(vbOptions);
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
           
           console.log("📹 Video started with background:", bgMode);
         } catch (vbErr) {
           if (vbErr.message?.includes("virtual background")) {
             console.warn("Virtual background not supported, falling back to normal video");
+            // Show the video container BEFORE starting video and attaching (fallback)
+            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+            if (localContainer) {
+              localContainer.style.display = "flex";
+              console.log("📹 Showing local video container (camera turning on - fallback)");
+            }
+            
             // Fallback to normal video without virtual background
             await mediaStreamRef.current.startVideo();
             await attachVideo(selfUserIdRef.current);
             setIsVideoOn(true);
             setBgMode("none"); // Reset to none since VB failed
-            
-            // Show the video container when video is turned on
-            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
-            if (localContainer) {
-              localContainer.style.display = "flex";
-              console.log("📹 Showing local video container (camera turned on - fallback)");
-            }
             
             console.log("📹 Video started without virtual background (fallback)");
           } else {
@@ -2305,16 +2312,16 @@ function JoinerScreen() {
         };
       }
 
-      await mediaStreamRef.current.startVideo(vbOptions);
-      setBgMode(newBgMode);
-      setIsVideoOn(true);
-      
-      // Show the video container when video is turned on
+      // Show the video container BEFORE starting video
       const localContainer = videoContainerRefs.current[selfUserIdRef.current];
       if (localContainer) {
         localContainer.style.display = "flex";
-        console.log("📹 Showing local video container (background changed)");
+        console.log("📹 Showing local video container (background changing)");
       }
+      
+      await mediaStreamRef.current.startVideo(vbOptions);
+      setBgMode(newBgMode);
+      setIsVideoOn(true);
 
       // Add notification for background change
       addNotification(`Virtual background changed to ${newBgMode}`);
@@ -2327,19 +2334,19 @@ function JoinerScreen() {
       if (err.message?.includes("virtual background")) {
         console.warn("Virtual background not supported, falling back to normal video");
         setError("Virtual background not supported, using normal video.");
+        // Show the video container BEFORE starting video (fallback)
+        const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+        if (localContainer) {
+          localContainer.style.display = "flex";
+          console.log("📹 Showing local video container (background change fallback)");
+        }
+        
         // Fallback to normal video without virtual background
         try {
           await mediaStreamRef.current.startVideo();
           await attachVideo(selfUserIdRef.current);
           setIsVideoOn(true);
           setBgMode("none"); // Reset to none since VB failed
-          
-          // Show the video container when video is turned on
-          const localContainer = videoContainerRefs.current[selfUserIdRef.current];
-          if (localContainer) {
-            localContainer.style.display = "flex";
-            console.log("📹 Showing local video container (background change fallback)");
-          }
         } catch (fallbackErr) {
           setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
         }
@@ -2347,16 +2354,16 @@ function JoinerScreen() {
         setError("Failed to switch background.");
         // If it fails, try to restart video without VB
         if (!isVideoOn) {
-          await mediaStreamRef.current.startVideo();
-          await attachVideo(selfUserIdRef.current);
-          setIsVideoOn(true);
-          
-          // Show the video container when video is turned on
+          // Show the video container BEFORE starting video (final fallback)
           const localContainer = videoContainerRefs.current[selfUserIdRef.current];
           if (localContainer) {
             localContainer.style.display = "flex";
             console.log("📹 Showing local video container (final fallback)");
           }
+          
+          await mediaStreamRef.current.startVideo();
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
         }
       }
     }
@@ -3099,10 +3106,10 @@ function JoinerScreen() {
                       el.style.alignItems = "center";
                       el.style.justifyContent = "center";
                       
-                      // Hide container if this is the local user and video is off from preview
-                      if (user.userId === selfUserIdRef.current && initialVideoOff) {
+                      // Hide container if this is the local user and video is currently off
+                      if (user.userId === selfUserIdRef.current && !isVideoOn) {
                         el.style.display = "none";
-                        console.log("📹 Hiding local video container (camera off from preview)");
+                        console.log("📹 Hiding local video container (camera currently off)");
                       }
                     }
                   }}
