@@ -485,26 +485,38 @@
     background: transparent !important;
   }
 
-  .joinerScreen .joinerSettingBottom .muteBoxSetting>svg path{
+  .joinerScreen .joinerSettingBottom .muteBoxSetting>svg path {
     fill: #5c5c5c;
   }
-  .joinerScreen .joinerSettingBottom .videoBoxSetting>svg path{
+
+  .joinerScreen .joinerSettingBottom .videoBoxSetting>svg path {
     fill: #5c5c5c;
   }
-  .joinerScreen .joinerSettingBottom .muteBoxSetting.active>svg path{
+
+  .joinerScreen .joinerSettingBottom .infoSetting>svg path {
+    stroke: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .muteBoxSetting.active>svg path {
     stroke: #171717 !important;
     fill: unset !important;
   }
-  .joinerScreen .joinerSettingBottom .videoBoxSetting.active>svg path{
+
+  .joinerScreen .joinerSettingBottom .videoBoxSetting.active>svg path {
     fill: #171717 !important;
   }
 
-  .joinerScreenContainer .joinerSettingBottom .chatSetting {
+  .joinerScreen .joinerSettingBottom .infoSetting.active>svg path {
+    fill: #171717 !important;
+  }
+
+  .joinerScreenContainer .joinerSettingBottom .chatSetting,
+  .joinerScreen .joinerSettingBottom .infoSetting {
     border: 1px solid #d4d4d4;
     border-radius: 8px;
     padding: 5px 10px;
     width: 100%;
-    max-width: 70px !important;
+    max-width: 50px !important;
     min-height: 37px;
   }
 
@@ -562,4 +574,22 @@
     bottom: 60px;
   }
 
+  .joinerScreen {
+    & .joinerSettingBottom {
+      .leaveMeetingButton {
+        min-width: auto;
+      }
+    }
+  }
+
+  .joinerScreen .joinerSettingBottom .leaveMeetingButton svg path {
+    stroke: #fff;
+  }
+
+}
+
+@media (max-width: 376px) {
+  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin{
+    height: 176px !important;
+  }
 }
