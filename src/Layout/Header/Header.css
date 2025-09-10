@@ -31,6 +31,12 @@
     }
   }
 
+  .headerLeftJoinerScreen .logoOrg {
+    width: 100%;
+    max-width: 140px;
+  }
+
+
   .profileDetailHeader {
     display: flex;
     align-items: center;
@@ -118,6 +124,11 @@
     font-weight: 400;
     margin-right: 30px;
   }
+}
+
+.headerMain .headerRightJoinerScreen .timerCount {
+  margin-right: 0;
+  padding: 8px 12px;
 }
 
 @media (max-width: 768px) {

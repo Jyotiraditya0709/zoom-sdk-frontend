@@ -1840,9 +1840,7 @@ const MeetingPage = () => {
       <div className="control-bar">
         {/* Mic button with dropdown for mic and speaker selection */}
         <div
-          className="control-button video-control-group"
-          style={{ position: "relative", marginRight: 8 }}
-        >
+          className="control-button video-control-group controlViewBlock">
           <button onClick={toggleAudio}>
             {isAudioOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
           </button>
@@ -1906,9 +1904,7 @@ const MeetingPage = () => {
         </div>
         {/* Camera button with dropdown for camera and background selection */}
         <div
-          className="control-button video-control-group"
-          style={{ position: "relative", marginRight: 8 }}
-        >
+          className="control-button video-control-group controlViewBlock">
           <button onClick={toggleVideo}>
             {isVideoOn ? <FaVideo /> : <FaVideoSlash />}
           </button>

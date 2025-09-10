@@ -1,0 +1,57 @@
+/* Full page center */
+.zoom-loader-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #f9f9f9; /* light bg, like Zoom */
+  font-family: Arial, sans-serif;
+}
+
+.loadingZoom {
+  width: 60px;
+  height: 60px;
+  position: relative;
+}
+
+.loadingZoom .d1, 
+.loadingZoom .d2 {
+  border: 5px solid #2d8cff; /* Zoom blue */
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.loadingZoom .d1 {
+  width: 55px;
+  height: 55px;
+  position: absolute;
+  border-left-color: transparent;
+  animation: load161 1s linear infinite;
+}
+
+.loadingZoom .d2 {
+  width: 40px;
+  height: 40px;
+  margin: 7.5px;
+  border-top-color: transparent;
+  border-right-color: transparent;
+  animation: load2812 1.5s linear infinite;
+}
+
+.zoom-loader-text {
+  margin-top: 16px;
+  font-size: 15px;
+  color: #333;
+}
+
+/* Animations */
+@keyframes load161 {
+  0% { transform: rotate(0); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes load2812 {
+  0% { transform: rotate(0); }
+  100% { transform: rotate(-360deg); }
+}

@@ -2893,7 +2893,7 @@ function JoinerScreen() {
                 participants.length >= 3 &&
                 participants.length <= participants.length
                   ? "20px 100px"
-                  : "20px 50px",
+                  : "20px 0",
               width: isSharingScreen ? "80%" : "90%",
               height: isSharingScreen ? "100%" : "70%",
             }}
@@ -3140,14 +3140,7 @@ function JoinerScreen() {
           <div className="joinerSettingBottom">
             {/* Mic button with dropdown for mic and speaker selection */}
             <div
-              className="control-button video-control-group"
-              style={{
-                position: "relative",
-                display: "inline-block",
-                marginRight: 8,
-                zIndex: 1000,
-              }}
-            >
+              className="control-button video-control-group controlViewBlock">
               <button
                 className={`commonJoinderBtn muteBoxSetting ${
                   !isAudioOn ? "active" : ""
@@ -3159,21 +3152,7 @@ function JoinerScreen() {
                 <span>{!isAudioOn ? "Unmute" : "Mute"}</span>
               </button>
               <button
-                className="video-options-toggle"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  bottom: 55,
-                  background: "#222",
-                  color: "#fff",
-                  border: "1px solid #e7e7e7",
-                  borderRadius: 8,
-                  padding: "2px 8px",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  zIndex: 10,
-                  transition: "all 0.2s ease",
-                }}
+                className="video-options-toggle optionToggleBlock"
                 onClick={() =>
                   setShowVideoOptions(showVideoOptions === "mic" ? null : "mic")
                 }
@@ -3182,23 +3161,9 @@ function JoinerScreen() {
               </button>
               {showVideoOptions === "mic" && (
                 <div
-                  className="video-options-menu"
-                  style={{
-                    position: "absolute",
-                    bottom: "105px",
-                    // left: "100%",
-                    // transform: "translateX(-50%)",
-                    background: "#222",
-                    color: "#fff",
-                    borderRadius: 10,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                    padding: 16,
-                    zIndex: 9999,
-                    border: "1px solid #333",
-                    width: 250,
-                  }}
-                >
+                  className="video-options-menu bottomButtonOption">
                   <label
+                    className="dropdownPopupArea"
                     style={{
                       display: "block",
                       marginBottom: 8,
@@ -3232,6 +3197,7 @@ function JoinerScreen() {
                     </select>
                   </label>
                   <label
+                   className="dropdownPopupArea"
                     style={{
                       display: "block",
                       marginBottom: 8,
@@ -3270,15 +3236,7 @@ function JoinerScreen() {
 
             {/* Camera button with dropdown for camera and background selection */}
             <div
-              className="control-button video-control-group"
-              style={{
-                position: "relative",
-                display: "inline-block",
-                marginRight: 8,
-                zIndex: 1000,
-              }}
-              ref={cameraBtnRef}
-            >
+              className="control-button video-control-group controlViewBlock" ref={cameraBtnRef}>
               <button
                 className={`commonJoinderBtn videoBoxSetting ${
                   !isVideoOn ? "active" : ""
@@ -3292,20 +3250,6 @@ function JoinerScreen() {
               </button>
               <button
                 className="video-options-toggle"
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  bottom: 55,
-                  background: "#222",
-                  color: "#fff",
-                  border: "1px solid #e7e7e7",
-                  borderRadius: 8,
-                  padding: "2px 8px",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  zIndex: 10,
-                  transition: "all 0.2s ease",
-                }}
                 onClick={() => {
                   console.log(
                     "🎨 Background dropdown clicked, current state:",
@@ -3321,22 +3265,9 @@ function JoinerScreen() {
               </button>
               {showVideoOptions === "video" && (
                 <div
-                  className="video-options-menu"
-                  style={{
-                    position: "absolute",
-                    bottom: 108,
-                    background: "#222",
-                    color: "#fff",
-                    borderRadius: 10,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                    padding: 16,
-                    zIndex: 9999,
-                    border: "1px solid #333",
-                    width: 350,
-                    transition: "all 0.2s ease",
-                  }}
-                >
+                  className="video-options-menu bottomButtonOption">
                   <label
+                  className="dropdownPopupArea"
                     style={{
                       display: "block",
                       marginBottom: 8,
@@ -3370,6 +3301,7 @@ function JoinerScreen() {
                     </select>
                   </label>
                   <label
+                  className="dropdownPopupArea"
                     style={{
                       display: "block",
                       marginBottom: 8,
@@ -3416,15 +3348,13 @@ function JoinerScreen() {
               onClick={() => handleModal("chat", !showModals.chat)}
               disabled={localUserRemoved}
             >
-              <span className="messageRound">
-                <ChatIcon />
+                <ChatIcon size="24" />
                 {showModals.chat && <span></span>}
-              </span>
               <span>{showModals.chat ? "Close Chat" : "Open Chat"}</span>
             </button>
 
             <button
-              className={`commonJoinderBtn participantsSetting ${
+              className={`commonJoinderBtn participantsSetting mobHide ${
                 showModals.participants ? "active" : ""
               }`}
               onClick={() =>
@@ -3450,7 +3380,7 @@ function JoinerScreen() {
             </button>
 
             <button
-              className={`commonJoinderBtn infoSetting ${
+              className={`commonJoinderBtn infoSetting mobHide ${
                 showModals.info ? "active" : ""
               }`}
               onClick={() => handleModal("info", !showModals.info)}
@@ -3472,7 +3402,7 @@ function JoinerScreen() {
             </button>
 
             <button
-              className={`commonJoinderBtn screenShareSetting ${
+              className={`commonJoinderBtn screenShareSetting mobHide ${
                 isSharingScreen ? "active" : ""
               }`}
               onClick={startScreenShare}
@@ -3515,7 +3445,7 @@ function JoinerScreen() {
 
             {/* 🆕 Automatic Recording Status - No Manual Controls */}
             <button
-              className={`commonJoinderBtn recordingSetting ${
+              className={`commonJoinderBtn recordingSetting mobHide ${
                 showRecordingNotice ? "active" : ""
               }`}
               disabled={true}
@@ -3531,7 +3461,7 @@ function JoinerScreen() {
               <button
                 className="leaveMeetingButton"
                 onClick={handleEndMeeting}
-                style={{ background: "#e53935",minHeight: "50px" }}
+                // style={{ background: "#e53935",minHeight: "50px" }}
                 disabled={localUserRemoved}
               >
                 End Meeting
@@ -3541,7 +3471,7 @@ function JoinerScreen() {
                 className="leaveMeetingButton"
                 onClick={handleLeave}
                 disabled={localUserRemoved}
-                style={{ background: "#e53935",minHeight: "50px" }}
+                // style={{ background: "#e53935",minHeight: "50px" }}
               >
                 Leave Meeting
               </button>
