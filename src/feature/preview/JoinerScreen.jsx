@@ -132,7 +132,6 @@ function JoinerScreen() {
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showLeaveMeetingConfirm, setShowLeaveMeetingConfirm] = useState(false);
   const [localUserRemoved, setLocalUserRemoved] = useState(false);
-  const [isHostReconnecting, setIsHostReconnecting] = useState(false);
 
   const recordingClientRef = useRef(null);
   const remoteShareContainerRef = useRef(null);
@@ -488,13 +487,14 @@ function JoinerScreen() {
                   visibility: videoElement.style.visibility,
                 });
 
-                // Check if video has actual content
+                // Check if video has actual content (only for remote users)
                 if (
-                  videoElement.videoWidth === 0 ||
-                  videoElement.videoHeight === 0
+                  userId !== selfUserIdRef.current &&
+                  (videoElement.videoWidth === 0 ||
+                  videoElement.videoHeight === 0)
                 ) {
                   console.log(
-                    `🧹 Immediate aggressive cleanup of black tile for user: ${userId}`
+                    `🧹 Immediate aggressive cleanup of black tile for remote user: ${userId}`
                   );
                   container.innerHTML = "";
                   container.style.display = "none";
@@ -557,35 +557,40 @@ function JoinerScreen() {
           }, 2000); // Reduced to 2 seconds for faster cleanup
 
           // Additional check for video element that doesn't start playing
-          setTimeout(() => {
-            if (container && container.children.length > 0) {
-              const videoElement = container.querySelector("video");
-              if (videoElement && videoElement.paused) {
-                console.log(
-                  `🧹 Aggressive cleanup of non-playing video for user: ${userId}`
-                );
-                container.innerHTML = "";
-                container.style.display = "none";
-                // Remove from DOM completely
-                if (container.parentNode) {
-                  container.parentNode.removeChild(container);
-                }
-                // Remove from refs
-                delete videoContainerRefs.current[userId];
+          // Only apply aggressive cleanup to remote users, not local user
+          if (userId !== selfUserIdRef.current) {
+            setTimeout(() => {
+              if (container && container.children.length > 0) {
+                const videoElement = container.querySelector("video");
+                if (videoElement && videoElement.paused) {
+                  console.log(
+                    `🧹 Aggressive cleanup of non-playing video for remote user: ${userId}`
+                  );
+                  container.innerHTML = "";
+                  container.style.display = "none";
+                  // Remove from DOM completely
+                  if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                  }
+                  // Remove from refs
+                  delete videoContainerRefs.current[userId];
 
-                if (mediaStreamRef.current) {
-                  mediaStreamRef.current
-                    .detachVideo(userId)
-                    .catch((e) =>
-                      console.error(`Failed to detach video for ${userId}`, e)
-                    );
-                }
+                  if (mediaStreamRef.current) {
+                    mediaStreamRef.current
+                      .detachVideo(userId)
+                      .catch((e) =>
+                        console.error(`Failed to detach video for ${userId}`, e)
+                      );
+                  }
 
-                // Force UI update
-                setParticipants(clientRef.current?.getAllUser() || []);
+                  // Force UI update
+                  setParticipants(clientRef.current?.getAllUser() || []);
+                }
               }
-            }
-          }, 2000); // Check after 2 seconds
+            }, 2000); // Check after 2 seconds
+          } else {
+            console.log(`🎥 Skipping aggressive cleanup for local user: ${userId}`);
+          }
         } catch (e) {
           console.error(`Failed to attach video for ${userId}`, e);
           // Clean up container if attachment fails
@@ -708,6 +713,8 @@ function JoinerScreen() {
           userId: userName,
           role: role,
           timestamp: Date.now(),
+          isHost: isHost,
+          reason: "page_unload"
         })
       );
 
@@ -819,22 +826,20 @@ function JoinerScreen() {
           if (timeDiff < 5000) {
             sessionStorage.removeItem("meetingExitInfo");
 
-            // For hosts, allow reconnection to the same meeting
-            if (info.role === 1 || info.role === "1") {
-              console.log(
-                "👑 Host refreshing - allowing reconnection to same meeting"
-              );
-              setIsHostReconnecting(true);
-              // Don't prevent rejoin for hosts
-            } else {
-              // For participants, prevent automatic rejoin by setting a flag
-              sessionStorage.setItem("preventAutoRejoin", "true");
-              navigate(
-                `/meeting-exit?meetingId=${encodeURIComponent(
-                  info.meetingId
-                )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
-              );
-            }
+            // For both hosts and participants, show the meeting exit modal on refresh
+            console.log(
+              `🔄 User refreshing - showing meeting exit modal (role: ${info.role === 1 || info.role === "1" ? "host" : "participant"})`
+            );
+            
+            // Set flag to prevent automatic rejoin
+            sessionStorage.setItem("preventAutoRejoin", "true");
+            
+            // Navigate to meeting-exit modal for both hosts and participants
+            navigate(
+              `/meeting-exit?meetingId=${encodeURIComponent(
+                info.meetingId
+              )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
+            );
           } else {
             sessionStorage.removeItem("meetingExitInfo");
           }
@@ -912,11 +917,6 @@ function JoinerScreen() {
       return;
     }
 
-    // For hosts, allow reconnection even after refresh
-    if (isHostReconnecting) {
-      console.log("👑 Host reconnecting after refresh - proceeding with join");
-      setIsHostReconnecting(false);
-    }
 
     // Fetch devices and set state
     const fetchDevices = async () => {
@@ -965,11 +965,20 @@ function JoinerScreen() {
     // Try to request permissions first, then fetch devices
     const initializeDevices = async () => {
       try {
-        // First try to get user media to request permissions
-        await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+        // Only request camera permissions if video is not off from preview
+        if (!initialVideoOff) {
+          console.log("📹 Requesting camera permissions for device initialization");
+          await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+        } else {
+          console.log("📹 Skipping camera permission request (camera off from preview)");
+          // Still request audio permissions for microphone
+          await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+        }
 
         // If successful, fetch devices
         await fetchDevices();
@@ -1243,12 +1252,34 @@ function JoinerScreen() {
 
         // Set meeting start time when successfully joined
         setMeetingStartTime(new Date().toISOString());
+        
+        // If camera should be off from preview, try to stop video immediately after join
+        if (initialVideoOff) {
+          try {
+            console.log("📹 Camera was off from preview - trying to stop video immediately after join");
+            const tempMediaStream = client.getMediaStream();
+            if (tempMediaStream) {
+              await tempMediaStream.stopVideo();
+              console.log("📹 Video stopped immediately after join");
+            }
+          } catch (err) {
+            console.log("📹 Could not stop video after join:", err.message);
+          }
+        }
 
         // notify backend that user joined
         await notifyUserJoined();
 
         // Enable leave on page unload after successful join
         client.leaveOnPageUnload = true;
+
+        // Store meeting info for refresh detection
+        sessionStorage.setItem("meetingInfo", JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+          timestamp: Date.now(),
+          isHost: isHost
+        }));
 
         // If this is a host reconnecting after refresh, show notification
         if (isHost) {
@@ -1266,9 +1297,51 @@ function JoinerScreen() {
           }
         }
 
+        // Check if this is a page refresh (not initial load)
+        const isRefresh = performance.navigation && performance.navigation.type === 1;
+        if (isRefresh) {
+          console.log("🔄 Page refreshed - maintaining meeting connection");
+          addNotification("Page refreshed - reconnected to meeting");
+        }
+
+        // Add network error handling
+        window.addEventListener('online', () => {
+          console.log("🌐 Network reconnected");
+          addNotification("Network reconnected");
+        });
+
+        window.addEventListener('offline', () => {
+          console.log("🌐 Network disconnected");
+          addNotification("Network disconnected - trying to reconnect...");
+        });
+
         mediaStreamRef.current = client.getMediaStream();
         selfUserIdRef.current = client.getCurrentUserInfo().userId;
         setParticipants(client.getAllUser());
+        
+        console.log("📹 MediaStream obtained, initialVideoOff:", initialVideoOff);
+        
+        // If camera should be off from preview, immediately stop any camera that might have been initialized
+        if (initialVideoOff) {
+          try {
+            console.log("📹 Camera was off from preview - immediately stopping any initialized camera");
+            // Stop video immediately to prevent camera light from staying on
+            await mediaStreamRef.current.stopVideo();
+            setIsVideoOn(false);
+            console.log("📹 Camera stopped immediately after mediaStream creation");
+            
+            // Also try to stop any tracks that might be running
+            if (mediaStreamRef.current && mediaStreamRef.current.getVideoTrack) {
+              const videoTrack = mediaStreamRef.current.getVideoTrack();
+              if (videoTrack) {
+                videoTrack.stop();
+                console.log("📹 Video track stopped");
+              }
+            }
+          } catch (err) {
+            console.log("📹 No camera to stop or already stopped:", err.message);
+          }
+        }
 
         setTimeout(async () => {
           // Start audio only if not muted from preview
@@ -1311,6 +1384,13 @@ function JoinerScreen() {
             }
           } else {
             console.log("📹 Video not started (off from preview)");
+            // Ensure video state is properly set to off
+            setIsVideoOn(false);
+            // Hide the local video container when camera is off from preview
+            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+            if (localContainer) {
+              localContainer.style.display = "none";
+            }
           }
 
           // Attach videos for users already in the session
@@ -2129,6 +2209,14 @@ function JoinerScreen() {
           await mediaStreamRef.current.startVideo(vbOptions);
           await attachVideo(selfUserIdRef.current);
           setIsVideoOn(true);
+          
+          // Show the video container when video is turned on
+          const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+          if (localContainer) {
+            localContainer.style.display = "flex";
+            console.log("📹 Showing local video container (camera turned on)");
+          }
+          
           console.log("📹 Video started with background:", bgMode);
         } catch (vbErr) {
           if (vbErr.message?.includes("virtual background")) {
@@ -2138,6 +2226,14 @@ function JoinerScreen() {
             await attachVideo(selfUserIdRef.current);
             setIsVideoOn(true);
             setBgMode("none"); // Reset to none since VB failed
+            
+            // Show the video container when video is turned on
+            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+            if (localContainer) {
+              localContainer.style.display = "flex";
+              console.log("📹 Showing local video container (camera turned on - fallback)");
+            }
+            
             console.log("📹 Video started without virtual background (fallback)");
           } else {
             throw vbErr; // Re-throw if it's not a VB error
@@ -2152,7 +2248,7 @@ function JoinerScreen() {
         clientRef.current.emit &&
           clientRef.current.emit("peer-video-state-change", {
             userId: selfUserIdRef.current,
-            action: isVideoOn ? "Stop" : "Start",
+            action: isVideoOn ? "Start" : "Stop",
           });
       }
     } catch (e) {
@@ -2212,6 +2308,13 @@ function JoinerScreen() {
       await mediaStreamRef.current.startVideo(vbOptions);
       setBgMode(newBgMode);
       setIsVideoOn(true);
+      
+      // Show the video container when video is turned on
+      const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+      if (localContainer) {
+        localContainer.style.display = "flex";
+        console.log("📹 Showing local video container (background changed)");
+      }
 
       // Add notification for background change
       addNotification(`Virtual background changed to ${newBgMode}`);
@@ -2230,6 +2333,13 @@ function JoinerScreen() {
           await attachVideo(selfUserIdRef.current);
           setIsVideoOn(true);
           setBgMode("none"); // Reset to none since VB failed
+          
+          // Show the video container when video is turned on
+          const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+          if (localContainer) {
+            localContainer.style.display = "flex";
+            console.log("📹 Showing local video container (background change fallback)");
+          }
         } catch (fallbackErr) {
           setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
         }
@@ -2240,6 +2350,13 @@ function JoinerScreen() {
           await mediaStreamRef.current.startVideo();
           await attachVideo(selfUserIdRef.current);
           setIsVideoOn(true);
+          
+          // Show the video container when video is turned on
+          const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+          if (localContainer) {
+            localContainer.style.display = "flex";
+            console.log("📹 Showing local video container (final fallback)");
+          }
         }
       }
     }
@@ -2771,25 +2888,30 @@ function JoinerScreen() {
     if (e.target.classList.contains("modal")) closeFn();
   };
 
-  // Start camera for self-preview
+  // Start camera for self-preview only if video is not off from preview
   useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      })
-      .catch((err) => {
-        console.error("Error accessing camera:", err);
-      });
+    // Only initialize camera if video is not off from preview
+    if (!initialVideoOff) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch((err) => {
+          console.error("Error accessing camera:", err);
+        });
+    } else {
+      console.log("📹 Skipping camera initialization (camera off from preview)");
+    }
 
     return () => {
       if (videoRef.current?.srcObject) {
         videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [initialVideoOff]);
 
   //=====camera drop down=====
   useEffect(() => {
@@ -2976,6 +3098,12 @@ function JoinerScreen() {
                       el.style.display = "flex";
                       el.style.alignItems = "center";
                       el.style.justifyContent = "center";
+                      
+                      // Hide container if this is the local user and video is off from preview
+                      if (user.userId === selfUserIdRef.current && initialVideoOff) {
+                        el.style.display = "none";
+                        console.log("📹 Hiding local video container (camera off from preview)");
+                      }
                     }
                   }}
                 >
@@ -4504,8 +4632,13 @@ function JoinerScreen() {
           {error.includes("permissions") && (
             <button
               onClick={() => {
+                // Only request camera permissions if video is not off from preview
+                const mediaConstraints = initialVideoOff 
+                  ? { audio: true } 
+                  : { video: true, audio: true };
+                
                 navigator.mediaDevices
-                  .getUserMedia({ video: true, audio: true })
+                  .getUserMedia(mediaConstraints)
                   .then(() => {
                     setError("");
                     // Retry fetching devices
