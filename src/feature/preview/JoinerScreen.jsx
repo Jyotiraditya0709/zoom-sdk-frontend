@@ -1367,6 +1367,13 @@ function JoinerScreen() {
                 };
               }
 
+              // Ensure video container is visible before starting video
+              const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+              if (localContainer) {
+                localContainer.style.display = "flex";
+                console.log("📹 Showing local video container (initial video start)");
+              }
+              
               await mediaStreamRef.current.startVideo(vbOptions);
               setIsVideoOn(true);
               await attachVideo(selfUserIdRef.current);
@@ -2206,33 +2213,33 @@ function JoinerScreen() {
         }
 
         try {
-          await mediaStreamRef.current.startVideo(vbOptions);
-          await attachVideo(selfUserIdRef.current);
-          setIsVideoOn(true);
-          
-          // Show the video container when video is turned on
+          // Show the video container BEFORE starting video and attaching
           const localContainer = videoContainerRefs.current[selfUserIdRef.current];
           if (localContainer) {
             localContainer.style.display = "flex";
-            console.log("📹 Showing local video container (camera turned on)");
+            console.log("📹 Showing local video container (camera turning on)");
           }
+          
+          await mediaStreamRef.current.startVideo(vbOptions);
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
           
           console.log("📹 Video started with background:", bgMode);
         } catch (vbErr) {
           if (vbErr.message?.includes("virtual background")) {
             console.warn("Virtual background not supported, falling back to normal video");
+            // Show the video container BEFORE starting video and attaching (fallback)
+            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+            if (localContainer) {
+              localContainer.style.display = "flex";
+              console.log("📹 Showing local video container (camera turning on - fallback)");
+            }
+            
             // Fallback to normal video without virtual background
             await mediaStreamRef.current.startVideo();
             await attachVideo(selfUserIdRef.current);
             setIsVideoOn(true);
             setBgMode("none"); // Reset to none since VB failed
-            
-            // Show the video container when video is turned on
-            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
-            if (localContainer) {
-              localContainer.style.display = "flex";
-              console.log("📹 Showing local video container (camera turned on - fallback)");
-            }
             
             console.log("📹 Video started without virtual background (fallback)");
           } else {
@@ -2305,16 +2312,16 @@ function JoinerScreen() {
         };
       }
 
-      await mediaStreamRef.current.startVideo(vbOptions);
-      setBgMode(newBgMode);
-      setIsVideoOn(true);
-      
-      // Show the video container when video is turned on
+      // Show the video container BEFORE starting video
       const localContainer = videoContainerRefs.current[selfUserIdRef.current];
       if (localContainer) {
         localContainer.style.display = "flex";
-        console.log("📹 Showing local video container (background changed)");
+        console.log("📹 Showing local video container (background changing)");
       }
+      
+      await mediaStreamRef.current.startVideo(vbOptions);
+      setBgMode(newBgMode);
+      setIsVideoOn(true);
 
       // Add notification for background change
       addNotification(`Virtual background changed to ${newBgMode}`);
@@ -2327,19 +2334,19 @@ function JoinerScreen() {
       if (err.message?.includes("virtual background")) {
         console.warn("Virtual background not supported, falling back to normal video");
         setError("Virtual background not supported, using normal video.");
+        // Show the video container BEFORE starting video (fallback)
+        const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+        if (localContainer) {
+          localContainer.style.display = "flex";
+          console.log("📹 Showing local video container (background change fallback)");
+        }
+        
         // Fallback to normal video without virtual background
         try {
           await mediaStreamRef.current.startVideo();
           await attachVideo(selfUserIdRef.current);
           setIsVideoOn(true);
           setBgMode("none"); // Reset to none since VB failed
-          
-          // Show the video container when video is turned on
-          const localContainer = videoContainerRefs.current[selfUserIdRef.current];
-          if (localContainer) {
-            localContainer.style.display = "flex";
-            console.log("📹 Showing local video container (background change fallback)");
-          }
         } catch (fallbackErr) {
           setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
         }
@@ -2347,16 +2354,16 @@ function JoinerScreen() {
         setError("Failed to switch background.");
         // If it fails, try to restart video without VB
         if (!isVideoOn) {
-          await mediaStreamRef.current.startVideo();
-          await attachVideo(selfUserIdRef.current);
-          setIsVideoOn(true);
-          
-          // Show the video container when video is turned on
+          // Show the video container BEFORE starting video (final fallback)
           const localContainer = videoContainerRefs.current[selfUserIdRef.current];
           if (localContainer) {
             localContainer.style.display = "flex";
             console.log("📹 Showing local video container (final fallback)");
           }
+          
+          await mediaStreamRef.current.startVideo();
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
         }
       }
     }
@@ -2957,6 +2964,23 @@ function JoinerScreen() {
     );
   if (localUserRemoved) return <div>Redirecting...</div>;
 
+
+  //mobile responsive
+   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // cleanup on unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <div
       className="joinerScreen"
@@ -3099,10 +3123,10 @@ function JoinerScreen() {
                       el.style.alignItems = "center";
                       el.style.justifyContent = "center";
                       
-                      // Hide container if this is the local user and video is off from preview
-                      if (user.userId === selfUserIdRef.current && initialVideoOff) {
+                      // Hide container if this is the local user and video is currently off
+                      if (user.userId === selfUserIdRef.current && !isVideoOn) {
                         el.style.display = "none";
-                        console.log("📹 Hiding local video container (camera off from preview)");
+                        console.log("📹 Hiding local video container (camera currently off)");
                       }
                     }
                   }}
@@ -3508,14 +3532,13 @@ function JoinerScreen() {
             </button>
 
             <button
-              className={`commonJoinderBtn infoSetting mobHide ${
+              className={`commonJoinderBtn infoSetting  ${
                 showModals.info ? "active" : ""
               }`}
               onClick={() => handleModal("info", !showModals.info)}
               title="Meeting Info"
               disabled={localUserRemoved}
             >
-              <span className="messageRound">
                 <svg
                   width="20"
                   height="20"
@@ -3525,7 +3548,6 @@ function JoinerScreen() {
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
                 </svg>
                 {showModals.info && <span></span>}
-              </span>
               <span>{showModals.info ? "Close Info" : "Info"}</span>
             </button>
 
@@ -3592,7 +3614,11 @@ function JoinerScreen() {
                 // style={{ background: "#e53935",minHeight: "50px" }}
                 disabled={localUserRemoved}
               >
-                End Meeting
+              {!isMobile ?  'End Meeting' :
+                <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>}
+
               </button>
             ) : (
               <button
@@ -3601,7 +3627,11 @@ function JoinerScreen() {
                 disabled={localUserRemoved}
                 // style={{ background: "#e53935",minHeight: "50px" }}
               >
-                Leave Meeting
+               {!isMobile ? 'Leave Meeting' :
+                <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>}
+
               </button>
             )}
           </div>

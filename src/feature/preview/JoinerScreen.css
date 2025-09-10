@@ -130,7 +130,7 @@
   }
 
   .joinerSettingBottom {
-    background: #fafafa;
+    background: #f5f5f5;
     border-radius: 12px;
     margin: 0 auto;
     max-width: 1200px;
@@ -426,27 +426,27 @@
   transition: all 0.2s ease;
 }
 
-.bottomButtonOption{
+.bottomButtonOption {
   position: absolute;
   bottom: 105px;
   background: #222;
   color: #fff;
   border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   padding: 16px;
   z-index: 9999;
   border: 1px solid #333;
   width: 250px;
 }
 
-  .dropdownPopupArea{
-    display: flex !important;
-    flex-direction: column;
+.dropdownPopupArea {
+  display: flex !important;
+  flex-direction: column;
 
-    select{
-      width: 100% !important;
-    }
+  select {
+    width: 100% !important;
   }
+}
 
 @media (max-width: 768px) {
 
@@ -470,6 +470,56 @@
     }
   }
 
+  .control-button.video-control-group.controlViewBlock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #d4d4d4;
+    border-radius: 8px;
+    padding: 5px 10px;
+    width: 100%;
+    max-width: 70px;
+  }
+
+  .joinerScreen .joinerSettingBottom .commonJoinderBtn.active {
+    background: transparent !important;
+  }
+
+  .joinerScreen .joinerSettingBottom .muteBoxSetting>svg path {
+    fill: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .videoBoxSetting>svg path {
+    fill: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .infoSetting>svg path {
+    stroke: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .muteBoxSetting.active>svg path {
+    stroke: #171717 !important;
+    fill: unset !important;
+  }
+
+  .joinerScreen .joinerSettingBottom .videoBoxSetting.active>svg path {
+    fill: #171717 !important;
+  }
+
+  .joinerScreen .joinerSettingBottom .infoSetting.active>svg path {
+    fill: #171717 !important;
+  }
+
+  .joinerScreenContainer .joinerSettingBottom .chatSetting,
+  .joinerScreen .joinerSettingBottom .infoSetting {
+    border: 1px solid #d4d4d4;
+    border-radius: 8px;
+    padding: 5px 10px;
+    width: 100%;
+    max-width: 50px !important;
+    min-height: 37px;
+  }
+
   .joinerScreen .joinerSettingBottom .commonJoinderBtn {
     padding: 0;
     height: auto;
@@ -478,9 +528,30 @@
     background: transparent;
   }
 
-    .joinerScreen .joinerSettingBottom{
-      gap: 20px;
-    }
+  .joinerSettingBottom .optionToggleBlock {
+    position: unset;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .joinerSettingBottom .optionToggleBlock path {
+    fill: #171717;
+  }
+
+  .joinerSettingBottom .video-options-toggle {
+    background: transparent;
+    padding: 0;
+    position: unset;
+  }
+
+  .joinerSettingBottom .video-options-toggle path {
+    fill: #171717;
+  }
+
+  .joinerScreen .joinerSettingBottom {
+    gap: 10px;
+  }
 
   .joinerScreen .joinerSettingBottom .commonJoinderBtn span {
     display: none;
@@ -492,11 +563,33 @@
     }
   }
 
-  .joinerScreen .joinerSettingBottom{
+  .joinerScreen .joinerSettingBottom {
     position: fixed;
     bottom: 0;
     right: 0;
     border-radius: 0;
   }
 
+  .bottomButtonOption {
+    bottom: 60px;
+  }
+
+  .joinerScreen {
+    & .joinerSettingBottom {
+      .leaveMeetingButton {
+        min-width: auto;
+      }
+    }
+  }
+
+  .joinerScreen .joinerSettingBottom .leaveMeetingButton svg path {
+    stroke: #fff;
+  }
+
+}
+
+@media (max-width: 376px) {
+  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin{
+    height: 176px !important;
+  }
 }
