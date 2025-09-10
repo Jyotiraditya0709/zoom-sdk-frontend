@@ -2964,6 +2964,23 @@ function JoinerScreen() {
     );
   if (localUserRemoved) return <div>Redirecting...</div>;
 
+
+  //mobile responsive
+   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // cleanup on unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <div
       className="joinerScreen"
@@ -3515,14 +3532,13 @@ function JoinerScreen() {
             </button>
 
             <button
-              className={`commonJoinderBtn infoSetting mobHide ${
+              className={`commonJoinderBtn infoSetting  ${
                 showModals.info ? "active" : ""
               }`}
               onClick={() => handleModal("info", !showModals.info)}
               title="Meeting Info"
               disabled={localUserRemoved}
             >
-              <span className="messageRound">
                 <svg
                   width="20"
                   height="20"
@@ -3532,7 +3548,6 @@ function JoinerScreen() {
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
                 </svg>
                 {showModals.info && <span></span>}
-              </span>
               <span>{showModals.info ? "Close Info" : "Info"}</span>
             </button>
 
@@ -3599,7 +3614,11 @@ function JoinerScreen() {
                 // style={{ background: "#e53935",minHeight: "50px" }}
                 disabled={localUserRemoved}
               >
-                End Meeting
+              {!isMobile ?  'End Meeting' :
+                <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>}
+
               </button>
             ) : (
               <button
@@ -3608,7 +3627,11 @@ function JoinerScreen() {
                 disabled={localUserRemoved}
                 // style={{ background: "#e53935",minHeight: "50px" }}
               >
-                Leave Meeting
+               {!isMobile ? 'Leave Meeting' :
+                <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>}
+
               </button>
             )}
           </div>
