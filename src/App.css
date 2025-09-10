@@ -165,4 +165,8 @@ video-player {
   .mobHide {
     display: none !important;
   }
+
+  .commonJoinderBtn.mobHide {
+    display: none !important;
+  }
 }

@@ -267,7 +267,6 @@
     gap: 16px;
     margin-top: 20px;
     border-radius: 12px;
-    flex-direction: column;
     /* width: 100%; */
 
     .bottomControlsLeft {
@@ -567,7 +566,7 @@
     }
 
     .mainMeetingContainer .videoBoxPreJoin {
-      min-height: 200px;
+      min-height: 240px;
     }
 
     .rightMeetingDetail {
@@ -628,7 +627,6 @@
     }
 
     .bottomControls {
-      flex-direction: column;
       align-items: stretch;
       gap: 12px;
       width: 100%;

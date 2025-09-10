@@ -130,21 +130,23 @@
   }
 
   .joinerSettingBottom {
-    background: #fff;
+    background: #fafafa;
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1200px;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 15px 8px;
-    padding-top: 0;
+    padding: 16px 8px;
     flex-wrap: wrap;
     overflow: visible;
-    min-height: 150px;
 
     .commonJoinderBtn {
       border-radius: 10px;
       background: #fafafa;
+      border: 1px solid transparent;
       padding: 12px 16px;
       display: flex;
       justify-content: center;
@@ -154,7 +156,7 @@
       width: auto;
       min-width: 120px;
       max-width: 150px;
-      min-height: 80px;
+      height: 80px;
       outline: none;
       flex-shrink: 0;
 
@@ -297,6 +299,7 @@
     opacity: 0;
     transform: translateY(10px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -345,10 +348,13 @@
 }
 
 @keyframes recordingPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
     transform: translateX(-50%) scale(1);
   }
+
   50% {
     box-shadow: 0 6px 20px rgba(255, 71, 87, 0.5);
     transform: translateX(-50%) scale(1.05);
@@ -386,10 +392,111 @@
 }
 
 @keyframes recordingBlink {
-  0%, 50% {
+
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+
+  51%,
+  100% {
     opacity: 0.3;
   }
+}
+
+.control-button.video-control-group.controlViewBlock {
+  position: relative;
+  display: inline-block;
+  margin-right: 8px;
+  z-index: 1000;
+}
+
+.optionToggleBlock {
+  position: absolute;
+  right: 0;
+  bottom: 40px;
+  background: #222;
+  color: #fff;
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.bottomButtonOption{
+  position: absolute;
+  bottom: 105px;
+  background: #222;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  padding: 16px;
+  z-index: 9999;
+  border: 1px solid #333;
+  width: 250px;
+}
+
+  .dropdownPopupArea{
+    display: flex !important;
+    flex-direction: column;
+
+    select{
+      width: 100% !important;
+    }
+  }
+
+@media (max-width: 768px) {
+
+  .joinerScreen {
+    .joinerScreenContainer {
+      height: calc(100vh - 70px);
+    }
+  }
+
+  .joinerScreen .joinerScreenBlock .joinerVideoScreen {
+    padding: 20px 0 !important;
+  }
+
+  .joinerScreen {
+    & .joinerScreenBlock {
+
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: repeat(1, 1fr);
+      }
+    }
+  }
+
+  .joinerScreen .joinerSettingBottom .commonJoinderBtn {
+    padding: 0;
+    height: auto;
+    min-width: auto;
+    max-width: unset;
+    background: transparent;
+  }
+
+    .joinerScreen .joinerSettingBottom{
+      gap: 20px;
+    }
+
+  .joinerScreen .joinerSettingBottom .commonJoinderBtn span {
+    display: none;
+  }
+
+  .joinerScreen {
+    .joinerScreenBlock {
+      justify-content: unset;
+    }
+  }
+
+  .joinerScreen .joinerSettingBottom{
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    border-radius: 0;
+  }
+
 }
