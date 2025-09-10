@@ -3530,7 +3530,7 @@ function JoinerScreen() {
                     >
                       <option value="none">None</option>
                       <option value="blur">Blur</option>
-                      <option value="image">Image</option>
+                      <option value="image">Tetr Background</option>
                     </select>
                   </label>
                 </div>
