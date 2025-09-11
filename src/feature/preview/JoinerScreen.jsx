@@ -2423,6 +2423,13 @@ function JoinerScreen() {
       if (!isSharingScreen) {
         console.log("[SCREEN SHARE] Starting screen share...");
 
+        // Close any open panels (chat, participants, info) before starting screen share
+        setShowModals({
+          participants: false,
+          chat: false,
+          info: false,
+        });
+
         const mediaStream = clientRef.current.getMediaStream();
 
         if (webCodecsEnabled) {

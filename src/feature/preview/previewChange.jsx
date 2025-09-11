@@ -875,7 +875,8 @@ const PreJoin = () => {
                           }
                         } catch (err) {
                           console.error("Error toggling audio:", err);
-                          setError("Failed to toggle audio: " + err.message);
+                          // Don't show user-facing errors for audio toggle failures
+                          // These are often expected when audio is not started
                         }
                       }}
                     >
@@ -928,7 +929,8 @@ const PreJoin = () => {
                           setIsVideoOff(!isVideoOff);
                         } catch (err) {
                           console.error("Error toggling video:", err);
-                          setError("Failed to toggle video: " + err.message);
+                          // Don't show user-facing errors for video toggle failures
+                          // These are often expected when video is not started
                         }
                       }}
                     >
@@ -938,7 +940,6 @@ const PreJoin = () => {
                 </video-player-container>
               </div>
               {isLoading && <div className="loading">Starting preview...</div>}
-              {error && <div className="error">{error}</div>}
 
               <div className="bottomControls">
                 <div className="bottomControlsLeft">
@@ -949,8 +950,7 @@ const PreJoin = () => {
                   <div className="buttonGroup">
                     <button
                       className={`commonTextBtn testMicrophone ${micTestPhase === "recording" ? "recording" :
-                          micTestPhase === "playing" ? "playing" :
-                            micTestPhase === "ready" ? "ready" : ""
+                          micTestPhase === "playing" ? "playing" : ""
                         }`}
                       onClick={handleMicTest}
                       disabled={!hasMicPermission}
@@ -961,22 +961,8 @@ const PreJoin = () => {
                         ? `Recording... (${micTestCountdown}s)`
                         : micTestPhase === "playing"
                           ? "Playing..."
-                          : micTestPhase === "ready"
-                            ? "Stop Test"
-                            : "Test Microphone"}
+                          : "Test Microphone"}
                     </button>
-
-
-
-                    {micTestPhase === "ready" && (
-                      <button
-                        className="commonTextBtn playRecording"
-                        onClick={handlePlayRecording}
-                      >
-                        <span className="playing-dot"></span>
-                        Play Recording
-                      </button>
-                    )}
 
                     <button
                       className={`commonTextBtn testSpeaker ${isSpeakerTesting ? "testing" : ""
