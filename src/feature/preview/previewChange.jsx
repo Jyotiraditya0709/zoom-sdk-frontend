@@ -173,6 +173,10 @@ const PreJoin = () => {
           startTime: data.Data.startTime,
           endTime: data.Data.endTime,
           meetingStatus: data.Data.meetingStatus,
+          mentorName: data.Data.mentorName,
+          menteeName: data.Data.menteeName,
+          mentorId: data.Data.mentorId,
+          menteeId: data.Data.menteeId,
         });
         console.log("✅ Agenda data fetched:", data.Data);
       } else {
@@ -830,7 +834,13 @@ const PreJoin = () => {
       {/* Header Component */}
       <Header
         userEmail={`${userName}@example.com`}
-        userName={userName}
+        userName={
+          agendaData && (agendaData.mentorName || agendaData.menteeName)
+            ? (agendaData.mentorId === userName 
+                ? (agendaData.mentorName || agendaData.mentorId)
+                : (agendaData.menteeName || agendaData.menteeId))
+            : userName
+        }
         meetingTitle={
           agendaData?.agenda ||
           "Meeting Session - General discussion and collaboration"
@@ -1000,7 +1010,13 @@ const PreJoin = () => {
               <div>
                 <div className="commonDetail">
                   <span>Joinee: </span>
-                  <p>{userName}</p>
+                  <p>{
+                    agendaData && (agendaData.mentorName || agendaData.menteeName)
+                      ? (agendaData.mentorId === userName 
+                          ? (agendaData.mentorName || agendaData.mentorId)
+                          : (agendaData.menteeName || agendaData.menteeId))
+                      : userName
+                  }</p>
                 </div>
                 <div className="commonDetail">
                   <span>Agenda: </span>

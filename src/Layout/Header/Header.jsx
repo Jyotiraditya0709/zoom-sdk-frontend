@@ -125,7 +125,6 @@ const Header = ({
           {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" className="logoOrg" />}
           <div className="profileDetailHeader">
             <div className="profileName">
-              <span className="emailText">{userEmail}</span>
               <span className="nameText">{userName}</span>
             </div>
             <div className="profileImage">
@@ -178,7 +177,6 @@ const Header = ({
           {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" />}
           <div className="profileDetailHeader">
             <div className="profileName">
-              <span className="emailText">{userEmail}</span>
               <span className="nameText">{userName}</span>
             </div>
             <div className="profileImage">

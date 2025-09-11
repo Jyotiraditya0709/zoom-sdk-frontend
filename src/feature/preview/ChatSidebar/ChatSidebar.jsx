@@ -9,6 +9,7 @@ const ChatSidebar = ({
   chatMessages = [],
   onSendMessage,
   userName,
+  meetingData,
 }) => {
   const [msg, setMsg] = useState("");
   const messagesEndRef = useRef(null);
@@ -46,6 +47,17 @@ const ChatSidebar = ({
   const getSenderName = (message, isSystemMessage) => {
     if (message.sender === userName) return "You";
     if (isSystemMessage) return "System";
+    
+    // Try to get proper name from meetingData
+    if (meetingData) {
+      if (message.sender === meetingData.mentorId) {
+        return meetingData.mentorName || message.sender;
+      }
+      if (message.sender === meetingData.menteeId) {
+        return meetingData.menteeName || message.sender;
+      }
+    }
+    
     return message.sender;
   };
 
@@ -151,6 +163,7 @@ ChatSidebar.propTypes = {
   chatMessages: PropTypes.array,
   onSendMessage: PropTypes.func.isRequired,
   userName: PropTypes.string,
+  meetingData: PropTypes.object,
 };
 
 export default ChatSidebar;
