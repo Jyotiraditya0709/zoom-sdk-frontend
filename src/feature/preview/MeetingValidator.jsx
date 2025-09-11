@@ -126,6 +126,13 @@ const MeetingValidator = () => {
                 <strong>Meeting ID:</strong> {meetingData.meetingId}
               </p>
               <p>
+                <strong>Joinee:</strong> {
+                  meetingData.mentorId === userId 
+                    ? (meetingData.mentorName || meetingData.mentorId)
+                    : (meetingData.menteeName || meetingData.menteeId)
+                }
+              </p>
+              <p>
                 <strong>Agenda:</strong> {meetingData.agenda}
               </p>
               <p>
@@ -153,6 +160,13 @@ const MeetingValidator = () => {
           <div className="meeting-validator-details">
             <p>
               <strong>Meeting ID:</strong> {meetingData.meetingId}
+            </p>
+            <p>
+              <strong>Joinee:</strong> {
+                meetingData.mentorId === userId 
+                  ? (meetingData.mentorName || meetingData.mentorId)
+                  : (meetingData.menteeName || meetingData.menteeId)
+              }
             </p>
             <p>
               <strong>Agenda:</strong> {meetingData.agenda}

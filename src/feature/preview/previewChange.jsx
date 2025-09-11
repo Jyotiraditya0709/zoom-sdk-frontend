@@ -173,6 +173,10 @@ const PreJoin = () => {
           startTime: data.Data.startTime,
           endTime: data.Data.endTime,
           meetingStatus: data.Data.meetingStatus,
+          mentorName: data.Data.mentorName,
+          menteeName: data.Data.menteeName,
+          mentorId: data.Data.mentorId,
+          menteeId: data.Data.menteeId,
         });
         console.log("✅ Agenda data fetched:", data.Data);
       } else {
@@ -830,7 +834,13 @@ const PreJoin = () => {
       {/* Header Component */}
       <Header
         userEmail={`${userName}@example.com`}
-        userName={userName}
+        userName={
+          agendaData && (agendaData.mentorName || agendaData.menteeName)
+            ? (agendaData.mentorId === userName 
+                ? (agendaData.mentorName || agendaData.mentorId)
+                : (agendaData.menteeName || agendaData.menteeId))
+            : userName
+        }
         meetingTitle={
           agendaData?.agenda ||
           "Meeting Session - General discussion and collaboration"
@@ -875,7 +885,8 @@ const PreJoin = () => {
                           }
                         } catch (err) {
                           console.error("Error toggling audio:", err);
-                          setError("Failed to toggle audio: " + err.message);
+                          // Don't show user-facing errors for audio toggle failures
+                          // These are often expected when audio is not started
                         }
                       }}
                     >
@@ -928,7 +939,8 @@ const PreJoin = () => {
                           setIsVideoOff(!isVideoOff);
                         } catch (err) {
                           console.error("Error toggling video:", err);
-                          setError("Failed to toggle video: " + err.message);
+                          // Don't show user-facing errors for video toggle failures
+                          // These are often expected when video is not started
                         }
                       }}
                     >
@@ -938,7 +950,6 @@ const PreJoin = () => {
                 </video-player-container>
               </div>
               {isLoading && <div className="loading">Starting preview...</div>}
-              {error && <div className="error">{error}</div>}
 
               <div className="bottomControls">
                 <div className="bottomControlsLeft">
@@ -949,8 +960,7 @@ const PreJoin = () => {
                   <div className="buttonGroup">
                     <button
                       className={`commonTextBtn testMicrophone ${micTestPhase === "recording" ? "recording" :
-                          micTestPhase === "playing" ? "playing" :
-                            micTestPhase === "ready" ? "ready" : ""
+                          micTestPhase === "playing" ? "playing" : ""
                         }`}
                       onClick={handleMicTest}
                       disabled={!hasMicPermission}
@@ -961,22 +971,8 @@ const PreJoin = () => {
                         ? `Recording... (${micTestCountdown}s)`
                         : micTestPhase === "playing"
                           ? "Playing..."
-                          : micTestPhase === "ready"
-                            ? "Stop Test"
-                            : "Test Microphone"}
+                          : "Test Microphone"}
                     </button>
-
-
-
-                    {micTestPhase === "ready" && (
-                      <button
-                        className="commonTextBtn playRecording"
-                        onClick={handlePlayRecording}
-                      >
-                        <span className="playing-dot"></span>
-                        Play Recording
-                      </button>
-                    )}
 
                     <button
                       className={`commonTextBtn testSpeaker ${isSpeakerTesting ? "testing" : ""
@@ -1014,7 +1010,13 @@ const PreJoin = () => {
               <div>
                 <div className="commonDetail">
                   <span>Joinee: </span>
-                  <p>{userName}</p>
+                  <p>{
+                    agendaData && (agendaData.mentorName || agendaData.menteeName)
+                      ? (agendaData.mentorId === userName 
+                          ? (agendaData.mentorName || agendaData.mentorId)
+                          : (agendaData.menteeName || agendaData.menteeId))
+                      : userName
+                  }</p>
                 </div>
                 <div className="commonDetail">
                   <span>Agenda: </span>
