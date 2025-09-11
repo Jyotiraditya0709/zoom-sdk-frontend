@@ -107,6 +107,10 @@ const PreJoin = () => {
   // Add permission state tracking
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [hasMicPermission, setHasMicPermission] = useState(false);
+  
+  // Add permission dialog state
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionDialogMessage, setPermissionDialogMessage] = useState("");
 
   // Add agenda state
   const [agendaData, setAgendaData] = useState(null);
@@ -118,6 +122,65 @@ const PreJoin = () => {
   const [showConsentError, setShowConsentError] = useState(false);
 
   const client = useRef(null);
+
+  // ========== Permission Dialog Functions ==========
+  // Shows a modal dialog when camera/microphone permissions are denied
+  // Similar to the media warning modal in JoinerScreen.jsx
+  const showPermissionError = (message) => {
+    setPermissionDialogMessage(message);
+    setShowPermissionDialog(true);
+  };
+
+  const requestPermissions = async () => {
+    try {
+      setShowPermissionDialog(false);
+      setError("");
+      
+      // Request both camera and microphone permissions
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      // Stop the test stream immediately
+      stream.getTracks().forEach(track => track.stop());
+
+      // Update permission states
+      setHasCameraPermission(true);
+      setHasMicPermission(true);
+      
+      // Fetch devices again after getting permissions
+      const devices = await ZoomVideo.getDevices();
+      const cams = devices.filter((d) => d.kind === "videoinput");
+      const mics = devices.filter((d) => d.kind === "audioinput");
+      const speakers = devices.filter((d) => d.kind === "audiooutput");
+
+      setVideoDevices(cams);
+      setAudioDevices(mics);
+      setSpeakerDevices(speakers);
+
+      if (cams.length > 0) setSelectedCamera(cams[0].deviceId);
+      if (mics.length > 0) setSelectedMic(mics[0].deviceId);
+      if (speakers.length > 0) setSelectedSpeaker(speakers[0].deviceId);
+
+      console.log("✅ Permissions granted successfully");
+      
+    } catch (err) {
+      console.error("❌ Permission request failed:", err);
+      
+      let errorMessage = "Please enable system microphone and video to continue.";
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage = "Please enable system microphone and video to continue.\n\nClick 'Retry' to request permissions again, or manually enable them in your browser settings.";
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = "No camera or microphone found. Please connect your devices and try again.";
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = "Camera or microphone is already in use by another application. Please close other apps and try again.";
+      }
+      
+      showPermissionError(errorMessage);
+    }
+  };
 
 
 
@@ -248,7 +311,7 @@ const PreJoin = () => {
       } catch (err) {
         console.error("Error fetching devices:", err);
         if (err.name === 'NotAllowedError') {
-          setError("Please allow camera and microphone permissions to continue.");
+          showPermissionError("Please enable system microphone and video to continue.\n\nClick 'Retry' to request permissions again, or manually enable them in your browser settings.");
         } else {
           setError("Failed to fetch devices. Please check your camera/microphone.");
         }
@@ -589,7 +652,7 @@ const PreJoin = () => {
         stream.getTracks().forEach(track => track.stop());
         setHasMicPermission(true);
       } catch (err) {
-        setError("Microphone permission is required to test audio. Please allow microphone access.");
+        showPermissionError("Microphone permission is required to test audio. Please allow microphone access.\n\nClick 'Retry' to request permissions again.");
         return;
       }
     }
@@ -720,7 +783,9 @@ const PreJoin = () => {
       // Provide more specific error messages
       let errorMessage = "Failed to test microphone";
       if (err.name === "NotAllowedError") {
-        errorMessage = "Microphone access denied. Please allow microphone permissions.";
+        errorMessage = "Microphone access denied. Please allow microphone permissions.\n\nClick 'Retry' to request permissions again.";
+        showPermissionError(errorMessage);
+        return;
       } else if (err.name === "NotFoundError") {
         errorMessage = "Microphone not found. Please check your microphone connection.";
       } else if (err.name === "NotReadableError") {
@@ -1172,6 +1237,115 @@ const PreJoin = () => {
           {/* Bottom Controls */}
         </div>
       </div>
+
+      {/* Permission Dialog Modal */}
+      {showPermissionDialog && (
+        <div
+          onClick={() => {
+            setShowPermissionDialog(false);
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.35)",
+            zIndex: 3000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#333",
+              borderRadius: 12,
+              padding: "24px 32px 24px 32px",
+              boxShadow: "0 4px 24px #0002",
+              minWidth: 400,
+              maxWidth: "90vw",
+              color: "#fff",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  background: "#ff9800",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 12,
+                  fontSize: 16,
+                  fontWeight: "bold",
+                }}
+              >
+                !
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+                Permission Required
+              </h3>
+            </div>
+            <div
+              style={{
+                color: "#ccc",
+                fontSize: 14,
+                lineHeight: 1.5,
+                marginBottom: 24,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {permissionDialogMessage}
+            </div>
+            <div
+              style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}
+            >
+              <button
+                onClick={() => {
+                  setShowPermissionDialog(false);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #666",
+                  color: "#ccc",
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 14,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={requestPermissions}
+                style={{
+                  background: "#007bff",
+                  border: "none",
+                  color: "#fff",
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

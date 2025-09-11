@@ -608,6 +608,22 @@
 
 }
 
+/* Chat notification indicator animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @media (max-width: 376px) {
   .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin{
     height: 176px !important;
