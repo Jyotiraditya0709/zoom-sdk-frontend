@@ -17,6 +17,7 @@ import {
 } from "../../icon/icon";
 import config from "../../config/config";
 import ChatSidebar from "../preview/ChatSidebar/ChatSidebar";
+import ZoomDotsLoader from "../../components/ZoomDotsLoader/ZoomDotsLoader";
 // Add new imports for icons
 import {
   FaMicrophone,
@@ -132,7 +133,22 @@ function JoinerScreen() {
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showLeaveMeetingConfirm, setShowLeaveMeetingConfirm] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [localUserRemoved, setLocalUserRemoved] = useState(false);
+
+  // Mobile responsive effect
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // cleanup on unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   const recordingClientRef = useRef(null);
   const remoteShareContainerRef = useRef(null);
@@ -1298,6 +1314,7 @@ function JoinerScreen() {
 
     const joinSession = async () => {
       try {
+        setIsJoining(true);
         await client.init("en-US", "Global", {
           patchJsMedia: true,
           enforceVirtualBackground: true,
@@ -2481,6 +2498,13 @@ function JoinerScreen() {
       isSharingScreen
     );
 
+    // Check if someone else is already sharing
+    if (isRemoteSharing && !isSharingScreen) {
+      console.log("[SCREEN SHARE] ERROR: Someone else is already sharing their screen");
+      addNotification("Screen sharing is already in progress by another participant");
+      return;
+    }
+
     if (!mediaStreamRef.current) {
       console.log("[SCREEN SHARE] ERROR: mediaStreamRef.current is null");
       return;
@@ -2923,6 +2947,20 @@ function JoinerScreen() {
     }
   };
 
+  // Helper function to get dynamic heading based on modal type
+  const getModalHeading = (modalType) => {
+    switch (modalType) {
+      case 'info':
+        return 'Info';
+      case 'participants':
+        return `Participants (${participants.length})`;
+      case 'chat':
+        return 'Chat';
+      default:
+        return 'Panel';
+    }
+  };
+
   // Device switching functions (like MeetingPage.jsx)
   const switchCamera = async (deviceId) => {
     if (mediaStreamRef.current) {
@@ -3052,7 +3090,8 @@ function JoinerScreen() {
   else if (count <= 25) gridClass = `grid-${count}`;
   else gridClass = "grid-25";
 
-  if (isJoining) return <div>Joining meeting...</div>;
+  // Early returns for loading and error states
+  if (isJoining) return <ZoomDotsLoader />;
   if (error)
     return (
       <div className="error-page">
@@ -3064,20 +3103,6 @@ function JoinerScreen() {
 
 
   //mobile responsive
-   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    // cleanup on unmount
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   return (
     <div
@@ -3606,7 +3631,7 @@ function JoinerScreen() {
             >
                 <ChatIcon size="24" />
                 {showModals.chat && <span></span>}
-              <span>{showModals.chat ? "Close Chat" : "Open Chat"}</span>
+              <span>{showModals.chat ? "Chat" : "Chat"}</span>
             </button>
 
             <button
@@ -3658,12 +3683,25 @@ function JoinerScreen() {
             <button
               className={`commonJoinderBtn screenShareSetting mobHide ${
                 isSharingScreen ? "active" : ""
-              }`}
+              } ${isRemoteSharing && !isSharingScreen ? "disabled" : ""}`}
               onClick={startScreenShare}
-              disabled={localUserRemoved}
+              disabled={localUserRemoved || (isRemoteSharing && !isSharingScreen)}
+              title={
+                isRemoteSharing && !isSharingScreen
+                  ? "Screen sharing is already in progress"
+                  : isSharingScreen
+                  ? "Stop sharing your screen"
+                  : "Share your screen"
+              }
             >
               <ShareScreenIcon />
-              <span>{isSharingScreen ? "Stop Share" : "Share Screen"}</span>
+              <span>
+                {isSharingScreen
+                  ? "Stop Share"
+                  : isRemoteSharing && !isSharingScreen
+                  ? "Screen sharing in progress"
+                  : "Share Screen"}
+              </span>
             </button>
 
             {/* Annotation Button (only show if sharing or viewing share) */}
@@ -3746,6 +3784,7 @@ function JoinerScreen() {
           participants={participants}
           chatMessages={chatMessages}
           meetingData={meetingData}
+          getModalHeading={getModalHeading}
           onSendMessage={(message) => {
             // Direct message sending without creating fake event
             if (message && message.trim()) {
@@ -4000,7 +4039,7 @@ function JoinerScreen() {
               }}
             >
               <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
-                Participants ({participants.length})
+                {getModalHeading('participants')}
               </h3>
               <button
                 onClick={() => handleModal("participants", false)}
@@ -4271,7 +4310,7 @@ function JoinerScreen() {
               }}
             >
               <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
-                Meeting Info
+                {getModalHeading('info')}
               </h3>
               <button
                 onClick={() => handleModal("info", false)}

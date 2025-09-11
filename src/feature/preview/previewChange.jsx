@@ -82,6 +82,7 @@ const PreJoin = () => {
   const [audioDevices, setAudioDevices] = useState([]); // mic array
   const [speakerDevices, setSpeakerDevices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState("");
   const [isMicTesting, setIsMicTesting] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
@@ -125,6 +126,9 @@ const PreJoin = () => {
   // Fetch agenda data from database
   const fetchAgendaData = async (meetingId, userId) => {
     if (!meetingId || !userId) return;
+    
+    // Don't fetch agenda data for default values
+    if (meetingId === "meeting-test" || userId === "Guest") return;
 
     setAgendaLoading(true);
     setAgendaError("");
@@ -239,6 +243,7 @@ const PreJoin = () => {
         setHasMicPermission(true);
         setIsVideoOff(false); // Camera should be ON by default
         setIsMute(false); // Mic should be ON by default
+        setIsInitializing(false); // Component is now initialized
 
       } catch (err) {
         console.error("Error fetching devices:", err);
@@ -247,6 +252,7 @@ const PreJoin = () => {
         } else {
           setError("Failed to fetch devices. Please check your camera/microphone.");
         }
+        setIsInitializing(false); // Component is now initialized even if there's an error
       }
     };
     fetchDevices();
@@ -829,6 +835,17 @@ const PreJoin = () => {
     }
   };
 
+  // Show simple loading during initialization
+  if (isInitializing) {
+    return (
+      <div className="mainMeetingContainer" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '18px', marginBottom: '10px' }}>Loading preview...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mainMeetingContainer">
       {/* Header Component */}
@@ -1021,12 +1038,9 @@ const PreJoin = () => {
                 <div className="commonDetail">
                   <span>Agenda: </span>
                   {agendaLoading ? (
-                    <p
-                      className="lineClamp"
-                      style={{ color: "#666", fontStyle: "italic" }}
-                    >
-                      Loading agenda...
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: "#666", fontStyle: "italic" }}>Loading agenda...</span>
+                    </div>
                   ) : agendaError ? (
                     <p className="lineClamp" style={{ color: "#dc2626" }}>
                       ⚠️ {agendaError}

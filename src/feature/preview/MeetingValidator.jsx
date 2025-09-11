@@ -67,7 +67,13 @@ const MeetingValidator = () => {
 
   if (isValidating) {
     return (
-      <div className="meeting-validator-loading">🔍 Validating meeting...</div>
+      <div className="meeting-validator-container">
+        <div className="meeting-validator-content">
+          <div className="meeting-validator-icon">⏳</div>
+          <h2 className="meeting-validator-title">Validating Meeting...</h2>
+          <p className="meeting-validator-message">Please wait while we validate your meeting access.</p>
+        </div>
+      </div>
     );
   }
 

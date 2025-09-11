@@ -12,17 +12,17 @@ export const RightArrow = ({ className, onClick, color }) => {
       <path
         d="M10.0001 18.8334C14.6025 18.8334 18.3334 15.1025 18.3334 10.5001C18.3334 5.89771 14.6025 2.16675 10.0001 2.16675C5.39771 2.16675 1.66675 5.89771 1.66675 10.5001C1.66675 15.1025 5.39771 18.8334 10.0001 18.8334Z"
         stroke="white"
-        stroke-width="1.5"
-        stroke-miterlimit="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M8.95007 13.4417L11.8834 10.5L8.95007 7.55835"
         stroke="white"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -39,21 +39,21 @@ export const SpeakerIcon = ({ className, onClick, color }) => {
       <path
         d="M2 10V14C2 16 3 17 5 17H6.43C6.8 17 7.17 17.11 7.49 17.3L10.41 19.13C12.93 20.71 15 19.56 15 16.59V7.41003C15 4.43003 12.93 3.29003 10.41 4.87003L7.49 6.70003C7.17 6.89003 6.8 7.00003 6.43 7.00003H5C3 7.00003 2 8.00003 2 10Z"
         stroke="#3397EF"
-        stroke-width="1.5"
+        strokeWidth="1.5"
       />
       <path
         d="M18 8C19.78 10.37 19.78 13.63 18 16"
         stroke="#3397EF"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M19.83 5.5C22.72 9.35 22.72 14.65 19.83 18.5"
         stroke="#3397EF"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -70,23 +70,23 @@ export const NoSpeakerIcon = ({ className, onClick, color }) => {
       <path
         d="M2 10.1595V14.1595C2 16.1595 3 17.1595 5 17.1595H6.43C6.8 17.1595 7.17 17.2695 7.49 17.4595L10.41 19.2895C12.93 20.8695 15 19.7195 15 16.7495V7.56946C15 4.58946 12.93 3.44946 10.41 5.02946L7.49 6.85946C7.17 7.04946 6.8 7.15946 6.43 7.15946H5C3 7.15946 2 8.15946 2 10.1595Z"
         stroke="#3397EF"
-        stroke-width="1.5"
+        strokeWidth="1.5"
       />
       <path
         d="M22 14.1194L18.04 10.1594"
         stroke="#3397EF"
-        stroke-width="1.5"
-        stroke-miterlimit="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M21.96 10.1995L18 14.1595"
         stroke="#3397EF"
-        stroke-width="1.5"
-        stroke-miterlimit="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -135,9 +135,9 @@ export const UnMicroPhone = ({ className, onClick, color }) => {
       <path
         d="M16 6.3V6C16 3.79 14.21 2 12 2C9.79 2 8 3.79 8 6V11"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M4.34998 9.6499V11.3499C4.34998 12.4099 4.55998 13.4099 4.94998 14.3299"
@@ -146,44 +146,44 @@ export const UnMicroPhone = ({ className, onClick, color }) => {
       <path
         d="M4.34998 9.6499V11.3499C4.34998 12.4099 4.55998 13.4099 4.94998 14.3299"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M20.0701 2.84009L3.93005 18.9901"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M11 3V6"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M9.03906 14.19C9.76906 15 10.8291 15.5 11.9991 15.5C14.2091 15.5 15.9991 13.71 15.9991 11.5V11"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M6.7793 16.9504C8.1493 18.2204 9.9793 19.0004 11.9993 19.0004C16.2193 19.0004 19.6493 15.5704 19.6493 11.3504V9.65039"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M12 19V22"
         stroke="#404040"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -250,8 +250,8 @@ export const WatchIcon = ({ className, onClick, color }) => {
       fill="none"
     >
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M8.00001 1.83334C4.59425 1.83334 1.83334 4.59425 1.83334 8.00001C1.83334 11.4058 4.59425 14.1667 8.00001 14.1667C11.4058 14.1667 14.1667 11.4058 14.1667 8.00001C14.1667 4.59425 11.4058 1.83334 8.00001 1.83334ZM0.833344 8.00001C0.833344 4.04197 4.04197 0.833344 8.00001 0.833344C11.9581 0.833344 15.1667 4.04197 15.1667 8.00001C15.1667 11.9581 11.9581 15.1667 8.00001 15.1667C4.04197 15.1667 0.833344 11.9581 0.833344 8.00001ZM8.00001 3.50001C8.27615 3.50001 8.50001 3.72387 8.50001 4.00001V7.69099L10.8903 8.88613C11.1373 9.00962 11.2374 9.30996 11.1139 9.55695C10.9904 9.80394 10.6901 9.90405 10.4431 9.78056L7.7764 8.44722C7.60701 8.36253 7.50001 8.1894 7.50001 8.00001V4.00001C7.50001 3.72387 7.72387 3.50001 8.00001 3.50001Z"
         fill="#404040"
       />
@@ -296,8 +296,8 @@ export const ShareScreenIcon = ({ className, onClick, color }) => {
       fill="none"
     >
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M3.6786 0.5L5.16667 0.5C5.44281 0.5 5.66667 0.723858 5.66667 1C5.66667 1.27614 5.44281 1.5 5.16667 1.5H3.7C3.1317 1.5 2.73554 1.50039 2.42712 1.52559C2.12454 1.55031 1.95069 1.5964 1.81901 1.66349C1.53677 1.8073 1.3073 2.03677 1.16349 2.31901C1.0964 2.45069 1.05031 2.62454 1.02559 2.92712C1.00039 3.23554 1 3.6317 1 4.2V9.8C1 10.3683 1.00039 10.7645 1.02559 11.0729C1.05031 11.3755 1.0964 11.5493 1.16349 11.681C1.3073 11.9632 1.53677 12.1927 1.81901 12.3365C1.95069 12.4036 2.12454 12.4497 2.42712 12.4744C2.73554 12.4996 3.1317 12.5 3.7 12.5H9.3C9.8683 12.5 10.2645 12.4996 10.5729 12.4744C10.8755 12.4497 11.0493 12.4036 11.181 12.3365C11.4632 12.1927 11.6927 11.9632 11.8365 11.681C11.9036 11.5493 11.9497 11.3755 11.9744 11.0729C11.9996 10.7645 12 10.3683 12 9.8V8.33333C12 8.05719 12.2239 7.83333 12.5 7.83333C12.7761 7.83333 13 8.05719 13 8.33333V9.82142C13 10.3633 13 10.8004 12.9711 11.1543C12.9413 11.5187 12.8784 11.8388 12.7275 12.135C12.4878 12.6054 12.1054 12.9878 11.635 13.2275C11.3388 13.3784 11.0187 13.4413 10.6543 13.4711C10.3004 13.5 9.8633 13.5 9.32142 13.5H3.67858C3.1367 13.5 2.69963 13.5 2.34569 13.4711C1.98126 13.4413 1.66117 13.3784 1.36502 13.2275C0.894619 12.9878 0.512167 12.6054 0.272484 12.135C0.12159 11.8388 0.0586839 11.5187 0.0289092 11.1543C-8.81155e-06 10.8004 -4.79915e-06 10.3633 1.28163e-07 9.8214V4.1786C-4.79915e-06 3.6367 -8.81155e-06 3.19963 0.0289092 2.84569C0.0586839 2.48126 0.12159 2.16117 0.272484 1.86502C0.512167 1.39462 0.894619 1.01217 1.36502 0.772484C1.66117 0.62159 1.98126 0.558684 2.34569 0.528909C2.69963 0.499991 3.1367 0.499995 3.6786 0.5ZM7.99999 1.00001C7.99999 0.723864 8.22385 0.500007 8.49999 0.500007H12.5C12.7761 0.500007 13 0.723864 13 1.00001L13 5.00001C13 5.27615 12.7761 5.50001 12.5 5.50001C12.2238 5.50001 12 5.27615 12 5.00001L12 2.20711L6.85355 7.35355C6.65829 7.54882 6.34171 7.54882 6.14645 7.35355C5.95118 7.15829 5.95118 6.84171 6.14645 6.64645L11.2929 1.50001H8.49999C8.22385 1.50001 7.99999 1.27615 7.99999 1.00001Z"
         fill="#404040"
       />
@@ -314,8 +314,8 @@ export const RecordingIcon = ({ className, onClick, color }) => {
       fill="none"
     >
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M9.5 2.0625C6.28984 2.0625 3.6875 4.66484 3.6875 7.875C3.6875 11.0852 6.28984 13.6875 9.5 13.6875C12.7102 13.6875 15.3125 11.0852 15.3125 7.875C15.3125 4.66484 12.7102 2.0625 9.5 2.0625ZM2.5625 7.875C2.5625 4.04352 5.66852 0.9375 9.5 0.9375C13.3315 0.9375 16.4375 4.04352 16.4375 7.875C16.4375 11.7065 13.3315 14.8125 9.5 14.8125C5.66852 14.8125 2.5625 11.7065 2.5625 7.875ZM9.5 6.04688C8.49035 6.04688 7.67188 6.86535 7.67188 7.875C7.67188 8.88465 8.49035 9.70312 9.5 9.70312C10.5096 9.70312 11.3281 8.88465 11.3281 7.875C11.3281 6.86535 10.5096 6.04688 9.5 6.04688ZM6.54688 7.875C6.54688 6.24403 7.86903 4.92188 9.5 4.92188C11.131 4.92188 12.4531 6.24403 12.4531 7.875C12.4531 9.50597 11.131 10.8281 9.5 10.8281C7.86903 10.8281 6.54688 9.50597 6.54688 7.875ZM5.9375 16.5C5.9375 16.1893 6.18934 15.9375 6.5 15.9375H12.5C12.8107 15.9375 13.0625 16.1893 13.0625 16.5C13.0625 16.8107 12.8107 17.0625 12.5 17.0625H6.5C6.18934 17.0625 5.9375 16.8107 5.9375 16.5Z"
         fill="#404040"
       />
@@ -353,16 +353,16 @@ export const LeftArrow = ({ className, color, onClick }) => {
       <path
         d="M7.97435 4.94189L2.91602 10.0002L7.97435 15.0586"
         stroke="#5A5A5A"
-        stroke-miterlimit="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M17.0836 10H3.05859"
         stroke="#5A5A5A"
-        stroke-miterlimit="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -382,16 +382,16 @@ export const SendIcon = ({ className, color, onClick }) => {
       <path
         d="M17.5 2.5L9.16667 10.8333"
         stroke="#3397EF"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
         d="M17.5 2.5L12.5 17.5L9.16667 10.8333L2.5 7.5L17.5 2.5Z"
         stroke="#3397EF"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
