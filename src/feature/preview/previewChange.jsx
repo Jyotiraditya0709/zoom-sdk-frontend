@@ -942,7 +942,7 @@ const PreJoin = () => {
 
               <div className="bottomControls">
                 <div className="bottomControlsLeft">
-                  <div className="instructions">< PolygonIcon />Check your mic and camera from the menu above (...)</div>
+                  <div className="instructions">< PolygonIcon />Check your mic and camera from icons shown above.</div>
                   <div className="instructions">< PolygonIcon /> Test your audio/ video and ensure you have a stable internet connection.</div>
                 </div>
                 <div className="bottomControlsRight mobHide">

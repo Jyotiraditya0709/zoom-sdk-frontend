@@ -26,6 +26,7 @@ import {
   FaChevronUp,
   FaSignal,
 } from "react-icons/fa";
+import BlinkDot from "../../components/BlinkDot/BlinkDot";
 
 // Helper functions for robust device fallback (like MeetingPage.jsx)
 async function createSafeLocalVideoTrack(selectedCamera) {
@@ -3032,7 +3033,7 @@ function JoinerScreen() {
                 participants.length >= 3 &&
                 participants.length <= participants.length
                   ? "20px 100px"
-                  : "20px 0",
+                  : "20px 0 0 0",
               width: isSharingScreen ? "80%" : "90%",
               height: isSharingScreen ? "100%" : "70%",
             }}
@@ -3227,29 +3228,14 @@ function JoinerScreen() {
           </div>
 
           {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
-          <div
-            style={{
-              width: "80%",
-              display: "flex",
-              justifyContent: "center",
-              margin: "16px 0px 0px 0px",
-              position: "relative",
-              zIndex: 10,
-            }}
-          >
+          <div className="shareScreenContainer">
             {/* Video element for screen sharing (when browser supports it) */}
             <video
               ref={shareRenderVideoRef}
               autoPlay
               playsInline
               id="my-screen-share-content-video"
-              style={{
-                display: "none",
-                maxWidth: "90vw",
-                maxHeight: "50vh",
-                borderRadius: 12,
-                boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
-              }}
+              className="videoTagBlock"
             />
             {/* Canvas element for screen sharing (fallback) */}
             <canvas
@@ -3297,7 +3283,7 @@ function JoinerScreen() {
                 <span>{!isAudioOn ? "Unmute" : "Mute"}</span>
               </button>
               <button
-                className="video-options-toggle optionToggleBlock"
+              className="video-options-toggle optionToggleBlock mobHide"
                 onClick={() =>
                   setShowVideoOptions(showVideoOptions === "mic" ? null : "mic")
                 }
@@ -3394,7 +3380,7 @@ function JoinerScreen() {
                 <span>{!isVideoOn ? "Start Video" : "Stop Video"}</span>
               </button>
               <button
-                className="video-options-toggle"
+                className="video-options-toggle mobHide"
                 onClick={() => {
                   console.log(
                     "🎨 Background dropdown clicked, current state:",
@@ -3594,6 +3580,7 @@ function JoinerScreen() {
               disabled={true}
               title="Recording starts automatically when both mentor and mentee join"
             >
+              <BlinkDot />
               <RecordingIcon />
               <span>Recording</span>
             </button>
@@ -3949,6 +3936,7 @@ function JoinerScreen() {
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={p.displayName || p.userId?.toString() || "Guest"}
                     >
                       {p.displayName || p.userId?.toString() || "Guest"}
                     </span>
@@ -4197,7 +4185,7 @@ function JoinerScreen() {
                     <span style={{ fontWeight: 600, color: "#666" }}>
                       Session:
                     </span>
-                    <span style={{ marginLeft: 8, color: "#222" }}>
+                    <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
                       {sessionName}
                     </span>
                   </div>
@@ -4205,7 +4193,7 @@ function JoinerScreen() {
                     <span style={{ fontWeight: 600, color: "#666" }}>
                       Your Name:
                     </span>
-                    <span style={{ marginLeft: 8, color: "#222" }}>
+                    <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
                       {displayName}
                     </span>
                   </div>
@@ -4213,7 +4201,7 @@ function JoinerScreen() {
                     <span style={{ fontWeight: 600, color: "#666" }}>
                       Role:
                     </span>
-                    <span style={{ marginLeft: 8, color: "#222" }}>
+                    <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
                       {isHost ? "Host" : "Participant"}
                     </span>
                   </div>
@@ -4221,7 +4209,7 @@ function JoinerScreen() {
                     <span style={{ fontWeight: 600, color: "#666" }}>
                       Participants:
                     </span>
-                    <span style={{ marginLeft: 8, color: "#222" }}>
+                    <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
                       {participants.length}
                     </span>
                   </div>
@@ -4249,6 +4237,7 @@ function JoinerScreen() {
                     <span
                       style={{
                         marginLeft: 8,
+                        fontSize: 14,
                         color: isAudioOn ? "#22c55e" : "#ef4444",
                       }}
                     >
@@ -4261,7 +4250,7 @@ function JoinerScreen() {
                     </span>
                     <span
                       style={{
-                        marginLeft: 8,
+                        marginLeft: 8, fontSize: 14,
                         color: isVideoOn ? "#22c55e" : "#ef4444",
                       }}
                     >
@@ -4274,7 +4263,7 @@ function JoinerScreen() {
                     </span>
                     <span
                       style={{
-                        marginLeft: 8,
+                        marginLeft: 8, fontSize: 14,
                         color: isSharingScreen ? "#22c55e" : "#666",
                       }}
                     >
@@ -4309,7 +4298,7 @@ function JoinerScreen() {
                       </span>
                       <span
                         style={{
-                          marginLeft: 8,
+                          marginLeft: 8,fontSize: 14,
                           color:
                             recordingStatus === "recording"
                               ? "#22c55e"
@@ -4526,8 +4515,7 @@ function JoinerScreen() {
         
         .commonJoinderBtn:disabled {
           opacity: 0.5;
-          cursor: not-allowed;
-          pointer-events: none;
+          cursor: no-drop;
         }
         
         .leaveMeetingButton:disabled {

@@ -80,9 +80,21 @@
     gap: 10px;
   }
 
-  .joinerVideoScreen.sharing-on {
-    display: flex !important;
-    max-height: 70px;
+  .shareScreenContainer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .shareScreenContainer .videoTagBlock {
+    display: none;
+    max-width: 90vw;
+    max-height: 50vh;
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
   }
 
   .joinerVideoScreen .joinerVideoBox {
@@ -97,6 +109,18 @@
     justify-content: center;
     position: relative;
     min-height: 100px;
+  }
+
+  .joinerVideoScreen.sharing-on.grid-1,
+  .grid-2,
+  .joinerVideoScreen.sharing-on .grid-3,
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
+
+  .recordingSetting{
+    position: relative;
   }
 
   .joinerVideoBox.active {
@@ -478,7 +502,8 @@
     border-radius: 8px;
     padding: 5px 10px;
     width: 100%;
-    max-width: 70px;
+    max-width: 50px;
+    justify-content: center;
   }
 
   .joinerScreen .joinerSettingBottom .commonJoinderBtn.active {
@@ -568,6 +593,7 @@
     bottom: 0;
     right: 0;
     border-radius: 0;
+    z-index: 10;
   }
 
   .bottomButtonOption {
@@ -578,6 +604,7 @@
     & .joinerSettingBottom {
       .leaveMeetingButton {
         min-width: auto;
+        padding: 9.5px 16px;
       }
     }
   }
@@ -586,10 +613,22 @@
     stroke: #fff;
   }
 
+.joinerScreenContainer .joinerVideoScreen.sharing-on.grid-1,
+  .grid-2,
+  .joinerVideoScreen.sharing-on .grid-3,
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+}
+
+.joinerVideoScreen.sharing-on {
+  overflow-x: auto;
 }
 
 @media (max-width: 376px) {
-  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin{
+  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin {
     height: 176px !important;
   }
 }

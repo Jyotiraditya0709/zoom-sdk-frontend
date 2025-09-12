@@ -16,6 +16,19 @@ body {
   max-width: none !important;
 }
 
+::-webkit-scrollbar {
+    height: 15px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 15px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 0;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 .app-container {
   text-align: center;
   position: relative;
