@@ -4065,7 +4065,7 @@ function JoinerScreen() {
                 background: "#fff",
               }}
             >
-              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
+              <h3 className="blackColor" style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
                 {getModalHeading('participants')}
               </h3>
               <button
@@ -4338,7 +4338,7 @@ function JoinerScreen() {
                 background: "#fff",
               }}
             >
-              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
+              <h3 className="blackColor" style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
                 {getModalHeading('info')}
               </h3>
               <button
