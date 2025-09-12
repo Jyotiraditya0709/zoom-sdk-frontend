@@ -17,6 +17,7 @@ import {
 } from "../../icon/icon";
 import config from "../../config/config";
 import ChatSidebar from "../preview/ChatSidebar/ChatSidebar";
+import ZoomDotsLoader from "../../components/ZoomDotsLoader/ZoomDotsLoader";
 // Add new imports for icons
 import {
   FaMicrophone,
@@ -101,6 +102,7 @@ function JoinerScreen() {
   const [error, setError] = useState("");
   const [participants, setParticipants] = useState([]);
   const [isAudioOn, setIsAudioOn] = useState(true);
+  const [meetingData, setMeetingData] = useState(null);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [localUser, setLocalUser] = useState(null);
@@ -110,6 +112,7 @@ function JoinerScreen() {
   const [showVideoOptions, setShowVideoOptions] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [showModals, setShowModals] = useState({
     participants: false,
     chat: false,
@@ -132,7 +135,22 @@ function JoinerScreen() {
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showLeaveMeetingConfirm, setShowLeaveMeetingConfirm] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [localUserRemoved, setLocalUserRemoved] = useState(false);
+
+  // Mobile responsive effect
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // cleanup on unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   const recordingClientRef = useRef(null);
   const remoteShareContainerRef = useRef(null);
@@ -218,7 +236,7 @@ function JoinerScreen() {
   //function for notification
   const notifyUserJoined = async () => {
     try {
-      console.log("�� Calling userJoined webhook with:", {
+      console.log(" Calling userJoined webhook with:", {
         meetingId: meetingId,
         userId: userName,
         userType: isHost ? "mentor" : "mentee",
@@ -365,16 +383,45 @@ function JoinerScreen() {
     }
   };
 
-  // notification helper
+  // notification helper with deduplication and connection throttling
   const addNotification = useCallback((msg) => {
-    const id = Date.now() + Math.random();
+    // Check if the same message already exists in recent notifications
     setNotifications((prev) => {
-      const next = [...prev, { id, msg }];
-      return next.slice(-4); // Limit to last 4
+      const recentTime = Date.now() - 2000; // 2 seconds ago
+      const isDuplicate = prev.some(n => 
+        n.msg === msg && 
+        (Date.now() - n.timestamp) < 2000 // Same message within 2 seconds
+      );
+      
+      if (isDuplicate) {
+        console.log("🚫 Skipping duplicate notification:", msg);
+        return prev; // Don't add duplicate
+      }
+      
+      // Special handling for connection notifications - longer cooldown
+      const isConnectionMsg = msg.includes("Connected to") || msg.includes("reconnected") || msg.includes("Page refreshed");
+      if (isConnectionMsg) {
+        const hasRecentConnection = prev.some(n => 
+          (n.msg.includes("Connected to") || n.msg.includes("reconnected") || n.msg.includes("Page refreshed")) &&
+          (Date.now() - n.timestamp) < 5000 // 5 seconds cooldown for connection messages
+        );
+        
+        if (hasRecentConnection) {
+          console.log("🚫 Skipping connection notification (recent connection exists):", msg);
+          return prev;
+        }
+      }
+      
+      const id = Date.now() + Math.random();
+      const next = [...prev, { id, msg, timestamp: Date.now() }];
+      return next.slice(-3); // Limit to last 3 (reduced from 4)
     });
+    
+    // Auto-remove notification after shorter duration
+    const id = Date.now() + Math.random();
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 4000);
+    }, 2500); // Reduced from 4000ms to 2500ms
   }, []);
 
   // Parse URL Params
@@ -401,7 +448,7 @@ function JoinerScreen() {
       return {
         sessionName: meetingId || "default-session",
         userName: userId || "Guest", // Use full userId for backend
-        displayName: userId || "Guest", // Use full userId for display too
+        displayName: userId || "Guest", // Will be updated when meetingData is available
         role: parseInt(params.get("role") || "1", 10),
         userType:
           params.get("userType") ||
@@ -412,6 +459,83 @@ function JoinerScreen() {
     }, [location.search, meetingId, userId]);
 
   const isHost = role === 1;
+
+  // Fetch meeting data to get proper names
+  useEffect(() => {
+    const fetchMeetingData = async () => {
+      if (!meetingId || !userId) return;
+      
+      try {
+        const response = await fetch(
+          config.getApiUrl(
+            `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${userId}`
+          )
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.IsSuccess && data.Data) {
+            setMeetingData(data.Data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch meeting data:", error);
+      }
+    };
+
+    fetchMeetingData();
+  }, [meetingId, userId]);
+
+  // Function to transform participants with proper names
+  const transformParticipantsWithNames = useCallback((participants) => {
+    if (!meetingData || !participants) return participants;
+    
+    return participants.map(participant => {
+      let properName = participant.displayName;
+      
+      // If current displayName is a UUID or matches userId, try to get proper name from meetingData
+      if (!properName || properName === participant.userId || properName.match(/^[a-f0-9-]{36}$/i)) {
+        if (meetingData.mentorId === participant.userId) {
+          properName = meetingData.mentorName;
+        } else if (meetingData.menteeId === participant.userId) {
+          properName = meetingData.menteeName;
+        }
+      }
+      
+      return {
+        ...participant,
+        displayName: properName || participant.displayName
+      };
+    });
+  }, [meetingData]);
+
+  // Function to update participant names from meetingData
+  const updateParticipantNames = useCallback(() => {
+    if (meetingData && participants.length > 0) {
+      setParticipants(prev => transformParticipantsWithNames(prev));
+    }
+  }, [meetingData, participants.length, transformParticipantsWithNames]);
+
+  // Update displayName when meetingData becomes available
+  useEffect(() => {
+    updateParticipantNames();
+  }, [updateParticipantNames]);
+
+  // Update local user displayName when meetingData becomes available
+  useEffect(() => {
+    if (meetingData) {
+      const properName = meetingData.mentorId === userId 
+        ? meetingData.mentorName 
+        : meetingData.menteeId === userId 
+        ? meetingData.menteeName 
+        : displayName;
+      
+      // Update the displayName in the URL params or state if needed
+      if (properName && properName !== displayName) {
+        console.log("🔄 Updating local user displayName:", { from: displayName, to: properName });
+      }
+    }
+  }, [meetingData, userId, displayName]);
 
   // Set initial camera/mic states based on URL parameters
   useEffect(() => {
@@ -515,7 +639,7 @@ function JoinerScreen() {
                   }
 
                   // Force UI update
-                  setParticipants(clientRef.current?.getAllUser() || []);
+                  setParticipants(transformParticipantsWithNames(clientRef.current?.getAllUser() || []));
                 } else {
                   console.log(
                     `🎥 Video is displaying properly for user: ${userId}`
@@ -552,7 +676,7 @@ function JoinerScreen() {
                 }
 
                 // Force UI update
-                setParticipants(clientRef.current?.getAllUser() || []);
+                setParticipants(transformParticipantsWithNames(clientRef.current?.getAllUser() || []));
               }
             }
           }, 2000); // Reduced to 2 seconds for faster cleanup
@@ -585,7 +709,7 @@ function JoinerScreen() {
                   }
 
                   // Force UI update
-                  setParticipants(clientRef.current?.getAllUser() || []);
+                  setParticipants(transformParticipantsWithNames(clientRef.current?.getAllUser() || []));
                 }
               }
             }, 2000); // Check after 2 seconds
@@ -1146,6 +1270,12 @@ function JoinerScreen() {
           return prev; // Don't add duplicate
         }
 
+        // Increment unread count if chat is closed and message is not from current user
+        if (!showModals.chat && payload.sender.name !== userName) {
+          setUnreadChatCount(prev => prev + 1);
+          console.log("📬 Unread chat message count:", unreadChatCount + 1);
+        }
+
         return [
           ...prev,
           {
@@ -1198,7 +1328,7 @@ function JoinerScreen() {
       }
 
       // Update participants state so UI reflects remote video changes
-      setParticipants(client.getAllUser());
+      setParticipants(transformParticipantsWithNames(client.getAllUser()));
     });
 
     // Add peer-audio-state-change listener to update participants state
@@ -1212,15 +1342,16 @@ function JoinerScreen() {
           )
         );
       } else {
-        setParticipants(client.getAllUser());
+        setParticipants(transformParticipantsWithNames(client.getAllUser()));
       }
     });
     client.on("user-updated", () => {
-      setParticipants(client.getAllUser());
+      setParticipants(transformParticipantsWithNames(client.getAllUser()));
     });
 
     const joinSession = async () => {
       try {
+        setIsJoining(true);
         await client.init("en-US", "Global", {
           patchJsMedia: true,
           enforceVirtualBackground: true,
@@ -1318,7 +1449,7 @@ function JoinerScreen() {
 
         mediaStreamRef.current = client.getMediaStream();
         selfUserIdRef.current = client.getCurrentUserInfo().userId;
-        setParticipants(client.getAllUser());
+        setParticipants(transformParticipantsWithNames(client.getAllUser()));
         
         console.log("📹 MediaStream obtained, initialVideoOff:", initialVideoOff);
         
@@ -1368,6 +1499,13 @@ function JoinerScreen() {
                 };
               }
 
+              // Ensure video container is visible before starting video
+              const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+              if (localContainer) {
+                localContainer.style.display = "flex";
+                console.log("📹 Showing local video container (initial video start)");
+              }
+              
               await mediaStreamRef.current.startVideo(vbOptions);
               setIsVideoOn(true);
               await attachVideo(selfUserIdRef.current);
@@ -1477,7 +1615,7 @@ function JoinerScreen() {
         }
         setIsRemoteSharing(true);
         setCurrentSharerId(userId);
-        addNotification(`Screen sharing started by ${userId}`);
+        addNotification(`Screen sharing started by ${meetingData && userId === meetingData.mentorId ? meetingData.mentorName : meetingData && userId === meetingData.menteeId ? meetingData.menteeName : userId}`);
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
@@ -1685,8 +1823,21 @@ function JoinerScreen() {
     const handleUserAdded = (payload) => {
       payload.forEach((item) => {
         // Generate a better display name if not provided
-        const displayName =
-          item.displayName || item.userId?.toString() || "Guest";
+        let displayName = item.displayName;
+        
+        // If no displayName, try to get it from meetingData
+        if (!displayName && meetingData) {
+          if (item.userId === meetingData.mentorId) {
+            displayName = meetingData.mentorName;
+          } else if (item.userId === meetingData.menteeId) {
+            displayName = meetingData.menteeName;
+          }
+        }
+        
+        // Fallback to userId if still no displayName
+        if (!displayName) {
+          displayName = item.userId?.toString() || "Guest";
+        }
 
         console.log("[USER] User joined:", {
           userId: item.userId,
@@ -1797,7 +1948,7 @@ function JoinerScreen() {
           });
         }
       });
-      setParticipants(client.getAllUser());
+      setParticipants(transformParticipantsWithNames(client.getAllUser()));
     };
 
     // Enhanced user removal handler that properly handles local user removal
@@ -1939,7 +2090,7 @@ function JoinerScreen() {
         detachVideo(item.userId);
 
         // Show notification for remote users
-        addNotification(`${item.displayName || item.userId} left the session.`);
+        addNotification(`${item.displayName || (meetingData && item.userId === meetingData.mentorId ? meetingData.mentorName : meetingData && item.userId === meetingData.menteeId ? meetingData.menteeName : item.userId)} left the session.`);
       });
     };
     client.on("user-added", handleUserAdded);
@@ -2152,7 +2303,7 @@ function JoinerScreen() {
         setIsAudioOn(!isAudioOn);
         console.log("🎤 Audio state updated to:", !isAudioOn);
         // Force update participants to reflect local audio state
-        if (clientRef.current) setParticipants(clientRef.current.getAllUser());
+        if (clientRef.current) setParticipants(transformParticipantsWithNames(clientRef.current.getAllUser()));
         // Manually emit peer-audio-state-change for local user to update UI globally
         if (clientRef.current) {
           const event = new Event("peer-audio-state-change");
@@ -2207,33 +2358,33 @@ function JoinerScreen() {
         }
 
         try {
-          await mediaStreamRef.current.startVideo(vbOptions);
-          await attachVideo(selfUserIdRef.current);
-          setIsVideoOn(true);
-          
-          // Show the video container when video is turned on
+          // Show the video container BEFORE starting video and attaching
           const localContainer = videoContainerRefs.current[selfUserIdRef.current];
           if (localContainer) {
             localContainer.style.display = "flex";
-            console.log("📹 Showing local video container (camera turned on)");
+            console.log("📹 Showing local video container (camera turning on)");
           }
+          
+          await mediaStreamRef.current.startVideo(vbOptions);
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
           
           console.log("📹 Video started with background:", bgMode);
         } catch (vbErr) {
           if (vbErr.message?.includes("virtual background")) {
             console.warn("Virtual background not supported, falling back to normal video");
+            // Show the video container BEFORE starting video and attaching (fallback)
+            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+            if (localContainer) {
+              localContainer.style.display = "flex";
+              console.log("📹 Showing local video container (camera turning on - fallback)");
+            }
+            
             // Fallback to normal video without virtual background
             await mediaStreamRef.current.startVideo();
             await attachVideo(selfUserIdRef.current);
             setIsVideoOn(true);
             setBgMode("none"); // Reset to none since VB failed
-            
-            // Show the video container when video is turned on
-            const localContainer = videoContainerRefs.current[selfUserIdRef.current];
-            if (localContainer) {
-              localContainer.style.display = "flex";
-              console.log("📹 Showing local video container (camera turned on - fallback)");
-            }
             
             console.log("📹 Video started without virtual background (fallback)");
           } else {
@@ -2242,7 +2393,7 @@ function JoinerScreen() {
         }
       }
       // Force update participants to reflect local video state
-      if (clientRef.current) setParticipants(clientRef.current.getAllUser());
+      if (clientRef.current) setParticipants(transformParticipantsWithNames(clientRef.current.getAllUser()));
       // Manually emit peer-video-state-change for local user to update UI globally
       if (clientRef.current) {
         const event = new Event("peer-video-state-change");
@@ -2306,16 +2457,16 @@ function JoinerScreen() {
         };
       }
 
-      await mediaStreamRef.current.startVideo(vbOptions);
-      setBgMode(newBgMode);
-      setIsVideoOn(true);
-      
-      // Show the video container when video is turned on
+      // Show the video container BEFORE starting video
       const localContainer = videoContainerRefs.current[selfUserIdRef.current];
       if (localContainer) {
         localContainer.style.display = "flex";
-        console.log("📹 Showing local video container (background changed)");
+        console.log("📹 Showing local video container (background changing)");
       }
+      
+      await mediaStreamRef.current.startVideo(vbOptions);
+      setBgMode(newBgMode);
+      setIsVideoOn(true);
 
       // Add notification for background change
       addNotification(`Virtual background changed to ${newBgMode}`);
@@ -2328,19 +2479,19 @@ function JoinerScreen() {
       if (err.message?.includes("virtual background")) {
         console.warn("Virtual background not supported, falling back to normal video");
         setError("Virtual background not supported, using normal video.");
+        // Show the video container BEFORE starting video (fallback)
+        const localContainer = videoContainerRefs.current[selfUserIdRef.current];
+        if (localContainer) {
+          localContainer.style.display = "flex";
+          console.log("📹 Showing local video container (background change fallback)");
+        }
+        
         // Fallback to normal video without virtual background
         try {
           await mediaStreamRef.current.startVideo();
           await attachVideo(selfUserIdRef.current);
           setIsVideoOn(true);
           setBgMode("none"); // Reset to none since VB failed
-          
-          // Show the video container when video is turned on
-          const localContainer = videoContainerRefs.current[selfUserIdRef.current];
-          if (localContainer) {
-            localContainer.style.display = "flex";
-            console.log("📹 Showing local video container (background change fallback)");
-          }
         } catch (fallbackErr) {
           setError("Failed to start video: " + (fallbackErr.reason || fallbackErr.message));
         }
@@ -2348,16 +2499,16 @@ function JoinerScreen() {
         setError("Failed to switch background.");
         // If it fails, try to restart video without VB
         if (!isVideoOn) {
-          await mediaStreamRef.current.startVideo();
-          await attachVideo(selfUserIdRef.current);
-          setIsVideoOn(true);
-          
-          // Show the video container when video is turned on
+          // Show the video container BEFORE starting video (final fallback)
           const localContainer = videoContainerRefs.current[selfUserIdRef.current];
           if (localContainer) {
             localContainer.style.display = "flex";
             console.log("📹 Showing local video container (final fallback)");
           }
+          
+          await mediaStreamRef.current.startVideo();
+          await attachVideo(selfUserIdRef.current);
+          setIsVideoOn(true);
         }
       }
     }
@@ -2383,6 +2534,13 @@ function JoinerScreen() {
       "[SCREEN SHARE] handleScreenShare called, isSharingScreen:",
       isSharingScreen
     );
+
+    // Check if someone else is already sharing
+    if (isRemoteSharing && !isSharingScreen) {
+      console.log("[SCREEN SHARE] ERROR: Someone else is already sharing their screen");
+      addNotification("Screen sharing is already in progress by another participant");
+      return;
+    }
 
     if (!mediaStreamRef.current) {
       console.log("[SCREEN SHARE] ERROR: mediaStreamRef.current is null");
@@ -2416,6 +2574,13 @@ function JoinerScreen() {
     try {
       if (!isSharingScreen) {
         console.log("[SCREEN SHARE] Starting screen share...");
+
+        // Close any open panels (chat, participants, info) before starting screen share
+        setShowModals({
+          participants: false,
+          chat: false,
+          info: false,
+        });
 
         const mediaStream = clientRef.current.getMediaStream();
 
@@ -2616,9 +2781,9 @@ function JoinerScreen() {
       oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
       oscillator.type = 'sine';
       
-      // Fade in/out for smooth sound
+      // Fade in/out for smooth sound with reduced volume
       gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+      gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.1); // Reduced from 0.3 to 0.1
       gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
       
       oscillator.start(audioContext.currentTime);
@@ -2813,9 +2978,29 @@ function JoinerScreen() {
         info: false,
         [modal]: true,
       });
+      
+      // Clear unread chat count when opening chat
+      if (modal === "chat") {
+        setUnreadChatCount(0);
+        console.log("📬 Cleared unread chat count");
+      }
     } else {
       // If closing a modal, just close that specific one
       setShowModals((prev) => ({ ...prev, [modal]: false }));
+    }
+  };
+
+  // Helper function to get dynamic heading based on modal type
+  const getModalHeading = (modalType) => {
+    switch (modalType) {
+      case 'info':
+        return 'Info';
+      case 'participants':
+        return `Participants (${participants.length})`;
+      case 'chat':
+        return 'Chat';
+      default:
+        return 'Panel';
     }
   };
 
@@ -2948,7 +3133,8 @@ function JoinerScreen() {
   else if (count <= 25) gridClass = `grid-${count}`;
   else gridClass = "grid-25";
 
-  if (isJoining) return <div>Joining meeting...</div>;
+  // Early returns for loading and error states
+  if (isJoining) return <ZoomDotsLoader />;
   if (error)
     return (
       <div className="error-page">
@@ -2960,20 +3146,6 @@ function JoinerScreen() {
 
 
   //mobile responsive
-   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    // cleanup on unmount
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   return (
     <div
@@ -2982,7 +3154,13 @@ function JoinerScreen() {
     >
       <Header
         userEmail={`${displayName}@example.com`}
-        userName={displayName}
+        userName={
+          meetingData 
+            ? (meetingData.mentorId === userId 
+                ? (meetingData.mentorName || meetingData.mentorId)
+                : (meetingData.menteeName || meetingData.menteeId))
+            : displayName
+        }
         meetingTitle={sessionName}
         startTime={meetingStartTime}
         showTimer={true}
@@ -3117,10 +3295,10 @@ function JoinerScreen() {
                       el.style.alignItems = "center";
                       el.style.justifyContent = "center";
                       
-                      // Hide container if this is the local user and video is off from preview
-                      if (user.userId === selfUserIdRef.current && initialVideoOff) {
+                      // Hide container if this is the local user and video is currently off
+                      if (user.userId === selfUserIdRef.current && !isVideoOn) {
                         el.style.display = "none";
-                        console.log("📹 Hiding local video container (camera off from preview)");
+                        console.log("📹 Hiding local video container (camera currently off)");
                       }
                     }
                   }}
@@ -3478,10 +3656,37 @@ function JoinerScreen() {
               }`}
               onClick={() => handleModal("chat", !showModals.chat)}
               disabled={localUserRemoved}
+              style={{ position: "relative" }}
             >
                 <ChatIcon size="24" />
                 {showModals.chat && <span></span>}
-              <span>{showModals.chat ? "Close Chat" : "Open Chat"}</span>
+                {/* Unread message indicator */}
+                {unreadChatCount > 0 && !showModals.chat && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "-2px",
+                      right: "-2px",
+                      background: "#ff4444",
+                      color: "#fff",
+                      borderRadius: "50%",
+                      minWidth: "18px",
+                      height: "18px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      border: "2px solid #fff",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      zIndex: 1,
+                      animation: "pulse 2s infinite",
+                    }}
+                  >
+                    {unreadChatCount > 9 ? "9+" : unreadChatCount}
+                  </div>
+                )}
+              <span>{showModals.chat ? "Chat" : "Chat"}</span>
             </button>
 
             <button
@@ -3533,12 +3738,25 @@ function JoinerScreen() {
             <button
               className={`commonJoinderBtn screenShareSetting mobHide ${
                 isSharingScreen ? "active" : ""
-              }`}
+              } ${isRemoteSharing && !isSharingScreen ? "disabled" : ""}`}
               onClick={startScreenShare}
-              disabled={localUserRemoved}
+              disabled={localUserRemoved || (isRemoteSharing && !isSharingScreen)}
+              title={
+                isRemoteSharing && !isSharingScreen
+                  ? "Screen sharing is already in progress"
+                  : isSharingScreen
+                  ? "Stop sharing your screen"
+                  : "Share your screen"
+              }
             >
               <ShareScreenIcon />
-              <span>{isSharingScreen ? "Stop Share" : "Share Screen"}</span>
+              <span>
+                {isSharingScreen
+                  ? "Stop Share"
+                  : isRemoteSharing && !isSharingScreen
+                  ? "Screen sharing in progress"
+                  : "Share Screen"}
+              </span>
             </button>
 
             {/* Annotation Button (only show if sharing or viewing share) */}
@@ -3621,6 +3839,8 @@ function JoinerScreen() {
           setIsChatOpen={(state) => handleModal("chat", state)}
           participants={participants}
           chatMessages={chatMessages}
+          meetingData={meetingData}
+          getModalHeading={getModalHeading}
           onSendMessage={(message) => {
             // Direct message sending without creating fake event
             if (message && message.trim()) {
@@ -3875,7 +4095,7 @@ function JoinerScreen() {
               }}
             >
               <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
-                Participants ({participants.length})
+                {getModalHeading('participants')}
               </h3>
               <button
                 onClick={() => handleModal("participants", false)}
@@ -4058,8 +4278,8 @@ function JoinerScreen() {
             zIndex: 1001,
             display: "flex",
             flexDirection: "column",
-            gap: "8px",
-            maxHeight: "80vh",
+            gap: "6px", // Reduced gap
+            maxHeight: "60vh", // Reduced max height
             overflow: "auto",
           }}
         >
@@ -4067,18 +4287,19 @@ function JoinerScreen() {
             <div
               key={notification.id}
               style={{
-                background: notification.msg.includes("recording") ? "#dc3545" : "#00baff",
+                background: notification.msg.includes("recording") ? "#dc3545" : "rgba(0, 186, 255, 0.9)", // More transparent
                 color: "#fff",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                fontSize: "14px",
-                maxWidth: "300px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                animation: "slideIn 0.3s ease-out",
+                padding: "6px 10px", // Reduced padding
+                borderRadius: "4px", // Smaller radius
+                fontSize: "12px", // Smaller font
+                maxWidth: "250px", // Reduced width
+                boxShadow: "0 1px 4px rgba(0,0,0,0.15)", // Lighter shadow
+                animation: "slideIn 0.2s ease-out", // Faster animation
                 fontWeight: notification.msg.includes("recording") ? "600" : "400",
                 border: notification.msg.includes("recording") ? "1px solid #c82333" : "none",
                 position: "relative",
                 overflow: "hidden",
+                opacity: 0.95, // Slightly transparent
               }}
             >
               {notification.msg}
@@ -4147,7 +4368,7 @@ function JoinerScreen() {
               }}
             >
               <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>
-                Meeting Info
+                {getModalHeading('info')}
               </h3>
               <button
                 onClick={() => handleModal("info", false)}
@@ -4194,7 +4415,11 @@ function JoinerScreen() {
                       Your Name:
                     </span>
                     <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
-                      {displayName}
+                      {meetingData 
+                        ? (meetingData.mentorId === userId 
+                            ? (meetingData.mentorName || meetingData.mentorId)
+                            : (meetingData.menteeName || meetingData.menteeId))
+                        : displayName}
                     </span>
                   </div>
                   <div style={{ marginBottom: 12 }}>

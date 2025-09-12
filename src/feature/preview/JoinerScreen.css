@@ -216,6 +216,25 @@
       color: #fff;
     }
 
+    .commonJoinderBtn.disabled {
+      background: #f0f0f0;
+      color: #999;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .commonJoinderBtn.disabled:hover {
+      background: #f0f0f0;
+    }
+
+    .commonJoinderBtn.disabled svg path {
+      fill: #999;
+    }
+
+    .commonJoinderBtn.disabled span {
+      color: #999;
+    }
+
     .commonJoinderBtn .messageRound {
       position: relative;
     }
@@ -604,6 +623,7 @@
     & .joinerSettingBottom {
       .leaveMeetingButton {
         min-width: auto;
+        line-height: 0;
         padding: 9.5px 16px;
       }
     }
@@ -625,6 +645,23 @@
 
 .joinerVideoScreen.sharing-on {
   overflow-x: auto;
+}
+
+
+/* Chat notification indicator animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 376px) {

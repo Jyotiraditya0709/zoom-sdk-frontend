@@ -9,6 +9,8 @@ const ChatSidebar = ({
   chatMessages = [],
   onSendMessage,
   userName,
+  meetingData,
+  getModalHeading,
 }) => {
   const [msg, setMsg] = useState("");
   const messagesEndRef = useRef(null);
@@ -46,6 +48,17 @@ const ChatSidebar = ({
   const getSenderName = (message, isSystemMessage) => {
     if (message.sender === userName) return "You";
     if (isSystemMessage) return "System";
+    
+    // Try to get proper name from meetingData
+    if (meetingData) {
+      if (message.sender === meetingData.mentorId) {
+        return meetingData.mentorName || message.sender;
+      }
+      if (message.sender === meetingData.menteeId) {
+        return meetingData.menteeName || message.sender;
+      }
+    }
+    
     return message.sender;
   };
 
@@ -77,7 +90,7 @@ const ChatSidebar = ({
     <div className="simple-chat-sidebar" ref={sidebarRef}>
       {/* Header */}
       <div className="chat-header">
-        <h3 className="chat-title">In-call messages</h3>
+        <h3 className="chat-title">{getModalHeading ? getModalHeading('chat') : 'Chat'}</h3>
         <button className="close-button" onClick={() => setIsChatOpen(false)}>
           ×
         </button>
@@ -151,6 +164,8 @@ ChatSidebar.propTypes = {
   chatMessages: PropTypes.array,
   onSendMessage: PropTypes.func.isRequired,
   userName: PropTypes.string,
+  meetingData: PropTypes.object,
+  getModalHeading: PropTypes.func,
 };
 
 export default ChatSidebar;
