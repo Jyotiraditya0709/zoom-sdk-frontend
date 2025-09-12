@@ -17,7 +17,7 @@
 
 .loadingZoom .d1, 
 .loadingZoom .d2 {
-  border: 5px solid #2d8cff; /* Zoom blue */
+  border: 5px solid #0E77D3; /* Zoom blue */
   border-radius: 50%;
   box-sizing: border-box;
 }

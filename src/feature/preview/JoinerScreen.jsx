@@ -3880,43 +3880,14 @@ function JoinerScreen() {
       {/* End Meeting Confirmation Modal */}
       {showEndMeetingConfirm && (
         <div
-          className="modal"
+          className="modal modalMeetingEndPopup"
           onClick={(e) => {
             if (e.target.classList.contains("modal"))
               setShowEndMeetingConfirm(false);
-          }}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              color: "#222",
-              width: "100%",
-              maxWidth: 400,
-              borderRadius: 16,
-              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
-              padding: 32,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              maxHeight: "90vh",
-              overflow: "auto",
-            }}
-          >
+          }}>
+          <div className="modalMeetingEndContentPopup">
             <h3 style={{ marginTop: 0, marginBottom: 16 }}>End Meeting</h3>
-            <p style={{ textAlign: "center", marginBottom: 24 }}>
+            <p className="textMeeting" style={{ textAlign: "center", marginBottom: 24 }}>
               Are you sure you want to end this meeting?
             </p>
             <div style={{ display: "flex", gap: 12 }}>
