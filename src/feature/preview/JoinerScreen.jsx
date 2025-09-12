@@ -235,7 +235,7 @@ function JoinerScreen() {
   //function for notification
   const notifyUserJoined = async () => {
     try {
-      console.log("�� Calling userJoined webhook with:", {
+      console.log(" Calling userJoined webhook with:", {
         meetingId: meetingId,
         userId: userName,
         userType: isHost ? "mentor" : "mentee",
