@@ -10,6 +10,7 @@ const ChatSidebar = ({
   onSendMessage,
   userName,
   meetingData,
+  getModalHeading,
 }) => {
   const [msg, setMsg] = useState("");
   const messagesEndRef = useRef(null);
@@ -89,7 +90,7 @@ const ChatSidebar = ({
     <div className="simple-chat-sidebar" ref={sidebarRef}>
       {/* Header */}
       <div className="chat-header">
-        <h3 className="chat-title">In-call messages</h3>
+        <h3 className="chat-title">{getModalHeading ? getModalHeading('chat') : 'Chat'}</h3>
         <button className="close-button" onClick={() => setIsChatOpen(false)}>
           ×
         </button>
@@ -164,6 +165,7 @@ ChatSidebar.propTypes = {
   onSendMessage: PropTypes.func.isRequired,
   userName: PropTypes.string,
   meetingData: PropTypes.object,
+  getModalHeading: PropTypes.func,
 };
 
 export default ChatSidebar;
