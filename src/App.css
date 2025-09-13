@@ -16,6 +16,19 @@ body {
   max-width: none !important;
 }
 
+::-webkit-scrollbar {
+    height: 15px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 15px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 0;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 .app-container {
   text-align: center;
   position: relative;
@@ -159,6 +172,13 @@ video-player {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.blackColor{
+  color: #101010;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 120%;
 }
 
 @media (max-width: 768px) {

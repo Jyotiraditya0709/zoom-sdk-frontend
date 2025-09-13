@@ -1,0 +1,33 @@
+.blink-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: sans-serif;
+    position: absolute;
+    top: 46px;
+    left: 12px;
+
+}
+
+.blink-dot {
+    width: 10px;
+    height: 10px;
+    background: #e53935;
+    border-radius: 50%;
+    animation: blink 1s infinite ease-in-out;
+}
+
+@keyframes blink {
+
+    0%,
+    49% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50%,
+    100% {
+        opacity: 0.2;
+        transform: scale(0.9);
+    }
+}

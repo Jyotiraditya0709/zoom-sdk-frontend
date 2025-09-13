@@ -80,9 +80,21 @@
     gap: 10px;
   }
 
-  .joinerVideoScreen.sharing-on {
-    display: flex !important;
-    max-height: 70px;
+  .shareScreenContainer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .shareScreenContainer .videoTagBlock {
+    display: none;
+    max-width: 90vw;
+    max-height: 50vh;
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
   }
 
   .joinerVideoScreen .joinerVideoBox {
@@ -99,9 +111,21 @@
     min-height: 100px;
   }
 
+  .joinerVideoScreen.sharing-on.grid-1,
+  .joinerVideoScreen.sharing-on .grid-2,
+  .joinerVideoScreen.sharing-on.grid-3,
+  .joinerVideoScreen.sharing-on .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
+
+  .recordingSetting {
+    position: relative;
+  }
+
   .joinerVideoBox.active {
     border: 2px solid #0e77d3;
-    min-height: 100px;
+    min-height: 80px;
   }
 
   /* Add active speaker highlighting */
@@ -467,6 +491,140 @@
   }
 }
 
+.modalMeetingEndPopup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalMeetingEndContentPopup {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 90vh;
+  overflow: auto;
+  color: #222;
+
+  h3 {
+    color: #171717;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 120%;
+  }
+
+  .textMeeting {
+    color: #737373;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+  }
+}
+
+.feedbackFormPopup {
+  .titleFeedback {
+    color: #171717;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 120%;
+    text-align: center;
+  }
+
+  label {
+    color: #171717;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+    margin-top: 40px;
+  }
+
+  textarea {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    color: #171717;
+    resize: none;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+    margin-top: 5px;
+    margin-bottom: 20px;
+  }
+
+  button {
+    border-radius: 6px;
+    border: 1px solid #0E77D3;
+    background: #0E77D3;
+    text-align: center;
+    width: 100%;
+    padding: 10px 20px;
+    color: #FFF;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 150%;
+  }
+}
+
+.feedbackThankYouPopup h2 {
+  color: #171717;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 120%;
+}
+
+.feedbackThankYouPopup p {
+  color: #737373;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.feedbackThankYou {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: center;
+}
+
+.meetingEndedHost {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.meetingRedirectContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #101010;
+  text-align: center;
+  padding: 20px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+}
+
+.meetingRedirectBox{
+  background: #fff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  max-width: 500px;
+  width: 100%;
+}
+
 @media (max-width: 768px) {
 
   .joinerScreen {
@@ -497,7 +655,8 @@
     border-radius: 8px;
     padding: 5px 10px;
     width: 100%;
-    max-width: 70px;
+    max-width: 50px;
+    justify-content: center;
   }
 
   .joinerScreen .joinerSettingBottom .commonJoinderBtn.active {
@@ -587,6 +746,7 @@
     bottom: 0;
     right: 0;
     border-radius: 0;
+    z-index: 10;
   }
 
   .bottomButtonOption {
@@ -598,6 +758,7 @@
       .leaveMeetingButton {
         min-width: auto;
         line-height: 0;
+        padding: 9.5px 16px;
       }
     }
   }
@@ -606,7 +767,20 @@
     stroke: #fff;
   }
 
+  .joinerScreenContainer .joinerVideoScreen.sharing-on.grid-1,
+  .grid-2,
+  .joinerVideoScreen.sharing-on .grid-3,
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
 }
+
+.joinerVideoScreen.sharing-on {
+  overflow-x: auto;
+}
+
 
 /* Chat notification indicator animation */
 @keyframes pulse {
@@ -614,10 +788,12 @@
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 0.8;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -625,7 +801,7 @@
 }
 
 @media (max-width: 376px) {
-  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin{
+  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin {
     height: 176px !important;
   }
 }

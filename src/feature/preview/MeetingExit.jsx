@@ -108,7 +108,7 @@ const MeetingExit = () => {
           padding: 32,
           borderRadius: 12,
           boxShadow: "0 2px 16px #0002",
-          minWidth: 320,
+          maxWidth: 500,
           textAlign: "center",
         }}
       >

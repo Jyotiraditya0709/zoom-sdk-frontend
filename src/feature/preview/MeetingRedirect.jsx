@@ -68,46 +68,28 @@ const MeetingRedirect = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#232323",
-        color: "#fff",
-        textAlign: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          background: "#2d2d2d",
-          padding: "40px",
-          borderRadius: "16px",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
-          maxWidth: "500px",
-          width: "100%",
-        }}
-      >
+    <div className="meetingRedirectContainer">
+      <div className="meetingRedirectBox">
         {/* Icon */}
         <div
           style={{
             fontSize: "64px",
             marginBottom: "24px",
-            color: "#00baff",
+            color: "#0E77D3",
           }}
         >
-          {endReason === "host_ended" ? "👋" : "🏁"}
+          {/* {endReason === "host_ended" ? "👋" : "🏁"} */}
         </div>
 
-        {/* Message */}
+        <div className="meetingEndedHost">
+          <img src="/assest/svg/meetingEnded.svg" alt="" />
+        </div>
+
         <h1
           style={{
-            fontSize: "28px",
+            fontSize: "20px",
             marginBottom: "16px",
-            color: "#fff",
+            color: "#101010",
             fontWeight: "600",
           }}
         >
@@ -117,15 +99,15 @@ const MeetingRedirect = () => {
         {/* Countdown */}
         <div
           style={{
-            fontSize: "18px",
+            fontSize: "14px",
             marginBottom: "24px",
-            color: "#ccc",
+            color: "#444",
           }}
         >
           Redirecting to {getRedirectDestination()} in{" "}
           <span
             style={{
-              color: "#00baff",
+              color: "#0E77D3",
               fontWeight: "bold",
               fontSize: "24px",
             }}
@@ -150,7 +132,7 @@ const MeetingRedirect = () => {
             style={{
               width: `${((3 - countdown) / 3) * 100}%`,
               height: "100%",
-              background: "#00baff",
+              background: "#0E77D3",
               transition: "width 1s linear",
             }}
           />
@@ -161,22 +143,23 @@ const MeetingRedirect = () => {
           onClick={handleRedirect}
           style={{
             background: "transparent",
-            border: "2px solid #00baff",
-            color: "#00baff",
-            padding: "12px 24px",
-            borderRadius: "8px",
+            border: "2px solid #ABABAB",
+            color: "#ABABAB",
+            padding: "10px 20px",
+            borderRadius: "6px",
             cursor: "pointer",
-            fontSize: "16px",
-            fontWeight: "500",
+            fontSize: "14px",
+            fontWeight: "600",
+            lineHeight: "150%",
             transition: "all 0.2s ease",
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = "#00baff";
+            e.target.style.background = "#101010";
             e.target.style.color = "#fff";
           }}
           onMouseLeave={(e) => {
             e.target.style.background = "transparent";
-            e.target.style.color = "#00baff";
+            e.target.style.color = "#101010";
           }}
         >
           Skip Countdown
@@ -193,7 +176,7 @@ const MeetingRedirect = () => {
               border: "1px solid rgba(0, 186, 255, 0.3)",
             }}
           >
-            <p style={{ margin: "0", fontSize: "14px", color: "#00baff" }}>
+            <p style={{ margin: "0", fontSize: "14px", color: "#0E77D3" }}>
               You will be redirected to: {redirectLink}
             </p>
           </div>

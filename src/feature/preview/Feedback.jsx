@@ -18,7 +18,7 @@ const Feedback = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: "#232323",
+        background: "#ffff",
         color: "#fff",
       }}
     >
@@ -26,17 +26,19 @@ const Feedback = () => {
         <form
           onSubmit={handleSubmit}
           style={{
-            width: 350,
-            background: "#2d2d2d",
+            width: 450,
+            background: "#fff",
             padding: 32,
             borderRadius: 12,
             boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
           }}
+
+          className="feedbackFormPopup"
         >
-          <h2 style={{ marginBottom: 16 }}>Thank you for attending!</h2>
+          <h2 className="titleFeedback" style={{ marginBottom: 16 }}>Thank you for attending!</h2>
           <label
             htmlFor="feedback"
-            style={{ display: "block", marginBottom: 8 }}
+            style={{ display: "block", marginBottom: 8, color: "#101010" }}
           >
             We value your feedback:
           </label>
@@ -45,42 +47,23 @@ const Feedback = () => {
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             rows={5}
-            style={{
-              width: "100%",
-              borderRadius: 8,
-              border: "none",
-              padding: 10,
-              marginBottom: 16,
-              resize: "vertical",
-            }}
             placeholder="Share your thoughts..."
             required
           />
           <button
-            type="submit"
-            style={{
-              width: "100%",
-              padding: 10,
-              borderRadius: 8,
-              border: "none",
-              background: "#00baff",
-              color: "#fff",
-              fontWeight: "bold",
-              fontSize: 16,
-              cursor: "pointer",
-            }}
-          >
+            type="submit">
             Submit Feedback
           </button>
         </form>
       ) : (
         <div
           style={{
-            background: "#2d2d2d",
+            background: "#fff",
             padding: 32,
             borderRadius: 12,
             boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
           }}
+          className="feedbackThankYouPopup feedbackThankYou"
         >
           <h2>Thank you for your feedback!</h2>
           <p>We appreciate your input.</p>
