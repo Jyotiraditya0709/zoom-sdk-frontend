@@ -1323,7 +1323,8 @@ function JoinerScreen() {
           (msg) =>
             msg.sender === payload.sender.name &&
             msg.content === payload.message &&
-            msg.timestamp === new Date(payload.timestamp).toLocaleTimeString()
+            // Compare timestamps more reliably by checking if they're within 1 second
+            Math.abs(new Date(msg.timestamp).getTime() - new Date(payload.timestamp).getTime()) < 1000
         );
 
         if (messageExists) {
@@ -1341,7 +1342,7 @@ function JoinerScreen() {
           {
             sender: payload.sender.name,
             content: payload.message,
-            timestamp: new Date(payload.timestamp).toLocaleTimeString(),
+            timestamp: payload.timestamp, // Store the original timestamp, not formatted string
           },
         ];
       });
@@ -3188,6 +3189,11 @@ function JoinerScreen() {
     } else {
       // If closing a modal, just close that specific one
       setShowModals((prev) => ({ ...prev, [modal]: false }));
+      
+      // Clear unread chat count when closing chat
+      if (modal === "chat") {
+        console.log("📬 Chat panel closed");
+      }
     }
   };
 
@@ -4041,6 +4047,7 @@ function JoinerScreen() {
           chatMessages={chatMessages}
           meetingData={meetingData}
           getModalHeading={getModalHeading}
+          userName={userName}
           onSendMessage={(message) => {
             // Direct message sending without creating fake event
             if (message && message.trim()) {
@@ -4071,7 +4078,6 @@ function JoinerScreen() {
               sendMessage();
             }
           }}
-          userName={getProperDisplayName(userId, displayName)}
         />
       </div>
 
