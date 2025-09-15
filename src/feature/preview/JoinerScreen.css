@@ -851,7 +851,7 @@
     }
 
     .shareScreenContainer {
-      height: calc(100vh - 302px);
+      height: auto;
     }
 
   }
@@ -927,7 +927,7 @@
   }
 
   .joinerScreen .shareScreenContainer .videoTagBlock{
-    height: 100px !important;
+    height: auto !important;
   }
 }
 
