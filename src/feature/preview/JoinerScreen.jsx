@@ -132,6 +132,7 @@ function JoinerScreen() {
   // const [isAnnotating, setIsAnnotating] = useState(false);
   const [showRecordingNotice, setShowRecordingNotice] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("stopped"); // "stopped" | "recording" | "paused"
+  const [recordingState, setRecordingState] = useState("idle"); // "idle" | "recording" | "paused" | "stopped"
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showLeaveMeetingConfirm, setShowLeaveMeetingConfirm] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -412,15 +413,15 @@ function JoinerScreen() {
       }
       
       const id = Date.now() + Math.random();
+    
+      // Auto-remove notification after 2 seconds
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      }, 2000); // Set to 2 seconds as requested
+      
       const next = [...prev, { id, msg, timestamp: Date.now() }];
       return next.slice(-3); // Limit to last 3 (reduced from 4)
     });
-    
-    // Auto-remove notification after shorter duration
-    const id = Date.now() + Math.random();
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 2500); // Reduced from 4000ms to 2500ms
   }, []);
 
   // Parse URL Params
@@ -473,7 +474,9 @@ function JoinerScreen() {
         
         if (response.ok) {
           const data = await response.json();
+          console.log(`📊 Fetched meeting data:`, data);
           if (data.IsSuccess && data.Data) {
+            console.log(`📊 Setting meetingData:`, data.Data);
             setMeetingData(data.Data);
           }
         }
@@ -485,28 +488,57 @@ function JoinerScreen() {
     fetchMeetingData();
   }, [meetingId, userId]);
 
+  // Helper function to get proper display name for any user (following chat system logic)
+  const getProperDisplayName = useCallback((userId, displayName) => {
+    console.log(`🔍 getProperDisplayName called: userId=${userId}, displayName=${displayName}, meetingData=`, meetingData);
+    
+    // If this is the current user, return "You"
+    if (userId === selfUserIdRef.current) return "You";
+    
+    // Try to get proper name from meetingData (same logic as chat system)
+    if (meetingData) {
+      console.log(`🔍 Checking meetingData: mentorId=${meetingData.mentorId}, menteeId=${meetingData.menteeId}, mentorName=${meetingData.mentorName}, menteeName=${meetingData.menteeName}`);
+      
+      if (userId === meetingData.mentorId) {
+        const properName = meetingData.mentorName || displayName || userId;
+        console.log(`🔍 Name mapping for mentor ${userId}: ${displayName} -> ${properName}`);
+        return properName;
+      }
+      if (userId === meetingData.menteeId) {
+        const properName = meetingData.menteeName || displayName || userId;
+        console.log(`🔍 Name mapping for mentee ${userId}: ${displayName} -> ${properName}`);
+        return properName;
+      }
+    }
+    
+    // Fallback to displayName or userId
+    const fallbackName = displayName || userId || "Guest";
+    console.log(`🔍 Name fallback for ${userId}: ${displayName} -> ${fallbackName}`);
+    return fallbackName;
+  }, [meetingData]);
+
   // Function to transform participants with proper names
   const transformParticipantsWithNames = useCallback((participants) => {
-    if (!meetingData || !participants) return participants;
+    console.log(`🔄 transformParticipantsWithNames called: meetingData=`, meetingData, `participants=`, participants);
     
-    return participants.map(participant => {
-      let properName = participant.displayName;
-      
-      // If current displayName is a UUID or matches userId, try to get proper name from meetingData
-      if (!properName || properName === participant.userId || properName.match(/^[a-f0-9-]{36}$/i)) {
-        if (meetingData.mentorId === participant.userId) {
-          properName = meetingData.mentorName;
-        } else if (meetingData.menteeId === participant.userId) {
-          properName = meetingData.menteeName;
-        }
-      }
+    if (!meetingData || !participants) {
+      console.log(`🔄 No meetingData or participants, returning original:`, participants);
+      return participants;
+    }
+    
+    const transformed = participants.map(participant => {
+      const properName = getProperDisplayName(participant.userId, participant.displayName);
+      console.log(`🔄 Transforming participant ${participant.userId}: ${participant.displayName} -> ${properName}`);
       
       return {
         ...participant,
-        displayName: properName || participant.displayName
+        displayName: properName
       };
     });
-  }, [meetingData]);
+    
+    console.log(`🔄 Transformed participants:`, transformed);
+    return transformed;
+  }, [meetingData, getProperDisplayName]);
 
   // Function to update participant names from meetingData
   const updateParticipantNames = useCallback(() => {
@@ -519,6 +551,14 @@ function JoinerScreen() {
   useEffect(() => {
     updateParticipantNames();
   }, [updateParticipantNames]);
+
+  // Force update participants when meetingData changes
+  useEffect(() => {
+    if (meetingData && participants.length > 0) {
+      console.log(`🔄 meetingData changed, forcing participant update:`, meetingData);
+      setParticipants(prev => transformParticipantsWithNames(prev));
+    }
+  }, [meetingData, transformParticipantsWithNames]);
 
   // Update local user displayName when meetingData becomes available
   useEffect(() => {
@@ -761,7 +801,7 @@ function JoinerScreen() {
       console.log(
         `📊 Complete removal - Participants updated: ${prevParticipants.length} -> ${updatedParticipants.length}`
       );
-      return updatedParticipants;
+      return transformParticipantsWithNames(updatedParticipants);
     });
 
     // 3. Force additional cleanup
@@ -788,7 +828,7 @@ function JoinerScreen() {
         console.log(
           `🔄 Complete removal - Final participants count: ${finalParticipants.length}`
         );
-        return finalParticipants;
+        return transformParticipantsWithNames(finalParticipants);
       });
     }, 100);
   }, []);
@@ -1244,12 +1284,32 @@ function JoinerScreen() {
       // Handle recording status messages from host
       if (payload.message.includes("🔴 LIVE - This meeting is being recorded")) {
         // Host started recording - update local state for all participants
+        setRecordingState("recording");
+        setRecordingStatus("recording");
         setShowRecordingNotice(true);
         addNotification("🔴 LIVE - This meeting is being recorded");
         playRecordingBeep();
         console.log("📹 Recording started (notified via chat)");
+      } else if (payload.message.includes("⏸️ Recording paused — waiting for participant")) {
+        // Host paused recording - update local state for all participants
+        setRecordingState("paused");
+        setRecordingStatus("paused");
+        setShowRecordingNotice(false);
+        addNotification("⏸️ Recording paused — waiting for participant");
+        playRecordingBeep();
+        console.log("⏸️ Recording paused (notified via chat)");
+      } else if (payload.message.includes("🔴 Recording resumed")) {
+        // Host resumed recording - update local state for all participants
+        setRecordingState("recording");
+        setRecordingStatus("recording");
+        setShowRecordingNotice(true);
+        addNotification("🔴 Recording resumed");
+        playRecordingBeep();
+        console.log("🔴 Recording resumed (notified via chat)");
       } else if (payload.message.includes("⏹️ Recording has stopped")) {
         // Host stopped recording - update local state for all participants
+        setRecordingState("stopped");
+        setRecordingStatus("stopped");
         setShowRecordingNotice(false);
         addNotification("⏹️ Recording has stopped");
         playRecordingBeep();
@@ -1333,13 +1393,14 @@ function JoinerScreen() {
     // Add peer-audio-state-change listener to update participants state
     client.on("peer-audio-state-change", (payload) => {
       if (payload && payload.userId) {
-        setParticipants((prev) =>
-          prev.map((user) =>
+        setParticipants((prev) => {
+          const updated = prev.map((user) =>
             user.userId === payload.userId
               ? { ...user, muted: payload.action === "Muted" }
               : user
-          )
         );
+          return transformParticipantsWithNames(updated);
+        });
       } else {
         setParticipants(transformParticipantsWithNames(client.getAllUser()));
       }
@@ -1595,11 +1656,8 @@ function JoinerScreen() {
       }, 100);
     };
     const handleShareStopped = () => {
-      setIsSharingScreen(false);
-      setIsRemoteSharing(false);
-      setCurrentSharerId(null);
-      // Clean up browser screen sharing handlers
-      cleanupBrowserScreenShareHandlers();
+      console.log("🛑 Share stopped event detected, cleaning up share...");
+      stopScreenShareCleanup();
     };
 
     // For viewers: always use canvas for incoming share (like MeetingPage.jsx)
@@ -1614,7 +1672,8 @@ function JoinerScreen() {
         }
         setIsRemoteSharing(true);
         setCurrentSharerId(userId);
-        addNotification(`Screen sharing started by ${meetingData && userId === meetingData.mentorId ? meetingData.mentorName : meetingData && userId === meetingData.menteeId ? meetingData.menteeName : userId}`);
+        const displayName = getProperDisplayName(userId, null);
+        addNotification(`Screen sharing started by ${displayName}`);
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
@@ -1632,37 +1691,8 @@ function JoinerScreen() {
       console.log("[SCREEN SHARE] Browser screen share ended");
       // Only handle if this user is actually sharing their screen
       if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
-        try {
-          // Stop the screen sharing in the Zoom SDK
-          if (mediaStreamRef.current) {
-            await mediaStreamRef.current.stopShareScreen();
-          }
-
-          // Clean up screen sharing elements
-          if (shareRenderVideoRef.current) {
-            shareRenderVideoRef.current.style.display = "none";
-          }
-          if (shareCanvasRef.current) {
-            shareCanvasRef.current.style.display = "none";
-          }
-
-          // Update state
-          setIsSharingScreen(false);
-          setCurrentSharerId(null);
-          setIsRemoteSharing(false);
-
-          addNotification("Screen sharing stopped");
-          console.log("[SCREEN SHARE] Browser screen share cleanup completed");
-        } catch (error) {
-          console.error(
-            "[SCREEN SHARE] Error during browser screen share cleanup:",
-            error
-          );
-          // Still update state even if cleanup fails
-          setIsSharingScreen(false);
-          setCurrentSharerId(null);
-          setIsRemoteSharing(false);
-        }
+        console.log("🛑 Browser stop detected in handleBrowserScreenShareEnd, cleaning up share...");
+        stopScreenShareCleanup();
       }
     };
 
@@ -1821,22 +1851,8 @@ function JoinerScreen() {
     // Enhanced to handle local user removal due to leaveOnPageUnload (refresh/close)
     const handleUserAdded = (payload) => {
       payload.forEach((item) => {
-        // Generate a better display name if not provided
-        let displayName = item.displayName;
-        
-        // If no displayName, try to get it from meetingData
-        if (!displayName && meetingData) {
-          if (item.userId === meetingData.mentorId) {
-            displayName = meetingData.mentorName;
-          } else if (item.userId === meetingData.menteeId) {
-            displayName = meetingData.menteeName;
-          }
-        }
-        
-        // Fallback to userId if still no displayName
-        if (!displayName) {
-          displayName = item.userId?.toString() || "Guest";
-        }
+        // Get proper display name using the helper function
+        const displayName = getProperDisplayName(item.userId, item.displayName);
 
         console.log("[USER] User joined:", {
           userId: item.userId,
@@ -1848,6 +1864,7 @@ function JoinerScreen() {
 
         // Show notification for user join (duplicate detection now handled at container creation level)
         if (item.userId !== selfUserIdRef.current) {
+          console.log(`🔔 User join notification: ${item.userId} (${item.displayName}) -> ${displayName}`);
           addNotification(`${displayName} joined the session.`);
           
           // Check if recording is already active and inform new participant
@@ -1947,7 +1964,13 @@ function JoinerScreen() {
           });
         }
       });
-      setParticipants(transformParticipantsWithNames(client.getAllUser()));
+      
+      console.log(`🔄 handleUserAdded: Updating participants with transformParticipantsWithNames`);
+      const allUsers = client.getAllUser();
+      console.log(`🔄 handleUserAdded: All users from client:`, allUsers);
+      const transformedUsers = transformParticipantsWithNames(allUsers);
+      console.log(`🔄 handleUserAdded: Transformed users:`, transformedUsers);
+      setParticipants(transformedUsers);
     };
 
     // Enhanced user removal handler that properly handles local user removal
@@ -2072,7 +2095,7 @@ function JoinerScreen() {
           console.log(
             `📊 Removed user ${item.userId} from participants list: ${prev.length} → ${updated.length}`
           );
-          return updated;
+          return transformParticipantsWithNames(updated);
         });
 
         // 2. Clean up video container directly (following Zoom guidance)
@@ -2089,7 +2112,9 @@ function JoinerScreen() {
         detachVideo(item.userId);
 
         // Show notification for remote users
-        addNotification(`${item.displayName || (meetingData && item.userId === meetingData.mentorId ? meetingData.mentorName : meetingData && item.userId === meetingData.menteeId ? meetingData.menteeName : item.userId)} left the session.`);
+        const displayName = getProperDisplayName(item.userId, item.displayName);
+        console.log(`🔔 User left notification: ${item.userId} (${item.displayName}) -> ${displayName}`);
+        addNotification(`${displayName} left the session.`);
       });
     };
     client.on("user-added", handleUserAdded);
@@ -2516,15 +2541,76 @@ function JoinerScreen() {
   const webCodecsEnabled =
     typeof window.MediaStreamTrackProcessor === "function";
 
-  // Clean up screen sharing elements
-  const cleanupScreenShareElements = () => {
+  // Centralized cleanup function for screen sharing
+  const stopScreenShareCleanup = () => {
+    console.log("🧹 Cleaning up screen share...");
+    
+    // Stop the screen sharing in the Zoom SDK
+    if (mediaStreamRef.current) {
+      try {
+        mediaStreamRef.current.stopShareScreen();
+      } catch (error) {
+        console.log("[SCREEN SHARE] Error stopping share screen:", error);
+      }
+    }
+
+    // Clean up video element
     if (shareRenderVideoRef.current) {
+      shareRenderVideoRef.current.srcObject = null;
       shareRenderVideoRef.current.style.display = "none";
     }
+
+    // Clean up canvas element
     if (shareCanvasRef.current) {
+      const ctx = shareCanvasRef.current.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, shareCanvasRef.current.width, shareCanvasRef.current.height);
+      }
       shareCanvasRef.current.style.display = "none";
     }
+
+    // CRITICAL: Clean up the video element with ID 'my-screen-share-content-video'
+    // This prevents black tiles from remaining when screen share is stopped
+    const screenShareVideoElement = document.getElementById('my-screen-share-content-video');
+    if (screenShareVideoElement) {
+      console.log("[SCREEN SHARE] Removing black tile video element");
+      // Stop any video tracks
+      if (screenShareVideoElement.srcObject) {
+        const tracks = screenShareVideoElement.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        screenShareVideoElement.srcObject = null;
+      }
+      // Remove the element from DOM
+      screenShareVideoElement.remove();
+    }
+
+    // Also clean up any other potential screen share video elements
+    const allScreenShareElements = document.querySelectorAll('[id*="screen-share"], [id*="share-content"]');
+    allScreenShareElements.forEach(element => {
+      if (element.tagName === 'VIDEO' && element.srcObject) {
+        const tracks = element.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        element.srcObject = null;
+        element.remove();
+      }
+    });
+
+    // Update state
     setIsSharingScreen(false);
+    setCurrentSharerId(null);
+    setIsRemoteSharing(false);
+
+    // Clean up browser screen sharing handlers (if function exists)
+    if (typeof cleanupBrowserScreenShareHandlers === 'function') {
+      cleanupBrowserScreenShareHandlers();
+    }
+
+    addNotification("Screen sharing stopped");
+  };
+
+  // Clean up screen sharing elements (legacy function - now calls centralized cleanup)
+  const cleanupScreenShareElements = () => {
+    stopScreenShareCleanup();
   };
 
   // Advanced screen sharing with proper element setup (like MeetingPage.jsx)
@@ -2583,6 +2669,7 @@ function JoinerScreen() {
 
         const mediaStream = clientRef.current.getMediaStream();
 
+        let stream = null;
         if (webCodecsEnabled) {
           // Use video element for sharer if WebCodecs is enabled
           console.log("[SCREEN SHARE] Using video element for WebCodecs");
@@ -2597,7 +2684,7 @@ function JoinerScreen() {
             // Small delay to ensure element is ready
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
-          await mediaStream.startShareScreen(shareRenderVideoRef.current);
+          stream = await mediaStream.startShareScreen(shareRenderVideoRef.current);
           shareRenderVideoRef.current.style.display = "block";
           shareCanvasRef.current.style.display = "none";
         } else {
@@ -2610,9 +2697,26 @@ function JoinerScreen() {
             // Small delay to ensure element is ready
             await new Promise((resolve) => setTimeout(resolve, 100));
           }
-          await mediaStream.startShareScreen(shareCanvasRef.current);
+          stream = await mediaStream.startShareScreen(shareCanvasRef.current);
           shareCanvasRef.current.style.display = "block";
           shareRenderVideoRef.current.style.display = "none";
+        }
+
+        // ✅ Catch browser stop (the "Stop sharing" button)
+        console.log("[SCREEN SHARE] Stream object:", stream);
+        if (stream && stream.getVideoTracks) {
+          const tracks = stream.getVideoTracks();
+          console.log("[SCREEN SHARE] Video tracks:", tracks);
+          if (tracks && tracks.length > 0) {
+            const track = tracks[0];
+            track.onended = () => {
+              console.log("🛑 Browser stop detected via track.onended, cleaning up share...");
+              stopScreenShareCleanup();
+            };
+            console.log("[SCREEN SHARE] Track onended listener added");
+          }
+        } else {
+          console.log("[SCREEN SHARE] No stream or getVideoTracks method available");
         }
 
         setIsSharingScreen(true);
@@ -2625,21 +2729,29 @@ function JoinerScreen() {
             setupBrowserScreenShareHandlers();
           }
         }, 100);
+
+        // Add a periodic check to detect when screen sharing has stopped
+        // This is a fallback in case the track.onended event doesn't fire
+        const screenShareCheckInterval = setInterval(() => {
+          if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+            try {
+              if (!mediaStreamRef.current.isSharingScreen) {
+                console.log("[SCREEN SHARE] Periodic check detected screen sharing ended");
+                clearInterval(screenShareCheckInterval);
+                stopScreenShareCleanup();
+              }
+            } catch (error) {
+              console.log("[SCREEN SHARE] Periodic check error - screen sharing may have ended");
+              clearInterval(screenShareCheckInterval);
+              stopScreenShareCleanup();
+            }
+          } else {
+            clearInterval(screenShareCheckInterval);
+          }
+        }, 2000); // Check every 2 seconds
       } else {
         console.log("[SCREEN SHARE] Stopping screen share...");
-        const mediaStream = clientRef.current.getMediaStream();
-        await mediaStream.stopShareScreen();
-        if (shareRenderVideoRef.current)
-          shareRenderVideoRef.current.style.display = "none";
-        if (shareCanvasRef.current)
-          shareCanvasRef.current.style.display = "none";
-        console.log("[SCREEN SHARE] Screen sharing stopped successfully");
-        setIsSharingScreen(false);
-        setCurrentSharerId(null);
-        addNotification("Screen sharing stopped");
-
-        // Clean up browser screen sharing handlers
-        cleanupBrowserScreenShareHandlers();
+        stopScreenShareCleanup();
       }
     } catch (err) {
       console.log("[SCREEN SHARE] Error:", {
@@ -2649,10 +2761,8 @@ function JoinerScreen() {
         name: err?.name,
       });
 
-      // Always reset the sharing state
-      setIsSharingScreen(false);
-      setCurrentSharerId(null);
-      cleanupBrowserScreenShareHandlers();
+      // Always reset the sharing state using centralized cleanup
+      stopScreenShareCleanup();
 
       if (err?.reason === "user deny screen share" || err?.errorCode === 6200) {
         console.log("[SCREEN SHARE] User cancelled screen share");
@@ -2674,6 +2784,8 @@ function JoinerScreen() {
     try {
       const res = await recordingClientRef.current.startCloudRecording();
               if (res === "") {
+        setRecordingState("recording");
+        setRecordingStatus("recording");
           setShowRecordingNotice(true);
           // Show professional recording notification to both host and participants
           addNotification("🔴 LIVE - This meeting is being recorded");
@@ -2701,11 +2813,79 @@ function JoinerScreen() {
     }
   };
 
+  const pauseAutomaticRecording = async () => {
+    if (!recordingClientRef.current || !isHost) return;
+    try {
+      const res = await recordingClientRef.current.pauseCloudRecording();
+      if (res === "") {
+        setRecordingState("paused");
+        setRecordingStatus("paused");
+        setShowRecordingNotice(false);
+        
+        // Show professional recording pause notification
+        addNotification("⏸️ Recording paused — waiting for participant");
+        playRecordingBeep();
+        
+        // Broadcast recording pause status to all participants via chat
+        try {
+          const client = clientRef.current;
+          if (client && client.getChatClient) {
+            const chatClient = client.getChatClient();
+            if (chatClient) {
+              await chatClient.sendToAll("⏸️ Recording paused — waiting for participant");
+            }
+          }
+        } catch (chatErr) {
+          console.warn("Failed to broadcast recording pause via chat:", chatErr);
+        }
+        
+        console.log("⏸️ Automatic recording paused");
+      }
+    } catch (err) {
+      console.error("❌ Failed to pause automatic recording:", err);
+    }
+  };
+
+  const resumeAutomaticRecording = async () => {
+    if (!recordingClientRef.current || !isHost) return;
+    try {
+      const res = await recordingClientRef.current.resumeCloudRecording();
+      if (res === "") {
+        setRecordingState("recording");
+        setRecordingStatus("recording");
+        setShowRecordingNotice(true);
+        
+        // Show professional recording resume notification
+        addNotification("🔴 Recording resumed");
+        playRecordingBeep();
+        
+        // Broadcast recording resume status to all participants via chat
+        try {
+          const client = clientRef.current;
+          if (client && client.getChatClient) {
+            const chatClient = client.getChatClient();
+            if (chatClient) {
+              await chatClient.sendToAll("🔴 Recording resumed");
+            }
+          }
+        } catch (chatErr) {
+          console.warn("Failed to broadcast recording resume via chat:", chatErr);
+        }
+        
+        console.log("🔴 Automatic recording resumed");
+      }
+    } catch (err) {
+      console.error("❌ Failed to resume automatic recording:", err);
+    }
+  };
+
   const stopAutomaticRecording = async () => {
     if (!recordingClientRef.current || !isHost) return;
     try {
       const res = await recordingClientRef.current.stopCloudRecording();
               if (res === "") {
+        setRecordingState("stopped");
+        setRecordingStatus("stopped");
           setShowRecordingNotice(false);
           // Show professional recording stop notification to both host and participants
           addNotification("⏹️ Recording has stopped");
@@ -2732,38 +2912,59 @@ function JoinerScreen() {
     }
   };
 
-  // 🆕 Monitor participant changes for automatic recording
+  // 🆕 Monitor participant changes for automatic recording with pause/resume
   useEffect(() => {
     if (participants.length > 0) {
       const hasMentor = participants.some(p => p.role === 'host' || p.isHost);
       const hasMentee = participants.some(p => p.role === 'attendee' || !p.isHost);
+      const participantCount = participants.length;
       
-      if (hasMentor && hasMentee && !showRecordingNotice) {
+      console.log(`👥 Participant monitoring: ${participantCount} participants, mentor: ${hasMentor}, mentee: ${hasMentee}, recordingState: ${recordingState}`);
+      
+      if (hasMentor && hasMentee && recordingState === "idle") {
         console.log("✅ Both mentor and mentee joined - starting automatic recording");
         if (isHost) {
           // Only host starts the actual recording
           startAutomaticRecording();
         } else {
           // For participants, just update their local state to show recording indicator
+          setRecordingState("recording");
+          setRecordingStatus("recording");
           setShowRecordingNotice(true);
           addNotification("🔴 LIVE - This meeting is being recorded");
           playRecordingBeep();
         }
-      } else if ((!hasMentor || !hasMentee) && showRecordingNotice) {
-        // Either mentor or mentee left - stop recording
-        console.log("❌ Mentor or mentee left - stopping automatic recording");
+      } else if ((!hasMentor || !hasMentee) && recordingState === "recording") {
+        // Either mentor or mentee left - pause recording
+        console.log("⏸️ Mentor or mentee left - pausing automatic recording");
         if (isHost) {
-          // Only host stops the actual recording
-          stopAutomaticRecording();
+          // Only host pauses the actual recording
+          pauseAutomaticRecording();
         } else {
-          // For participants, just update their local state to hide recording indicator
+          // For participants, just update their local state to show paused indicator
+          setRecordingState("paused");
+          setRecordingStatus("paused");
           setShowRecordingNotice(false);
-          addNotification("⏹️ Recording has stopped");
+          addNotification("⏸️ Recording paused — waiting for participant");
+          playRecordingBeep();
+        }
+      } else if (hasMentor && hasMentee && recordingState === "paused") {
+        // Both mentor and mentee are back - resume recording
+        console.log("🔴 Both mentor and mentee back - resuming automatic recording");
+        if (isHost) {
+          // Only host resumes the actual recording
+          resumeAutomaticRecording();
+        } else {
+          // For participants, just update their local state to show recording indicator
+          setRecordingState("recording");
+          setRecordingStatus("recording");
+          setShowRecordingNotice(true);
+          addNotification("🔴 Recording resumed");
           playRecordingBeep();
         }
       }
     }
-  }, [participants, showRecordingNotice, isHost]);
+  }, [participants, recordingState, isHost]);
 
   // Function to play recording beep sound (similar to Zoom)
   const playRecordingBeep = () => {
@@ -3153,13 +3354,7 @@ function JoinerScreen() {
     >
       <Header
         userEmail={`${displayName}@example.com`}
-        userName={
-          meetingData 
-            ? (meetingData.mentorId === userId 
-                ? (meetingData.mentorName || meetingData.mentorId)
-                : (meetingData.menteeName || meetingData.menteeId))
-            : displayName
-        }
+        userName={getProperDisplayName(userId, displayName)}
         meetingTitle={sessionName}
         startTime={meetingStartTime}
         showTimer={true}
@@ -3167,13 +3362,13 @@ function JoinerScreen() {
 
               <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
           {/* Clean Recording Indicator */}
-          {showRecordingNotice && (
+          {(showRecordingNotice || recordingState === "paused") && (
             <div
               style={{
                 position: "absolute",
                 top: "10px",
                 right: "20px",
-                background: "#dc3545",
+                background: recordingState === "paused" ? "#f59e0b" : "#dc3545",
                 color: "#fff",
                 padding: "6px 12px",
                 borderRadius: "20px",
@@ -3183,8 +3378,8 @@ function JoinerScreen() {
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
-                boxShadow: "0 2px 8px rgba(220, 53, 69, 0.3)",
-                animation: "pulse 2s infinite",
+                boxShadow: recordingState === "paused" ? "0 2px 8px rgba(245, 158, 11, 0.3)" : "0 2px 8px rgba(220, 53, 69, 0.3)",
+                animation: recordingState === "paused" ? "none" : "pulse 2s infinite",
               }}
             >
               <div
@@ -3193,10 +3388,10 @@ function JoinerScreen() {
                   height: "6px",
                   background: "#fff",
                   borderRadius: "50%",
-                  animation: "pulse 1s infinite",
+                  animation: recordingState === "paused" ? "none" : "pulse 1s infinite",
                 }}
               />
-              REC
+              {recordingState === "paused" ? "PAUSED" : "REC"}
             </div>
           )}
           
@@ -3215,7 +3410,11 @@ function JoinerScreen() {
               height: isSharingScreen ? "100%" : "70%",
             }}
           >
-            {participants.slice(0, 4).map((user, i) => (
+            {participants.slice(0, 4).map((user, i) => {
+              console.log(`🎥 Rendering video tile for user:`, user);
+              console.log(`🎥 Current participants state:`, participants);
+              console.log(`🎥 MeetingData available:`, meetingData);
+              return (
               <div
                 className={`joinerVideoBox ${
                   user.userId === selfUserIdRef.current ? "active" : ""
@@ -3267,7 +3466,7 @@ function JoinerScreen() {
                           console.log(
                             `⚡ INSTANTLY removed duplicate user ${user.userId} from participants: ${prev.length} → ${filtered.length}`
                           );
-                          return filtered;
+                          return transformParticipantsWithNames(filtered);
                         });
 
                         // Complete cleanup
@@ -3343,7 +3542,7 @@ function JoinerScreen() {
                     }}
                   >
                     <span>
-                      {user.displayName || user.userId?.toString() || "Guest"}
+                      {getProperDisplayName(user.userId, user.displayName)}
                     </span>
                     {/* Network quality indicator */}
                     {networkQuality[user.userId] !== undefined && (
@@ -3401,7 +3600,8 @@ function JoinerScreen() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
@@ -3884,7 +4084,7 @@ function JoinerScreen() {
               sendMessage();
             }
           }}
-          userName={displayName}
+          userName={getProperDisplayName(userId, displayName)}
         />
       </div>
 
@@ -4157,7 +4357,7 @@ function JoinerScreen() {
                       textTransform: "uppercase",
                     }}
                   >
-                    {p.displayName?.[0] || "?"}
+                    {getProperDisplayName(p.userId, p.displayName)?.[0] || "?"}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span
@@ -4170,7 +4370,7 @@ function JoinerScreen() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {p.displayName || p.userId?.toString() || "Guest"}
+                      {getProperDisplayName(p.userId, p.displayName)}
                     </span>
                     <span
                       style={{
@@ -4427,11 +4627,7 @@ function JoinerScreen() {
                       Your Name:
                     </span>
                     <span style={{ marginLeft: 8, color: "#222" }}>
-                      {meetingData 
-                        ? (meetingData.mentorId === userId 
-                            ? (meetingData.mentorName || meetingData.mentorId)
-                            : (meetingData.menteeName || meetingData.menteeId))
-                        : displayName}
+                      {getProperDisplayName(userId, displayName)}
                     </span>
                   </div>
                   <div style={{ marginBottom: 12 }}>
@@ -4536,18 +4732,20 @@ function JoinerScreen() {
                         style={{
                           marginLeft: 8,
                           color:
-                            recordingStatus === "recording"
+                            recordingState === "recording"
                               ? "#22c55e"
-                              : recordingStatus === "paused"
+                              : recordingState === "paused"
                                 ? "#f59e0b"
                                 : "#666",
                         }}
                       >
-                        {recordingStatus === "recording"
+                        {recordingState === "recording"
                           ? "Recording"
-                          : recordingStatus === "paused"
+                          : recordingState === "paused"
                             ? "Paused"
-                            : "Stopped"}
+                            : recordingState === "stopped"
+                              ? "Stopped"
+                              : "Idle"}
                       </span>
                     </div>
                   </div>
