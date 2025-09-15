@@ -4554,9 +4554,9 @@ function JoinerScreen() {
               borderRadius: 12,
               padding: "24px 32px 24px 32px",
               boxShadow: "0 4px 24px #0002",
-              minWidth: 400,
-              maxWidth: "90vw",
+              maxWidth: 400,
               color: "#fff",
+              margin: "10px",
             }}
           >
             <div
@@ -4598,7 +4598,7 @@ function JoinerScreen() {
               {mediaWarningMessage}
             </div>
             <div
-              style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}
+              style={{ display: "flex", gap: 12, justifyContent: "center" }}
             >
               <button
                 onClick={() => {

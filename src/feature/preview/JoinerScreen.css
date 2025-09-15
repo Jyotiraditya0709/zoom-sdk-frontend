@@ -45,6 +45,7 @@
     height: 100px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     width: 100%;
     max-width: 1200px;
@@ -568,6 +569,10 @@
 }
 
 .feedbackFormPopup {
+    width: 100%;
+    max-width: 600px;
+    margin: 10px;
+
   .titleFeedback {
     color: #171717;
     font-size: 20px;
@@ -922,7 +927,7 @@
   }
 
   .joinerScreen .shareScreenContainer .videoTagBlock{
-    height: 300px !important;
+    height: 200px !important;
   }
 }
 
