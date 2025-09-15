@@ -1031,7 +1031,7 @@ const PreJoin = () => {
                   </div>
                 </video-player-container>
               </div>
-              {isLoading && <div className="loading">Starting preview...</div>}
+              {isLoading && <div className="loading">Camera is Starting...</div>}
 
               <div className="bottomControls">
                 <div className="bottomControlsLeft">

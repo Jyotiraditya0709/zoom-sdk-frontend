@@ -33,15 +33,31 @@ const ChatSidebar = ({
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return "19:48";
+    if (!timestamp) {
+      // Return current time if no timestamp provided
+      return new Date().toLocaleTimeString(undefined, { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+    }
+    
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
-      return "19:48";
+      // Return current time if timestamp is invalid
+      return new Date().toLocaleTimeString(undefined, { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
     }
-    return date.toLocaleTimeString('en-US', { 
+    
+    // Use user's locale and timezone for international support
+    return date.toLocaleTimeString(undefined, { 
       hour: '2-digit', 
       minute: '2-digit',
-      hour12: false 
+      hour12: false,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
   };
 
@@ -67,7 +83,10 @@ const ChatSidebar = ({
     const handleClickOutside = (event) => {
       if (
         sidebarRef.current &&
-        !sidebarRef.current.contains(event.target)
+        !sidebarRef.current.contains(event.target) &&
+        // Don't close if clicking on chat button or its children
+        !event.target.closest('.chatSetting') &&
+        !event.target.closest('.commonJoinderBtn')
       ) {
         setIsChatOpen(false);
       }
@@ -131,15 +150,27 @@ const ChatSidebar = ({
             return null; // Skip invalid messages
           }
 
+          const isOwnMessage = message.sender === userName;
+          
+          // Determine message class based on type
+          let messageClass = 'other-message';
+          if (isSystemMessage) {
+            messageClass = 'system-message';
+          } else if (isOwnMessage) {
+            messageClass = 'own-message';
+          }
+          
           return (
-            <div key={`${message.sender}-${message.timestamp}-${index}`} className="message">
-              <div className="message-header">
-                <span className="sender-name">
-                  {getSenderName(message, isSystemMessage)}
-                </span>
-                <span className="message-time">{formatTime(message.timestamp)}</span>
-              </div>
-              <div className={`message-content ${message.sender === userName ? 'own-message' : ''} ${isSystemMessage ? 'system-message' : ''}`}>
+            <div key={`${message.sender}-${message.timestamp}-${index}`} className={`message ${messageClass}`}>
+              {!isSystemMessage && (
+                <div className="message-header">
+                  <span className="sender-name">
+                    {getSenderName(message, isSystemMessage)}
+                  </span>
+                  <span className="message-time">{formatTime(message.timestamp)}</span>
+                </div>
+              )}
+              <div className={`message-content ${messageClass}`}>
                 {isSystemMessage && message.content?.includes('LIVE') && (
                   <span className="live-indicator">●</span>
                 )}
