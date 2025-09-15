@@ -107,6 +107,11 @@
     height: 48%;
   }
 
+   &.sharingScreenActive  .joinerVideoScreen.grid-4 .joinerVideoBox {
+    max-width: 24%;
+    height: 100%;
+  }
+
   .joinerVideoScreen.grid-5 .joinerVideoBox {
     max-width: calc(20% - 10px);
   }
