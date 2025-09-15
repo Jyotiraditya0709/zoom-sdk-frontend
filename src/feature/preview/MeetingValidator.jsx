@@ -67,13 +67,20 @@ const MeetingValidator = () => {
 
   if (isValidating) {
     return (
-      <div className="meeting-validator-container">
-        <div className="meeting-validator-content">
-          <div className="meeting-validator-icon">⏳</div>
-          <h2 className="meeting-validator-title">Validating Meeting...</h2>
-          <p className="meeting-validator-message">Please wait while we validate your meeting access.</p>
+      <>
+        <div className="meeting-validator-container">
+          <div className="meeting-validator-content">
+            <div className="meeting-validator-icon"><img src="/assest/greenTick.gif" alt="" style={{ width: "70px" }} /></div>
+            <h2 className="meeting-validator-title">Meeting Validated!</h2>
+            <p className="meeting-validator-message">Please wait while we validate your meeting access.</p>
+            {/* <div className="meetingValidatedDetails">
+            <div className="itemsMeeting"><strong>Meeting ID:</strong> 123454567788</div>
+            <div className="itemsMeeting"><strong>Agenda:</strong> Design</div>
+            <div className="itemsMeeting"><strong>Status:</strong> In Progress</div>
+          </div> */}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -85,19 +92,19 @@ const MeetingValidator = () => {
             {errorType === "expired"
               ? "⏰"
               : errorType === "not_found"
-                ? "❌"
+                ? <img src="/assest/svg/accessDenied.svg" alt="" />
                 : errorType === "unauthorized"
-                  ? "🚫"
-                  : "❌"}
+                  ? <img src="/assest/svg/accessDenied.svg" alt="" />
+                  : <img src="/assest/svg/accessDenied.svg" alt="" />}
           </div>
-          <h2 className="meeting-validator-title error">
+          <h2 className="meeting-validator-title" style={{ color: "#101010" }}>
             {errorType === "expired"
               ? "Meeting Time Has Passed"
               : errorType === "not_found"
                 ? "Meeting Not Found"
                 : errorType === "unauthorized"
                   ? "Access Denied"
-                  : "Error"}
+                  : "Access Denied"}
           </h2>
           <p className="meeting-validator-message">{error}</p>
           {errorType === "expired" && (
@@ -127,21 +134,21 @@ const MeetingValidator = () => {
             <h2 className="meeting-validator-title warning">
               Meeting is already completed
             </h2>
-            <div className="meeting-validator-details">
-              <p>
+            <div className="meeting-validator-details meetingValidatedDetails">
+              <p className="itemsMeeting">
                 <strong>Meeting ID:</strong> {meetingData.meetingId}
               </p>
-              <p>
+              <p className="itemsMeeting">
                 <strong>Joinee:</strong> {
-                  meetingData.mentorId === userId 
+                  meetingData.mentorId === userId
                     ? (meetingData.mentorName || meetingData.mentorId)
                     : (meetingData.menteeName || meetingData.menteeId)
                 }
               </p>
-              <p>
+              <p className="itemsMeeting">
                 <strong>Agenda:</strong> {meetingData.agenda}
               </p>
-              <p>
+              <p className="itemsMeeting">
                 <strong>Status:</strong> {meetingData.meetingStatus}
               </p>
             </div>
@@ -159,25 +166,25 @@ const MeetingValidator = () => {
     return (
       <div className="meeting-validator-container">
         <div className="meeting-validator-content meeting-validator-success">
-          <div className="meeting-validator-icon">✅</div>
+          <div className="meeting-validator-icon"><img src="/assest/greenTick.gif" alt="" style={{ width: "70px" }} /></div>
           <h2 className="meeting-validator-title success">
             Meeting Validated!
           </h2>
-          <div className="meeting-validator-details">
-            <p>
+          <div className="meeting-validator-details meetingValidatedDetails">
+            <p className="itemsMeeting">
               <strong>Meeting ID:</strong> {meetingData.meetingId}
             </p>
-            <p>
+            <p className="itemsMeeting">
               <strong>Joinee:</strong> {
-                meetingData.mentorId === userId 
+                meetingData.mentorId === userId
                   ? (meetingData.mentorName || meetingData.mentorId)
                   : (meetingData.menteeName || meetingData.menteeId)
               }
             </p>
-            <p>
+            <p className="itemsMeeting">
               <strong>Agenda:</strong> {meetingData.agenda}
             </p>
-            <p>
+            <p className="itemsMeeting">
               <strong>Status:</strong> {meetingData.meetingStatus}
             </p>
           </div>
