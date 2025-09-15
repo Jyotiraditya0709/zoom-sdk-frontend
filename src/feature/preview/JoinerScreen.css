@@ -93,11 +93,18 @@
   }
 
   .joinerVideoScreen.grid-3 .joinerVideoBox {
-    max-width: calc(33.3% - 10px);
+    max-width: calc(50% - 10px);
+    height: 48%;
+  }
+
+  &.sharingScreenActive .joinerVideoScreen.grid-3 .joinerVideoBox {
+    max-width: calc(25% - 10px);
+    height: 100%;
   }
 
   .joinerVideoScreen.grid-4 .joinerVideoBox {
-    max-width: calc(25% - 10px);
+    max-width: calc(50% - 10px);
+    height: 48%;
   }
 
   .joinerVideoScreen.grid-5 .joinerVideoBox {
@@ -661,7 +668,7 @@
     padding: 20px 0 !important;
   }
 
- .joinerScreen .joinerVideoScreen .joinerVideoBox{
+  .joinerScreen .joinerVideoScreen .joinerVideoBox {
     height: 200px;
   }
 
@@ -810,6 +817,7 @@
       height: 108px;
       flex-wrap: nowrap;
     }
+
     .joinerVideoScreen.grid-4 .joinerVideoBox {
       max-width: 21%;
       height: 108px;
@@ -821,6 +829,7 @@
       height: 108px;
       flex-wrap: nowrap;
     }
+
     .joinerVideoScreen.grid-6 .joinerVideoBox {
       max-width: 11%;
       height: 108px;
