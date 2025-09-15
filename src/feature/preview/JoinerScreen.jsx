@@ -3149,7 +3149,9 @@ function JoinerScreen() {
 
   return (
     <div
-      className="joinerScreen"
+      className={`joinerScreen ${
+              isSharingScreen || isRemoteSharing ? "sharingScreenActive" : ""
+            }`}
       style={{ overflow: "hidden", height: "100vh" }}
     >
       <Header
@@ -3210,10 +3212,8 @@ function JoinerScreen() {
               padding:
                 participants.length >= 3 &&
                 participants.length <= participants.length
-                  ? "20px 100px"
-                  : "20px 0 0 0",
-              width: isSharingScreen ? "80%" : "90%",
-              height: isSharingScreen ? "100%" : "70%",
+                  ? "0px 0px"
+                  : "0px 0 0 0",
             }}
           >
             {participants.slice(0, 4).map((user, i) => (

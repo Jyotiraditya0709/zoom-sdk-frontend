@@ -3,18 +3,21 @@
     border-bottom: 1px solid #e5e5e5;
   }
 
+  &.sharingScreenActive .shareScreenContainer {
+    height: calc(100vh - 260px);
+  }
+
   .joinerScreenContainer {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: calc(100vh - 80px);
+    height: calc(100vh - 76px);
     width: 100%;
   }
 
   .joinerScreenBlock {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     flex-direction: column;
     width: 70%;
     -webkit-box-flex: 1;
@@ -24,75 +27,45 @@
     flex: 1;
     overflow: visible;
     height: 100%;
-
-    /* 1 user = fullscreen */
-    .grid-1 {
-      grid-template-columns: 1fr;
-    }
-
-    /* 2–4 users = 2×2 */
-    .grid-2,
-    .grid-3,
-    .grid-4 {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    /* 5–9 users = 3×3 */
-    .grid-5,
-    .grid-6,
-    .grid-7,
-    .grid-8,
-    .grid-9 {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    /* 10–16 users = 4×4 */
-    .grid-10,
-    .grid-11,
-    .grid-12,
-    .grid-13,
-    .grid-14,
-    .grid-15,
-    .grid-16 {
-      grid-template-columns: repeat(4, 1fr);
-    }
-
-    /* 17–25 users = 5×5 */
-    .grid-17,
-    .grid-18,
-    .grid-19,
-    .grid-20,
-    .grid-21,
-    .grid-22,
-    .grid-23,
-    .grid-24,
-    .grid-25 {
-      grid-template-columns: repeat(5, 1fr);
-    }
+    padding: 20px;
   }
 
   .joinerVideoScreen {
-    height: calc(100vh - 182px);
-    display: grid;
-    grid-auto-rows: 1fr;
-    align-items: stretch;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     width: 100%;
+    height: calc(100vh - 260px);
     gap: 10px;
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  .joinerVideoScreen.sharing-on {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 1200px;
   }
 
   .shareScreenContainer {
     width: 100%;
+    max-width: 1200px;
     display: flex;
     justify-content: center;
     padding: 16px;
     position: relative;
     z-index: 10;
+    gap: 10px;
   }
 
   .shareScreenContainer .videoTagBlock {
     display: none;
-    max-width: 90vw;
-    max-height: 50vh;
+    height: 100% !important;
+    width: 100% !important;
+    max-width: 50%;
     border-radius: 12px;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
   }
@@ -102,21 +75,73 @@
     overflow: hidden;
     width: 100%;
     height: 100%;
+    max-width: 100%;
     border: 2px solid transparent;
     border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    min-height: 100px;
   }
 
-  .joinerVideoScreen.sharing-on.grid-1,
-  .joinerVideoScreen.sharing-on .grid-2,
-  .joinerVideoScreen.sharing-on.grid-3,
-  .joinerVideoScreen.sharing-on .grid-4 {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr) !important;
+  .joinerVideoScreen.grid-1.sharing-on .joinerVideoBox {
+    max-width: 20%;
+  }
+
+  .joinerVideoScreen.grid-2 .joinerVideoBox {
+    max-width: calc(50% - 10px);
+  }
+
+  .joinerVideoScreen.grid-3 .joinerVideoBox {
+    max-width: calc(33.3% - 10px);
+  }
+
+  .joinerVideoScreen.grid-4 .joinerVideoBox {
+    max-width: calc(25% - 10px);
+  }
+
+  .joinerVideoScreen.grid-5 .joinerVideoBox {
+    max-width: calc(20% - 10px);
+  }
+
+  .joinerVideoScreen.grid-6 .joinerVideoBox {
+    max-width: calc(16.6% - 10px);
+  }
+
+  .joinerVideoScreen.grid-7 .joinerVideoBox {
+    max-width: calc(14.2% - 10px);
+  }
+
+  .joinerVideoScreen.grid-8 .joinerVideoBox {
+    max-width: calc(12.5% - 10px);
+  }
+
+  .joinerVideoScreen.grid-9 .joinerVideoBox {
+    max-width: calc(11.1% - 10px);
+  }
+
+  .joinerVideoScreen.grid-10 .joinerVideoBox {
+    max-width: calc(10% - 10px);
+  }
+
+  .joinerVideoScreen.grid-11 .joinerVideoBox {
+    max-width: calc(9.1% - 10px);
+  }
+
+  .joinerVideoScreen.grid-12 .joinerVideoBox {
+    max-width: calc(8.3% - 10px);
+  }
+
+  .joinerVideoScreen.grid-13 .joinerVideoBox {
+    max-width: calc(7.7% - 10px);
+  }
+
+  .joinerVideoScreen.grid-14 .joinerVideoBox {
+    max-width: calc(7.1% - 10px);
+  }
+
+  .joinerVideoScreen.grid-15 .joinerVideoBox {
+    max-width: calc(6.6% - 10px);
   }
 
   .recordingSetting {
@@ -125,7 +150,6 @@
 
   .joinerVideoBox.active {
     border: 2px solid #0e77d3;
-    min-height: 80px;
   }
 
   /* Add active speaker highlighting */
@@ -616,11 +640,11 @@
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
 }
 
-.meetingRedirectBox{
+.meetingRedirectBox {
   background: #fff;
   padding: 40px;
   border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   max-width: 500px;
   width: 100%;
 }
@@ -637,15 +661,16 @@
     padding: 20px 0 !important;
   }
 
-  .joinerScreen {
-    & .joinerScreenBlock {
+ .joinerScreen .joinerVideoScreen .joinerVideoBox{
+    height: 200px;
+  }
 
-      .grid-2,
-      .grid-3 {
-        grid-template-columns: repeat(1, 1fr);
-      }
+  .joinerScreen {
+    .joinerVideoScreen .joinerVideoBox {
+      min-height: unset;
     }
   }
+
 
   .control-button.video-control-group.controlViewBlock {
     display: flex;
@@ -767,18 +792,120 @@
     stroke: #fff;
   }
 
-  .joinerScreenContainer .joinerVideoScreen.sharing-on.grid-1,
-  .grid-2,
-  .joinerVideoScreen.sharing-on .grid-3,
-  .grid-4 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr) !important;
+  .sharingScreenActive.joinerScreen {
+    .joinerVideoScreen.grid-1 .joinerVideoBox {
+      max-width: 48%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-2 .joinerVideoBox {
+      max-width: 48%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-3 .joinerVideoBox {
+      max-width: 31%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+    .joinerVideoScreen.grid-4 .joinerVideoBox {
+      max-width: 21%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-5 .joinerVideoBox {
+      max-width: 11%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+    .joinerVideoScreen.grid-6 .joinerVideoBox {
+      max-width: 11%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerScreenBlock {
+      gap: 30px;
+    }
+
+    .shareScreenContainer {
+      height: calc(100vh - 302px);
+    }
+
   }
 
-}
+  .joinerScreen {
+    .joinerVideoScreen.grid-1.sharing-on .joinerVideoBox {
+      max-width: 20%;
+    }
 
-.joinerVideoScreen.sharing-on {
-  overflow-x: auto;
+    .joinerVideoScreen.grid-2 .joinerVideoBox {
+      max-width: 100%;
+      height: 220px;
+    }
+
+    .joinerVideoScreen.grid-3 .joinerVideoBox {
+      max-width: 48%;
+      height: 200px;
+    }
+
+    .joinerVideoScreen.grid-4 .joinerVideoBox {
+      max-width: 48%;
+    }
+
+    .joinerVideoScreen.grid-5 .joinerVideoBox {
+      max-width: 31%;
+    }
+
+    .joinerVideoScreen.grid-6 .joinerVideoBox {
+      max-width: 31%;
+    }
+
+    .joinerVideoScreen.grid-7 .joinerVideoBox {
+      max-width: 18%;
+    }
+
+    .joinerVideoScreen.grid-8 .joinerVideoBox {
+      max-width: 18%;
+    }
+
+    .joinerVideoScreen.grid-9 .joinerVideoBox {
+      max-width: calc(11.1% - 10px);
+    }
+
+    .joinerVideoScreen.grid-10 .joinerVideoBox {
+      max-width: calc(10% - 10px);
+    }
+
+    .joinerVideoScreen.grid-11 .joinerVideoBox {
+      max-width: calc(9.1% - 10px);
+    }
+
+    .joinerVideoScreen.grid-12 .joinerVideoBox {
+      max-width: calc(8.3% - 10px);
+    }
+
+    .joinerVideoScreen.grid-13 .joinerVideoBox {
+      max-width: calc(7.7% - 10px);
+    }
+
+    .joinerVideoScreen.grid-14 .joinerVideoBox {
+      max-width: calc(7.1% - 10px);
+    }
+
+    .joinerVideoScreen.grid-15 .joinerVideoBox {
+      max-width: calc(6.6% - 10px);
+    }
+  }
+
+  .joinerScreen {
+    .shareScreenContainer .videoTagBlock {
+      max-width: 100%;
+    }
+  }
 }
 
 
