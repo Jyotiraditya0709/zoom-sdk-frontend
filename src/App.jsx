@@ -10,6 +10,7 @@ import MeetingRedirect from "./feature/preview/MeetingRedirect";
 import { ZoomProvider } from "./feature/preview/ZoomContext";
 import { MeetingProvider } from "./contexts/MeetingContext";
 import JoinerScreen from "./feature/preview/JoinerScreen";
+import MeetingCreator from "./components/MeetingCreator/MeetingCreator";
 
 import "./App.css";
 
@@ -18,6 +19,8 @@ const App = () => {
     <MeetingProvider>
       <ZoomProvider>
         <Routes>
+          <Route path="/" element={<MeetingCreator />} />
+          <Route path="/create-meeting" element={<MeetingCreator />} />
           <Route path="/joiner-screen" element={<JoinerScreen />} />
           <Route path="/pre-join" element={<PreJoin />} />
           <Route

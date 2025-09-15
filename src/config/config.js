@@ -10,6 +10,7 @@ const config = {
     USER_LEFT: "/api/userLeft",
     MEETING_END: "/api/meetingEnd",
     GET_MEETING_INFO: "/api/getMeetingInfo",
+    CREATE_MEETING: "/api/createMeeting",
   },
 
   // Get full URL for an endpoint

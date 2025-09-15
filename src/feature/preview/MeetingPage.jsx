@@ -718,7 +718,7 @@ const MeetingPage = () => {
           {
             sender: payload.sender.name,
             content: payload.message,
-            timestamp: new Date(payload.timestamp).toLocaleTimeString(),
+            timestamp: payload.timestamp, // Store the original timestamp, not formatted string
           },
         ]);
       });
