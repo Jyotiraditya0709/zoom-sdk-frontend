@@ -915,6 +915,10 @@
       max-width: 100%;
     }
   }
+
+  .joinerScreen .shareScreenContainer .videoTagBlock{
+    height: 300px !important;
+  }
 }
 
 
