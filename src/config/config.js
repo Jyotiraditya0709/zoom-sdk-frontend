@@ -1,7 +1,7 @@
 // Backend configuration
 const config = {
   // Backend URL - change this for production
-  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || "https://zoom-sdk.mastersunion.org",
+  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || "http://localhost:4000",
 
   // API endpoints
   API_ENDPOINTS: {
@@ -11,6 +11,7 @@ const config = {
     MEETING_END: "/api/meetingEnd",
     GET_MEETING_INFO: "/api/getMeetingInfo",
     CREATE_MEETING: "/api/createMeeting",
+    REMOVE_USER: "/api/removeUser",
   },
 
   // Get full URL for an endpoint
