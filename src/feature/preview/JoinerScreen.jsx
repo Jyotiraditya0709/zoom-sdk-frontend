@@ -590,13 +590,40 @@ function JoinerScreen() {
         // Use host privileges to remove old duplicate users (same approach as duplicate hosts)
         for (const duplicate of duplicateParticipants) {
           try {
-            console.log(`🗑️ Removing old duplicate participant: ${duplicate.displayName} (${duplicate.userId})`);
+            // Use URL parameters directly for notifications
+            let displayName = duplicate.displayName; // Default to SDK displayName
+            
+            // If we have URL parameters, use them to map the displayName to actual names
+            if (urlParamNames.mentorName && urlParamNames.menteeName) {
+              // Check if this is the mentor or mentee based on the displayName
+              if (duplicate.displayName === meetingData?.mentorId || duplicate.displayName === userName && userType === "mentor") {
+                displayName = urlParamNames.mentorName;
+              } else if (duplicate.displayName === meetingData?.menteeId || duplicate.displayName === userName && userType === "mentee") {
+                displayName = urlParamNames.menteeName;
+              } else {
+                // For the other participant, use the opposite role's name
+                displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+              }
+            }
+            
+            console.log(`🗑️ Removing old duplicate participant: ${duplicate.displayName} (${duplicate.userId}) -> ${displayName}`);
             await clientRef.current.removeUser(duplicate.userId);
-            console.log(`✅ Successfully removed duplicate: ${duplicate.displayName}`);
-            addNotification(`Removed duplicate participant: ${duplicate.displayName}`);
+            console.log(`✅ Successfully removed duplicate: ${displayName}`);
+            addNotification(`Removed duplicate participant: ${displayName}`);
           } catch (removeError) {
-            console.error(`❌ Failed to remove duplicate ${duplicate.displayName}:`, removeError);
-            addNotification(`Failed to remove duplicate participant: ${duplicate.displayName}`);
+            // Use URL parameters for error notification too
+            let displayName = duplicate.displayName;
+            if (urlParamNames.mentorName && urlParamNames.menteeName) {
+              if (duplicate.displayName === meetingData?.mentorId || duplicate.displayName === userName && userType === "mentor") {
+                displayName = urlParamNames.mentorName;
+              } else if (duplicate.displayName === meetingData?.menteeId || duplicate.displayName === userName && userType === "mentee") {
+                displayName = urlParamNames.menteeName;
+              } else {
+                displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+              }
+            }
+            console.error(`❌ Failed to remove duplicate ${displayName}:`, removeError);
+            addNotification(`Failed to remove duplicate participant: ${displayName}`);
           }
         }
       }
@@ -3802,7 +3829,24 @@ function JoinerScreen() {
 
         if (item.userId !== selfUserIdRef.current) {
 
+          // Use URL parameters directly for notifications (simpler and more reliable)
+          let displayName = item.displayName; // Default to SDK displayName
+          
+          // If we have URL parameters, use them to map the displayName to actual names
+          if (urlParamNames.mentorName && urlParamNames.menteeName) {
+            // Check if this is the mentor or mentee based on the displayName (which contains the mentor/mentee ID)
+            if (item.displayName === meetingData?.mentorId || item.displayName === userName && userType === "mentor") {
+              displayName = urlParamNames.mentorName;
+            } else if (item.displayName === meetingData?.menteeId || item.displayName === userName && userType === "mentee") {
+              displayName = urlParamNames.menteeName;
+            } else {
+              // For the other participant, use the opposite role's name
+              displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+            }
+          }
+
           console.log(`🔔 User join notification: ${item.userId} (${item.displayName}) -> ${displayName}`);
+          console.log(`🔍 Using URL parameters:`, { urlParamNames, userType, displayName });
 
           addNotification(`${displayName} joined the session.`);
 
@@ -4302,9 +4346,24 @@ function JoinerScreen() {
 
         // Show notification for remote users
 
-        const displayName = getProperDisplayName(item.userId, item.displayName);
+        // Use URL parameters directly for notifications (simpler and more reliable)
+        let displayName = item.displayName; // Default to SDK displayName
+        
+        // If we have URL parameters, use them to map the displayName to actual names
+        if (urlParamNames.mentorName && urlParamNames.menteeName) {
+          // Check if this is the mentor or mentee based on the displayName (which contains the mentor/mentee ID)
+          if (item.displayName === meetingData?.mentorId || item.displayName === userName && userType === "mentor") {
+            displayName = urlParamNames.mentorName;
+          } else if (item.displayName === meetingData?.menteeId || item.displayName === userName && userType === "mentee") {
+            displayName = urlParamNames.menteeName;
+          } else {
+            // For the other participant, use the opposite role's name
+            displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+          }
+        }
 
         console.log(`🔔 User left notification: ${item.userId} (${item.displayName}) -> ${displayName}`);
+        console.log(`🔍 Using URL parameters:`, { urlParamNames, userType, displayName });
 
         addNotification(`${displayName} left the session.`);
 
@@ -6351,7 +6410,11 @@ function JoinerScreen() {
 
     // Get meeting data from context or props
 
+    console.log("🔄 Starting redirect to meeting end. SessionName:", sessionName);
+
     const redirectLink = sessionName ? await getMeetingRedirectLink(sessionName) : null;
+
+    console.log("🔗 Retrieved redirect link:", redirectLink);
 
     
 
@@ -6367,11 +6430,17 @@ function JoinerScreen() {
 
       userId: userName,
 
-      role: role
+      role: role,
+
+      userRole: role,  // Add userRole for MeetingRedirect component
+
+      userType: userType  // Add userType for MeetingRedirect component
 
     };
 
 
+
+    console.log("🔄 Redirecting to meeting end page with data:", meetingData);
 
     // Navigate to MeetingRedirect with meeting data
 
@@ -6409,13 +6478,14 @@ function JoinerScreen() {
 
       
 
-      if (response.data?.IsSuccess && response.data?.Data?.redirectLink) {
-
-        return response.data.Data.redirectLink;
-
-      }
-
+      console.log("🔗 Meeting redirect API response:", response.data);
       
+      if (response.data?.IsSuccess && response.data?.Data?.redirectLink) {
+        console.log("✅ Found redirect link:", response.data.Data.redirectLink);
+        return response.data.Data.redirectLink;
+      } else {
+        console.log("❌ No redirect link found in response. Available fields:", Object.keys(response.data?.Data || {}));
+      }
 
       return null;
 
@@ -7181,7 +7251,7 @@ function JoinerScreen() {
 
         userName={getProperDisplayName(userId, displayName)}
 
-        meetingTitle={sessionName}
+        meetingTitle={meetingData?.agenda || sessionName}
 
         startTime={meetingStartTime}
 
@@ -9619,7 +9689,7 @@ function JoinerScreen() {
 
                     <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
 
-                      {sessionName}
+                      {meetingData?.agenda || sessionName}
 
                     </span>
 
