@@ -93,6 +93,10 @@
     max-width: calc(50% - 10px);
   }
 
+  &.sharingScreenActive .joinerVideoScreen.grid-2 .joinerVideoBox{
+    max-width: 20%;
+  }
+
   .joinerVideoScreen.grid-3 .joinerVideoBox {
     max-width: calc(50% - 10px);
     height: 48%;
@@ -953,5 +957,12 @@
 @media (max-width: 376px) {
   .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin {
     height: 176px !important;
+  }
+}
+
+
+@media (min-width: 1700px) {
+  .joinerScreen.sharingScreenActive .shareScreenContainer .videoTagBlock {
+    max-width: 57%;
   }
 }
