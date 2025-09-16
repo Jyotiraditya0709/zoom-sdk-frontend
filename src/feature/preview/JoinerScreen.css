@@ -958,7 +958,7 @@
 
 @media (min-width: 1700px) {
   .joinerScreen.sharingScreenActive .shareScreenContainer .videoTagBlock {
-    max-width: 57%;
+    max-width: 100%;
   }
 }
 
