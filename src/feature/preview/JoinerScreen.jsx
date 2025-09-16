@@ -3317,8 +3317,13 @@ function JoinerScreen() {
 
     const handleShareStopped = () => {
 
-      console.log("🛑 Share stopped event detected, cleaning up share...");
+      console.log("🛑 Share stopped event detected, cleaning up share...", {
+        isSharingScreen,
+        currentSharerId,
+        selfUserId: selfUserIdRef.current
+      });
 
+      // Always cleanup when share is stopped, regardless of current state
       stopScreenShareCleanup();
 
     };
@@ -3374,6 +3379,23 @@ function JoinerScreen() {
     client.on("share-content-stopped", handleShareStopped);
 
     client.on("active-share-change", handleActiveShareChange);
+
+    // Listen for browser "Stop sharing" button (passively-stop-share event)
+
+    client.on("passively-stop-share", () => {
+
+      console.log("[SCREEN SHARE] Browser 'Stop sharing' button detected via passively-stop-share event", {
+        isSharingScreen,
+        currentSharerId,
+        selfUserId: selfUserIdRef.current,
+        isActuallySharing: mediaStreamRef.current?.isSharingScreen
+      });
+
+      // ALWAYS cleanup when browser stops sharing - this is the most reliable approach
+      console.log("[SCREEN SHARE] Force cleaning up due to browser stop share event");
+      stopScreenShareCleanup();
+
+    });
 
 
 
@@ -4591,6 +4613,8 @@ function JoinerScreen() {
 
       client.off("active-share-change", handleActiveShareChange);
 
+      client.off("passively-stop-share");
+
 
 
       // Clean up error handling event listeners
@@ -5151,27 +5175,27 @@ function JoinerScreen() {
 
     // This prevents black tiles from remaining when screen share is stopped
 
-    const screenShareVideoElement = document.getElementById('my-screen-share-content-video');
+    const screenShareVideoElementInitial = document.getElementById('my-screen-share-content-video');
 
-    if (screenShareVideoElement) {
+    if (screenShareVideoElementInitial) {
 
       console.log("[SCREEN SHARE] Cleaning up black tile video element");
 
       // Stop any video tracks
 
-      if (screenShareVideoElement.srcObject) {
+      if (screenShareVideoElementInitial.srcObject) {
 
-        const tracks = screenShareVideoElement.srcObject.getTracks();
+        const tracks = screenShareVideoElementInitial.srcObject.getTracks();
 
         tracks.forEach(track => track.stop());
 
-        screenShareVideoElement.srcObject = null;
+        screenShareVideoElementInitial.srcObject = null;
 
       }
 
       // Hide the element instead of removing it to allow reuse
 
-      screenShareVideoElement.style.display = "none";
+      screenShareVideoElementInitial.style.display = "none";
 
     }
 
@@ -5201,13 +5225,153 @@ function JoinerScreen() {
 
 
 
-    // Update state
+    // Update state - use functional updates to ensure we get the latest state
 
-    setIsSharingScreen(false);
+    setIsSharingScreen(prev => {
 
-    setCurrentSharerId(null);
+      console.log("[SCREEN SHARE] Setting isSharingScreen from", prev, "to false");
 
-    setIsRemoteSharing(false);
+      return false;
+
+    });
+
+    setCurrentSharerId(prev => {
+
+      console.log("[SCREEN SHARE] Setting currentSharerId from", prev, "to null");
+
+      return null;
+
+    });
+
+    setIsRemoteSharing(prev => {
+
+      console.log("[SCREEN SHARE] Setting isRemoteSharing from", prev, "to false");
+
+      return false;
+
+    });
+
+    // Immediate UI cleanup - don't wait for timeout
+
+    if (shareRenderVideoRef.current) {
+
+      shareRenderVideoRef.current.style.display = "none";
+
+      shareRenderVideoRef.current.srcObject = null;
+
+    }
+
+    if (shareCanvasRef.current) {
+
+      shareCanvasRef.current.style.display = "none";
+
+      const ctx = shareCanvasRef.current.getContext("2d");
+
+      if (ctx) {
+
+        ctx.clearRect(0, 0, shareCanvasRef.current.width, shareCanvasRef.current.height);
+
+      }
+
+    }
+
+    const screenShareVideoElement = document.getElementById('my-screen-share-content-video');
+
+    if (screenShareVideoElement) {
+
+      screenShareVideoElement.style.display = "none";
+
+      screenShareVideoElement.srcObject = null;
+
+    }
+
+    // Force UI update by ensuring all screen share elements are hidden (with timeout as backup)
+
+    setTimeout(() => {
+
+      if (shareRenderVideoRef.current) {
+
+        shareRenderVideoRef.current.style.display = "none";
+
+        // Also clear any remaining video content
+
+        shareRenderVideoRef.current.srcObject = null;
+
+      }
+
+      if (shareCanvasRef.current) {
+
+        shareCanvasRef.current.style.display = "none";
+
+        // Clear canvas content
+
+        const ctx = shareCanvasRef.current.getContext("2d");
+
+        if (ctx) {
+
+          ctx.clearRect(0, 0, shareCanvasRef.current.width, shareCanvasRef.current.height);
+
+        }
+
+      }
+
+      const screenShareVideoElementBackup = document.getElementById('my-screen-share-content-video');
+
+      if (screenShareVideoElementBackup) {
+
+        screenShareVideoElementBackup.style.display = "none";
+
+        // Clear any remaining video content
+
+        screenShareVideoElementBackup.srcObject = null;
+
+      }
+
+      // Also check for any other video elements that might be showing screen share content
+
+      const allVideoElements = document.querySelectorAll('video');
+
+      allVideoElements.forEach(video => {
+
+        if (video.style.display !== 'none' && (video.id.includes('screen-share') || video.id.includes('share-content'))) {
+
+          console.log("[SCREEN SHARE] Hiding video element:", video.id);
+
+          video.style.display = 'none';
+
+          video.srcObject = null;
+
+        }
+
+      });
+
+      // Also check for any canvas elements that might be showing screen share content
+
+      const allCanvasElements = document.querySelectorAll('canvas');
+
+      allCanvasElements.forEach(canvas => {
+
+        if (canvas.style.display !== 'none' && (canvas.id.includes('screen-share') || canvas.id.includes('share-content'))) {
+
+          console.log("[SCREEN SHARE] Hiding canvas element:", canvas.id);
+
+          canvas.style.display = 'none';
+
+          // Clear canvas content
+
+          const ctx = canvas.getContext("2d");
+
+          if (ctx) {
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          }
+
+        }
+
+      });
+
+    }, 100);
 
 
 
@@ -5216,6 +5380,16 @@ function JoinerScreen() {
     if (typeof cleanupBrowserScreenShareHandlers === 'function') {
 
       cleanupBrowserScreenShareHandlers();
+
+    }
+
+    // Clean up additional status check interval
+
+    if (window._screenShareStatusCheckInterval) {
+
+      clearInterval(window._screenShareStatusCheckInterval);
+
+      window._screenShareStatusCheckInterval = null;
 
     }
 
@@ -5479,6 +5653,39 @@ function JoinerScreen() {
 
             setupBrowserScreenShareHandlers();
 
+            // Add additional detection for browser stop sharing
+            const checkScreenShareStatus = () => {
+              if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+                try {
+                  const isActuallySharing = mediaStreamRef.current?.isSharingScreen;
+                  const hasActiveTracks = stream?.getVideoTracks()?.some(track => track.readyState === 'live');
+                  
+                  // Check if tracks are ended (browser stopped sharing)
+                  const tracksEnded = stream?.getVideoTracks()?.some(track => track.readyState === 'ended');
+                  
+                  if (!isActuallySharing || !hasActiveTracks || tracksEnded) {
+                    console.log("[SCREEN SHARE] Browser stop detected via visibility/status check", {
+                      isActuallySharing,
+                      hasActiveTracks,
+                      tracksEnded,
+                      trackStates: stream?.getVideoTracks()?.map(track => track.readyState)
+                    });
+                    stopScreenShareCleanup();
+                    return;
+                  }
+                } catch (error) {
+                  console.log("[SCREEN SHARE] Error checking screen share status:", error);
+                }
+              }
+            };
+
+            // Check immediately and then periodically
+            checkScreenShareStatus();
+            const statusCheckInterval = setInterval(checkScreenShareStatus, 500);
+
+            // Store interval for cleanup
+            window._screenShareStatusCheckInterval = statusCheckInterval;
+
           }
 
         }, 100);
@@ -5491,13 +5698,27 @@ function JoinerScreen() {
 
         const screenShareCheckInterval = setInterval(() => {
 
-          if (isSharingScreen && currentSharerId === selfUserIdRef.current) {
+          // Use a ref to get the current state value instead of stale closure
+          const currentIsSharingScreen = isSharingScreen;
+          const currentSharerId = selfUserIdRef.current;
+
+          if (currentIsSharingScreen && currentSharerId === selfUserIdRef.current) {
 
             try {
 
-              if (!mediaStreamRef.current.isSharingScreen) {
+              // Check multiple conditions to detect if screen sharing has stopped
+              const isActuallySharing = mediaStreamRef.current?.isSharingScreen;
+              const hasActiveTracks = stream?.getVideoTracks()?.some(track => track.readyState === 'live');
+              const tracksEnded = stream?.getVideoTracks()?.some(track => track.readyState === 'ended');
 
-                console.log("[SCREEN SHARE] Periodic check detected screen sharing ended");
+              if (!isActuallySharing || !hasActiveTracks || tracksEnded) {
+
+                console.log("[SCREEN SHARE] Periodic check detected screen sharing ended", {
+                  isActuallySharing,
+                  hasActiveTracks,
+                  tracksEnded,
+                  trackStates: stream?.getVideoTracks()?.map(track => track.readyState)
+                });
 
                 clearInterval(screenShareCheckInterval);
 
@@ -5507,7 +5728,7 @@ function JoinerScreen() {
 
             } catch (error) {
 
-              console.log("[SCREEN SHARE] Periodic check error - screen sharing may have ended");
+              console.log("[SCREEN SHARE] Periodic check error - screen sharing may have ended", error);
 
               clearInterval(screenShareCheckInterval);
 
@@ -5521,13 +5742,22 @@ function JoinerScreen() {
 
           }
 
-        }, 2000); // Check every 2 seconds
+        }, 1000); // Check every 1 second for faster detection
 
       } else {
 
-        console.log("[SCREEN SHARE] Stopping screen share...");
+        console.log("[SCREEN SHARE] Stopping screen share via our button...");
 
-        stopScreenShareCleanup();
+        // Manually trigger the passively-stop-share event to ensure consistent cleanup
+        // This ensures both browser stop and our button use the same cleanup path
+        try {
+          // Trigger the same event that browser stop would trigger
+          client.emit("passively-stop-share");
+        } catch (error) {
+          console.log("[SCREEN SHARE] Could not emit passively-stop-share event:", error);
+          // Fallback to direct cleanup if event emission fails
+          stopScreenShareCleanup();
+        }
 
       }
 
