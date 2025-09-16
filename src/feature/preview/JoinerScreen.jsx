@@ -5155,7 +5155,7 @@ function JoinerScreen() {
 
     if (screenShareVideoElement) {
 
-      console.log("[SCREEN SHARE] Removing black tile video element");
+      console.log("[SCREEN SHARE] Cleaning up black tile video element");
 
       // Stop any video tracks
 
@@ -5169,9 +5169,9 @@ function JoinerScreen() {
 
       }
 
-      // Remove the element from DOM
+      // Hide the element instead of removing it to allow reuse
 
-      screenShareVideoElement.remove();
+      screenShareVideoElement.style.display = "none";
 
     }
 
@@ -5191,7 +5191,9 @@ function JoinerScreen() {
 
         element.srcObject = null;
 
-        element.remove();
+        // Hide the element instead of removing it to allow reuse
+
+        element.style.display = "none";
 
       }
 
@@ -5359,6 +5361,10 @@ function JoinerScreen() {
 
           if (shareRenderVideoRef.current) {
 
+            // Reset any previous state
+
+            shareRenderVideoRef.current.srcObject = null;
+
             shareRenderVideoRef.current.style.width = "850px";
 
             shareRenderVideoRef.current.style.height = "720px";
@@ -5392,6 +5398,16 @@ function JoinerScreen() {
           // Ensure canvas element is properly set up
 
           if (shareCanvasRef.current) {
+
+            // Clear any previous content
+
+            const ctx = shareCanvasRef.current.getContext("2d");
+
+            if (ctx) {
+
+              ctx.clearRect(0, 0, shareCanvasRef.current.width, shareCanvasRef.current.height);
+
+            }
 
             shareCanvasRef.current.width = 1280;
 
