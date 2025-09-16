@@ -15,7 +15,7 @@ const Header = ({
   const location = useLocation();
   const pathname = location.pathname;
   const { orgId, isLoading } = useOrgId();
-  const [timer, setTimer] = useState("00:00:00");
+  // const [timer, setTimer] = useState("00:00:00"); // COMMENTED OUT - timer logic disabled
   const [isVisible, setIsVisible] = useState(true);
 
   // Ensure header visibility after mount (fixes refresh issues in production)
@@ -66,36 +66,36 @@ const Header = ({
     };
   }, [pathname, userEmail, userName, meetingTitle, showTimer]);
 
-  // Timer functionality
-  useEffect(() => {
-    if (!showTimer || !startTime) return;
+  // Timer functionality - COMMENTED OUT
+  // useEffect(() => {
+  //   if (!showTimer || !startTime) return;
 
-    const updateTimer = () => {
-      const now = new Date();
-      const start = new Date(startTime);
-      const diff = now - start;
+  //   const updateTimer = () => {
+  //     const now = new Date();
+  //     const start = new Date(startTime);
+  //     const diff = now - start;
 
-      if (diff < 0) {
-        setTimer("00:00:00");
-        return;
-      }
+  //     if (diff < 0) {
+  //       setTimer("00:00:00");
+  //       return;
+  //     }
 
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  //     const hours = Math.floor(diff / (1000 * 60 * 60));
+  //     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  //     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-      setTimer(
-        `${hours.toString().padStart(2, "0")}:${minutes
-          .toString()
-          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-      );
-    };
+  //     setTimer(
+  //       `${hours.toString().padStart(2, "0")}:${minutes
+  //         .toString()
+  //         .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+  //     );
+  //   };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+  //   updateTimer();
+  //   const interval = setInterval(updateTimer, 1000);
 
-    return () => clearInterval(interval);
-  }, [startTime, showTimer]);
+  //   return () => clearInterval(interval);
+  // }, [startTime, showTimer]);
 
   return (
     <div
@@ -158,13 +158,13 @@ const Header = ({
             <span className="headerDescription mobHide">{meetingTitle}</span>
           </div>
 
-          <div className="headerRightJoinerScreen">
+          {/* <div className="headerRightJoinerScreen">
             {showTimer && (
               <div className="timerCount">
                 <WatchIcon /> {timer}
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       )}
       

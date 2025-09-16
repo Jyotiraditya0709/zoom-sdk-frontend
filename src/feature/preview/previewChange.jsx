@@ -664,6 +664,18 @@ const PreJoin = () => {
 
   // ========== Enhanced Mic Testing Feature ==========
   const handleMicTest = async () => {
+    // Stop any running speaker test before starting mic test
+    if (isSpeakerTesting && speakerTesterRef.current) {
+      try {
+        speakerTesterRef.current.destroy();
+        speakerTesterRef.current = null;
+        setIsSpeakerTesting(false);
+        console.log("🔇 Speaker test stopped (mic test starting)");
+      } catch (err) {
+        console.error("Error stopping speaker test before mic test:", err);
+      }
+    }
+
     // Check if microphone permission is granted
     if (!hasMicPermission) {
       try {
@@ -885,6 +897,20 @@ const PreJoin = () => {
   const speakerTesterRef = useRef(null);
 
   const handleSpeakerTest = () => {
+    // Stop any running mic test before starting speaker test
+    if (isMicTesting && microPhoneTesterRef.current) {
+      try {
+        microPhoneTesterRef.current.stop();
+        microPhoneTesterRef.current = null;
+        setIsMicTesting(false);
+        setMicLevel(0);
+        setMicTestPhase("idle");
+        console.log("🎤 Mic test stopped (speaker test starting)");
+      } catch (err) {
+        console.error("Error stopping mic test before speaker test:", err);
+      }
+    }
+
     if (!localAudioTrack) {
       setError("Please start preview first");
       return;
@@ -1064,7 +1090,7 @@ const PreJoin = () => {
                           micTestPhase === "playing" ? "playing" : ""
                         }`}
                       onClick={handleMicTest}
-                      disabled={!hasMicPermission}
+                      disabled={!hasMicPermission || isSpeakerTesting}
                     >
                       {micTestPhase === "recording" && <span className="recording-dot"></span>}
                       {micTestPhase === "playing" && <span className="playing-dot"></span>}
@@ -1079,6 +1105,7 @@ const PreJoin = () => {
                       className={`commonTextBtn testSpeaker ${isSpeakerTesting ? "testing" : ""
                         }`}
                       onClick={handleSpeakerTest}
+                      disabled={isMicTesting}
                     >
                       {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
                     </button>

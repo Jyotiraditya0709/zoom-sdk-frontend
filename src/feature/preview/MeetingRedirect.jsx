@@ -11,6 +11,10 @@ const MeetingRedirect = () => {
   // Get meeting data from location state or URL params
   const meetingData = location.state?.meetingData || {};
   const { redirectLink, meetingStatus, endReason, userRole, userType } = meetingData;
+  
+  // Debug logging
+  console.log("🔄 MeetingRedirect received data:", meetingData);
+  console.log("🔄 MeetingRedirect extracted values:", { redirectLink, meetingStatus, endReason, userRole, userType });
 
   useEffect(() => {
     // Start countdown
@@ -33,11 +37,15 @@ const MeetingRedirect = () => {
     const isHost = userRole === 1 || userRole === "1";
     const isMentor = userType === "mentor";
     
+    console.log("🔄 handleRedirect called with:", { isHost, isMentor, userRole, userType, redirectLink });
+    
     if ((isHost || isMentor) && redirectLink && redirectLink.trim() !== "") {
       // Redirect to external link for hosts/mentors
+      console.log("🔄 Redirecting to external link:", redirectLink);
       window.location.href = redirectLink;
     } else {
       // Show feedback component for non-hosts/non-mentors
+      console.log("🔄 Showing feedback component instead of redirect");
       setShowFeedback(true);
     }
   };

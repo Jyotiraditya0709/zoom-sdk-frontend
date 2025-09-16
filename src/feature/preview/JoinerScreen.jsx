@@ -590,13 +590,40 @@ function JoinerScreen() {
         // Use host privileges to remove old duplicate users (same approach as duplicate hosts)
         for (const duplicate of duplicateParticipants) {
           try {
-            console.log(`🗑️ Removing old duplicate participant: ${duplicate.displayName} (${duplicate.userId})`);
+            // Use URL parameters directly for notifications
+            let displayName = duplicate.displayName; // Default to SDK displayName
+            
+            // If we have URL parameters, use them to map the displayName to actual names
+            if (urlParamNames.mentorName && urlParamNames.menteeName) {
+              // Check if this is the mentor or mentee based on the displayName
+              if (duplicate.displayName === meetingData?.mentorId || duplicate.displayName === userName && userType === "mentor") {
+                displayName = urlParamNames.mentorName;
+              } else if (duplicate.displayName === meetingData?.menteeId || duplicate.displayName === userName && userType === "mentee") {
+                displayName = urlParamNames.menteeName;
+              } else {
+                // For the other participant, use the opposite role's name
+                displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+              }
+            }
+            
+            console.log(`🗑️ Removing old duplicate participant: ${duplicate.displayName} (${duplicate.userId}) -> ${displayName}`);
             await clientRef.current.removeUser(duplicate.userId);
-            console.log(`✅ Successfully removed duplicate: ${duplicate.displayName}`);
-            addNotification(`Removed duplicate participant: ${duplicate.displayName}`);
+            console.log(`✅ Successfully removed duplicate: ${displayName}`);
+            addNotification(`Removed duplicate participant: ${displayName}`);
           } catch (removeError) {
-            console.error(`❌ Failed to remove duplicate ${duplicate.displayName}:`, removeError);
-            addNotification(`Failed to remove duplicate participant: ${duplicate.displayName}`);
+            // Use URL parameters for error notification too
+            let displayName = duplicate.displayName;
+            if (urlParamNames.mentorName && urlParamNames.menteeName) {
+              if (duplicate.displayName === meetingData?.mentorId || duplicate.displayName === userName && userType === "mentor") {
+                displayName = urlParamNames.mentorName;
+              } else if (duplicate.displayName === meetingData?.menteeId || duplicate.displayName === userName && userType === "mentee") {
+                displayName = urlParamNames.menteeName;
+              } else {
+                displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+              }
+            }
+            console.error(`❌ Failed to remove duplicate ${displayName}:`, removeError);
+            addNotification(`Failed to remove duplicate participant: ${displayName}`);
           }
         }
       }
@@ -2349,19 +2376,66 @@ function JoinerScreen() {
 
       const message = payload.message || payload.code || "Unknown media error";
 
-      addNotification(`Media error: ${message}`);
+      console.error("Active media failed:", payload);
 
+      // Don't show notification to avoid disrupting user experience
+      // addNotification(`Media error: ${message}`);
 
+      // Try to automatically recover from media failures
+      const handleMediaRecovery = async () => {
+        try {
+          // Get available devices
+          const devices = await ZoomVideo.getDevices();
+          const mics = devices.filter((d) => d.kind === "audioinput");
+          const speakers = devices.filter((d) => d.kind === "audiooutput");
+          
+          // Try to switch to a working device
+          if (mics.length > 0 && mediaStreamRef.current) {
+            // Find a non-communication device
+            const nonCommMic = mics.find(mic => 
+              !mic.label.toLowerCase().includes('communication') && 
+              !mic.label.toLowerCase().includes('comm')
+            ) || mics[0];
+            
+            try {
+              await mediaStreamRef.current.switchMicrophone(nonCommMic.deviceId);
+              setSelectedMic(nonCommMic.deviceId);
+              console.log("Auto-recovered microphone to:", nonCommMic.label);
+            } catch (micErr) {
+              console.error("Failed to auto-recover microphone:", micErr);
+            }
+          }
+          
+          if (speakers.length > 0 && mediaStreamRef.current) {
+            // Find a non-communication device
+            const nonCommSpeaker = speakers.find(speaker => 
+              !speaker.label.toLowerCase().includes('communication') && 
+              !speaker.label.toLowerCase().includes('comm')
+            ) || speakers[0];
+            
+            try {
+              await mediaStreamRef.current.switchSpeaker(nonCommSpeaker.deviceId);
+              setSelectedSpeaker(nonCommSpeaker.deviceId);
+              console.log("Auto-recovered speaker to:", nonCommSpeaker.label);
+            } catch (speakerErr) {
+              console.error("Failed to auto-recover speaker:", speakerErr);
+            }
+          }
+        } catch (recoveryErr) {
+          console.error("Media recovery failed:", recoveryErr);
+        }
+      };
+      
+      // Attempt recovery after a short delay
+      setTimeout(handleMediaRecovery, 1000);
 
-      // Show warning dialog instead of throwing error
-
-      setMediaWarningMessage(
-
-        `We detected an issue with the microphone that we cannot resolve.\n\n Your mic is muted in system or browser settings.\n\n Please open your settings to unmute and adjust the level..\n\nPlease refresh the page to try to fix it.`
-
-      );
-
-      setShowMediaWarning(true);
+      // Only show warning for critical errors that can't be auto-recovered
+      if (payload.code && (payload.code === 2001 || payload.code === 2002)) {
+        setMediaWarningMessage(
+          `We detected an issue with your audio device. We've automatically switched to a compatible device.\n\nIf you continue to have issues, please check your system audio settings.`
+        );
+        setShowMediaWarning(true);
+      }
 
     });
 
@@ -3755,7 +3829,24 @@ function JoinerScreen() {
 
         if (item.userId !== selfUserIdRef.current) {
 
+          // Use URL parameters directly for notifications (simpler and more reliable)
+          let displayName = item.displayName; // Default to SDK displayName
+          
+          // If we have URL parameters, use them to map the displayName to actual names
+          if (urlParamNames.mentorName && urlParamNames.menteeName) {
+            // Check if this is the mentor or mentee based on the displayName (which contains the mentor/mentee ID)
+            if (item.displayName === meetingData?.mentorId || item.displayName === userName && userType === "mentor") {
+              displayName = urlParamNames.mentorName;
+            } else if (item.displayName === meetingData?.menteeId || item.displayName === userName && userType === "mentee") {
+              displayName = urlParamNames.menteeName;
+            } else {
+              // For the other participant, use the opposite role's name
+              displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+            }
+          }
+
           console.log(`🔔 User join notification: ${item.userId} (${item.displayName}) -> ${displayName}`);
+          console.log(`🔍 Using URL parameters:`, { urlParamNames, userType, displayName });
 
           addNotification(`${displayName} joined the session.`);
 
@@ -4255,9 +4346,24 @@ function JoinerScreen() {
 
         // Show notification for remote users
 
-        const displayName = getProperDisplayName(item.userId, item.displayName);
+        // Use URL parameters directly for notifications (simpler and more reliable)
+        let displayName = item.displayName; // Default to SDK displayName
+        
+        // If we have URL parameters, use them to map the displayName to actual names
+        if (urlParamNames.mentorName && urlParamNames.menteeName) {
+          // Check if this is the mentor or mentee based on the displayName (which contains the mentor/mentee ID)
+          if (item.displayName === meetingData?.mentorId || item.displayName === userName && userType === "mentor") {
+            displayName = urlParamNames.mentorName;
+          } else if (item.displayName === meetingData?.menteeId || item.displayName === userName && userType === "mentee") {
+            displayName = urlParamNames.menteeName;
+          } else {
+            // For the other participant, use the opposite role's name
+            displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
+          }
+        }
 
         console.log(`🔔 User left notification: ${item.userId} (${item.displayName}) -> ${displayName}`);
+        console.log(`🔍 Using URL parameters:`, { urlParamNames, userType, displayName });
 
         addNotification(`${displayName} left the session.`);
 
@@ -4393,19 +4499,66 @@ function JoinerScreen() {
 
       const message = payload.message || payload.code || "Unknown media error";
 
-      addNotification(`Media error: ${message}`);
+      console.error("Active media failed:", payload);
 
+      // Don't show notification to avoid disrupting user experience
+      // addNotification(`Media error: ${message}`);
 
+      // Try to automatically recover from media failures
+      const handleMediaRecovery = async () => {
+        try {
+          // Get available devices
+          const devices = await ZoomVideo.getDevices();
+          const mics = devices.filter((d) => d.kind === "audioinput");
+          const speakers = devices.filter((d) => d.kind === "audiooutput");
+          
+          // Try to switch to a working device
+          if (mics.length > 0 && mediaStreamRef.current) {
+            // Find a non-communication device
+            const nonCommMic = mics.find(mic => 
+              !mic.label.toLowerCase().includes('communication') && 
+              !mic.label.toLowerCase().includes('comm')
+            ) || mics[0];
+            
+            try {
+              await mediaStreamRef.current.switchMicrophone(nonCommMic.deviceId);
+              setSelectedMic(nonCommMic.deviceId);
+              console.log("Auto-recovered microphone to:", nonCommMic.label);
+            } catch (micErr) {
+              console.error("Failed to auto-recover microphone:", micErr);
+            }
+          }
+          
+          if (speakers.length > 0 && mediaStreamRef.current) {
+            // Find a non-communication device
+            const nonCommSpeaker = speakers.find(speaker => 
+              !speaker.label.toLowerCase().includes('communication') && 
+              !speaker.label.toLowerCase().includes('comm')
+            ) || speakers[0];
+            
+            try {
+              await mediaStreamRef.current.switchSpeaker(nonCommSpeaker.deviceId);
+              setSelectedSpeaker(nonCommSpeaker.deviceId);
+              console.log("Auto-recovered speaker to:", nonCommSpeaker.label);
+            } catch (speakerErr) {
+              console.error("Failed to auto-recover speaker:", speakerErr);
+            }
+          }
+        } catch (recoveryErr) {
+          console.error("Media recovery failed:", recoveryErr);
+        }
+      };
+      
+      // Attempt recovery after a short delay
+      setTimeout(handleMediaRecovery, 1000);
 
-      // Show warning dialog instead of throwing error
-
-      setMediaWarningMessage(
-
-        `We detected an issue with the microphone that we cannot resolve.\n\n Your mic is muted in system or browser settings.\n\n Please open your settings to unmute and adjust the level..\n\nPlease refresh the page to try to fix it.`
-
-      );
-
-      setShowMediaWarning(true);
+      // Only show warning for critical errors that can't be auto-recovered
+      if (payload.code && (payload.code === 2001 || payload.code === 2002)) {
+        setMediaWarningMessage(
+          `We detected an issue with your audio device. We've automatically switched to a compatible device.\n\nIf you continue to have issues, please check your system audio settings.`
+        );
+        setShowMediaWarning(true);
+      }
 
     });
 
@@ -6257,7 +6410,11 @@ function JoinerScreen() {
 
     // Get meeting data from context or props
 
+    console.log("🔄 Starting redirect to meeting end. SessionName:", sessionName);
+
     const redirectLink = sessionName ? await getMeetingRedirectLink(sessionName) : null;
+
+    console.log("🔗 Retrieved redirect link:", redirectLink);
 
     
 
@@ -6273,11 +6430,17 @@ function JoinerScreen() {
 
       userId: userName,
 
-      role: role
+      role: role,
+
+      userRole: role,  // Add userRole for MeetingRedirect component
+
+      userType: userType  // Add userType for MeetingRedirect component
 
     };
 
 
+
+    console.log("🔄 Redirecting to meeting end page with data:", meetingData);
 
     // Navigate to MeetingRedirect with meeting data
 
@@ -6315,13 +6478,14 @@ function JoinerScreen() {
 
       
 
-      if (response.data?.IsSuccess && response.data?.Data?.redirectLink) {
-
-        return response.data.Data.redirectLink;
-
-      }
-
+      console.log("🔗 Meeting redirect API response:", response.data);
       
+      if (response.data?.IsSuccess && response.data?.Data?.redirectLink) {
+        console.log("✅ Found redirect link:", response.data.Data.redirectLink);
+        return response.data.Data.redirectLink;
+      } else {
+        console.log("❌ No redirect link found in response. Available fields:", Object.keys(response.data?.Data || {}));
+      }
 
       return null;
 
@@ -6701,13 +6865,56 @@ function JoinerScreen() {
 
 
 
+  // Helper function to validate if a device is problematic
+  const isProblematicDevice = (deviceLabel) => {
+    const label = deviceLabel.toLowerCase();
+    return label.includes('communication') || label.includes('comm') || 
+           label.includes('default -') || label.includes('communications -');
+  };
+
+  // Helper function to find a safe alternative device
+  const findSafeDevice = (devices, currentDeviceId) => {
+    // First try to find a non-communication device
+    const nonCommDevice = devices.find(device => 
+      device.deviceId !== currentDeviceId && !isProblematicDevice(device.label)
+    );
+    
+    if (nonCommDevice) return nonCommDevice;
+    
+    // If no non-comm device found, return the first available device
+    return devices.find(device => device.deviceId !== currentDeviceId) || devices[0];
+  };
+
   const switchMicrophone = async (deviceId) => {
 
     if (mediaStreamRef.current) {
 
       try {
 
-        await mediaStreamRef.current.switchMicrophone(deviceId);
+        // Store previous device for fallback
+        const previousDevice = selectedMic;
+        
+        // Check if the selected device is problematic
+        const devices = await ZoomVideo.getDevices();
+        const mics = devices.filter((d) => d.kind === "audioinput");
+        const selectedDevice = mics.find(d => d.deviceId === deviceId);
+        
+        if (selectedDevice && isProblematicDevice(selectedDevice.label)) {
+          console.log("Detected problematic communication device, finding alternative");
+          const safeDevice = findSafeDevice(mics, deviceId);
+          if (safeDevice) {
+            deviceId = safeDevice.deviceId;
+            console.log("Switching to safe device:", safeDevice.label);
+          }
+        }
+        
+        // Attempt to switch microphone with timeout
+        const switchPromise = mediaStreamRef.current.switchMicrophone(deviceId);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Device switch timeout')), 5000)
+        );
+        
+        await Promise.race([switchPromise, timeoutPromise]);
 
         setSelectedMic(deviceId);
 
@@ -6717,7 +6924,30 @@ function JoinerScreen() {
 
         console.error("Failed to switch microphone:", err);
 
-        setError("Failed to switch microphone");
+        // Don't show error to user, silently fallback to previous device
+        console.log("Silently falling back to previous microphone device");
+        
+        // Try to revert to previous device if available
+        if (selectedMic && mediaStreamRef.current) {
+          try {
+            await mediaStreamRef.current.switchMicrophone(selectedMic);
+            console.log("Successfully reverted to previous microphone");
+          } catch (revertErr) {
+            console.error("Failed to revert microphone:", revertErr);
+            // If revert fails, try default device
+            try {
+              const devices = await ZoomVideo.getDevices();
+              const mics = devices.filter((d) => d.kind === "audioinput");
+              if (mics.length > 0) {
+                await mediaStreamRef.current.switchMicrophone(mics[0].deviceId);
+                setSelectedMic(mics[0].deviceId);
+                console.log("Fell back to default microphone");
+              }
+            } catch (defaultErr) {
+              console.error("All microphone fallbacks failed:", defaultErr);
+            }
+          }
+        }
 
       }
 
@@ -6733,7 +6963,30 @@ function JoinerScreen() {
 
       try {
 
-        await mediaStreamRef.current.switchSpeaker(deviceId);
+        // Store previous device for fallback
+        const previousDevice = selectedSpeaker;
+        
+        // Check if the selected device is problematic
+        const devices = await ZoomVideo.getDevices();
+        const speakers = devices.filter((d) => d.kind === "audiooutput");
+        const selectedDevice = speakers.find(d => d.deviceId === deviceId);
+        
+        if (selectedDevice && isProblematicDevice(selectedDevice.label)) {
+          console.log("Detected problematic communication device, finding alternative");
+          const safeDevice = findSafeDevice(speakers, deviceId);
+          if (safeDevice) {
+            deviceId = safeDevice.deviceId;
+            console.log("Switching to safe device:", safeDevice.label);
+          }
+        }
+        
+        // Attempt to switch speaker with timeout
+        const switchPromise = mediaStreamRef.current.switchSpeaker(deviceId);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Device switch timeout')), 5000)
+        );
+        
+        await Promise.race([switchPromise, timeoutPromise]);
 
         setSelectedSpeaker(deviceId);
 
@@ -6743,7 +6996,30 @@ function JoinerScreen() {
 
         console.error("Failed to switch speaker:", err);
 
-        setError("Failed to switch speaker");
+        // Don't show error to user, silently fallback to previous device
+        console.log("Silently falling back to previous speaker device");
+        
+        // Try to revert to previous device if available
+        if (selectedSpeaker && mediaStreamRef.current) {
+          try {
+            await mediaStreamRef.current.switchSpeaker(selectedSpeaker);
+            console.log("Successfully reverted to previous speaker");
+          } catch (revertErr) {
+            console.error("Failed to revert speaker:", revertErr);
+            // If revert fails, try default device
+            try {
+              const devices = await ZoomVideo.getDevices();
+              const speakers = devices.filter((d) => d.kind === "audiooutput");
+              if (speakers.length > 0) {
+                await mediaStreamRef.current.switchSpeaker(speakers[0].deviceId);
+                setSelectedSpeaker(speakers[0].deviceId);
+                console.log("Fell back to default speaker");
+              }
+            } catch (defaultErr) {
+              console.error("All speaker fallbacks failed:", defaultErr);
+            }
+          }
+        }
 
       }
 
@@ -6975,7 +7251,7 @@ function JoinerScreen() {
 
         userName={getProperDisplayName(userId, displayName)}
 
-        meetingTitle={sessionName}
+        meetingTitle={meetingData?.agenda || sessionName}
 
         startTime={meetingStartTime}
 
@@ -9413,7 +9689,7 @@ function JoinerScreen() {
 
                     <span style={{ marginLeft: 8, fontSize: 14, color: "#222" }}>
 
-                      {sessionName}
+                      {meetingData?.agenda || sessionName}
 
                     </span>
 
