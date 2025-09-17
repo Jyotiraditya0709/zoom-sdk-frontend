@@ -168,10 +168,10 @@ const PreJoin = () => {
     } catch (err) {
       console.error("❌ Permission request failed:", err);
       
-      let errorMessage = "⚠️ Camera and Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
+      let errorMessage = "⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
       
       if (err.name === 'NotAllowedError') {
-        errorMessage = "⚠️ Camera and Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
+        errorMessage = "⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
       } else if (err.name === 'NotFoundError') {
         errorMessage = "No camera or microphone found. Please connect your devices and try again.";
       } else if (err.name === 'NotReadableError') {
@@ -311,7 +311,7 @@ const PreJoin = () => {
       } catch (err) {
         console.error("Error fetching devices:", err);
         if (err.name === 'NotAllowedError') {
-          showPermissionError("⚠️ Camera and Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
+          showPermissionError("⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
         } else {
           setError("Failed to fetch devices. Please check your camera/microphone.");
         }
@@ -683,7 +683,7 @@ const PreJoin = () => {
         stream.getTracks().forEach(track => track.stop());
         setHasMicPermission(true);
       } catch (err) {
-        showPermissionError("⚠️ Camera and Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
+        showPermissionError("⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
         return;
       }
     }
@@ -814,7 +814,7 @@ const PreJoin = () => {
       // Provide more specific error messages
       let errorMessage = "Failed to test microphone";
       if (err.name === "NotAllowedError") {
-        errorMessage = "⚠️ Camera and Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
+        errorMessage = "⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
         showPermissionError(errorMessage);
         return;
       } else if (err.name === "NotFoundError") {

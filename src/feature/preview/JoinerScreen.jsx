@@ -4481,7 +4481,7 @@ function JoinerScreen() {
 
         setMediaWarningMessage(
 
-          `Media error: Your mic is muted in system or browser settings. Please open your settings to unmute and adjust the level.`
+          `Access to your microphone or camera is blocked.\n\nplease click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.`
 
         );
 
@@ -10129,7 +10129,7 @@ function JoinerScreen() {
 
             >
 
-              <button
+              {/* <button
 
                 onClick={() => {
 
@@ -10195,7 +10195,7 @@ function JoinerScreen() {
 
                 Dismiss
 
-              </button>
+              </button> */}
 
               <button
 
