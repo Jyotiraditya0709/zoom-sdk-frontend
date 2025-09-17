@@ -26,6 +26,7 @@ import {
   FaVideoSlash,
   FaChevronUp,
   FaSignal,
+  FaChevronDown,
 } from "react-icons/fa";
 import BlinkDot from "../../components/BlinkDot/BlinkDot";
 
@@ -3672,7 +3673,7 @@ function JoinerScreen() {
                   setShowVideoOptions(showVideoOptions === "mic" ? null : "mic")
                 }
               >
-                <FaChevronUp />
+                {showVideoOptions === "mic" && isAudioOn ? <FaChevronUp /> : <FaChevronDown />}
               </button>
               {showVideoOptions === "mic" && (
                 <div
@@ -3776,7 +3777,7 @@ function JoinerScreen() {
                 }}
                 title="Change Background"
               >
-                <FaChevronUp />
+               {showVideoOptions === "video" && isAudioOn ? <FaChevronUp /> : <FaChevronDown />}
               </button>
               {showVideoOptions === "video" && (
                 <div
