@@ -2491,11 +2491,39 @@ function JoinerScreen() {
 
     client.on("network-quality-change", (payload) => {
 
+      // Convert network quality levels to numeric values for consistent rendering
+      const getNetworkQualityLevel = (level) => {
+        // Handle both string and numeric values from Zoom SDK
+        if (typeof level === 'number') {
+          return level;
+        }
+        
+        switch (level) {
+          case 'Excellent':
+          case 'Good':
+          case '4':
+            return 4;
+          case 'Fair':
+          case '3':
+            return 3;
+          case 'Poor':
+          case '2':
+            return 2;
+          case 'Very Poor':
+          case '1':
+            return 1;
+          default:
+            return 0;
+        }
+      };
+
+      const numericLevel = getNetworkQualityLevel(payload.level);
+
       setNetworkQuality((prev) => ({
 
         ...prev,
 
-        [payload.userId]: payload.level,
+        [payload.userId]: numericLevel,
 
       }));
 
@@ -2503,7 +2531,7 @@ function JoinerScreen() {
 
       // Log network quality changes for debugging
 
-      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level}`);
+      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level} (numeric: ${numericLevel})`);
 
       
 
@@ -4614,11 +4642,39 @@ function JoinerScreen() {
 
     client.on("network-quality-change", (payload) => {
 
+      // Convert network quality levels to numeric values for consistent rendering
+      const getNetworkQualityLevel = (level) => {
+        // Handle both string and numeric values from Zoom SDK
+        if (typeof level === 'number') {
+          return level;
+        }
+        
+        switch (level) {
+          case 'Excellent':
+          case 'Good':
+          case '4':
+            return 4;
+          case 'Fair':
+          case '3':
+            return 3;
+          case 'Poor':
+          case '2':
+            return 2;
+          case 'Very Poor':
+          case '1':
+            return 1;
+          default:
+            return 0;
+        }
+      };
+
+      const numericLevel = getNetworkQualityLevel(payload.level);
+
       setNetworkQuality((prev) => ({
 
         ...prev,
 
-        [payload.userId]: payload.level,
+        [payload.userId]: numericLevel,
 
       }));
 
@@ -4626,7 +4682,7 @@ function JoinerScreen() {
 
       // Log network quality changes for debugging
 
-      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level}`);
+      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level} (numeric: ${numericLevel})`);
 
       
 
