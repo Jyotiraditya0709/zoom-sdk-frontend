@@ -3179,19 +3179,37 @@ function JoinerScreen() {
 
         setTimeout(async () => {
 
-          // Start audio only if not muted from preview
+          // Always start audio track, but mute it if muted from preview
 
-          if (!initialMute) {
+          try {
 
             await mediaStreamRef.current.startAudio();
 
-            setIsAudioOn(true);
+            console.log("🎤 Audio track started");
 
-            console.log("🎤 Audio started (not muted from preview)");
+            if (initialMute) {
 
-          } else {
+              // Mute the audio if it was muted in preview
 
-            console.log("🎤 Audio not started (muted from preview)");
+              await mediaStreamRef.current.muteAudio();
+
+              setIsAudioOn(false);
+
+              console.log("🎤 Audio muted (was muted from preview)");
+
+            } else {
+
+              setIsAudioOn(true);
+
+              console.log("🎤 Audio started and unmuted (not muted from preview)");
+
+            }
+
+          } catch (err) {
+
+            console.error("🎤 Failed to start audio track:", err);
+
+            setIsAudioOn(false);
 
           }
 
