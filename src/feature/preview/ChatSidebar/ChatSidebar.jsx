@@ -110,9 +110,22 @@ const ChatSidebar = ({
       {/* Header */}
       <div className="chat-header">
         <h3 className="chat-title">{getModalHeading ? getModalHeading('chat') : 'Chat'}</h3>
-        <button className="close-button" onClick={() => setIsChatOpen(false)}>
-          ×
-        </button>
+              <button
+               onClick={() => setIsChatOpen(false)}
+                style={{
+                  background: "none",
+                  border: "1px solid #101010",
+                  fontSize: 22,
+                  color: "#888",
+                  cursor: "pointer",
+                  marginLeft: 8,
+                  paddingLeft: 8,
+                  paddingRight: 8,
+                }}
+                aria-label="Close info panel"
+              >
+                ×
+              </button>
       </div>
 
       {/* Messages Area */}

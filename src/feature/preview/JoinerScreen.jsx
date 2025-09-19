@@ -54,6 +54,7 @@ import {
 
   FaSignal,
 
+  FaChevronDown,
 } from "react-icons/fa";
 
 import BlinkDot from "../../components/BlinkDot/BlinkDot";
@@ -7313,7 +7314,9 @@ function JoinerScreen() {
 
     <div
 
-      className="joinerScreen"
+      className={`joinerScreen ${
+              isSharingScreen || isRemoteSharing ? "sharingScreenActive" : ""
+            }`}
 
       style={{ overflow: "hidden", height: "100vh" }}
 
@@ -7422,15 +7425,8 @@ function JoinerScreen() {
                 participants.length >= 3 &&
 
                 participants.length <= participants.length
-
-                  ? "20px 100px"
-
-                  : "20px 0 0 0",
-
-              width: isSharingScreen ? "80%" : "90%",
-
-              height: isSharingScreen ? "100%" : "70%",
-
+                  ? "0px 0px"
+                  : "0px 0 0 0",
             }}
 
           >
@@ -7939,7 +7935,7 @@ function JoinerScreen() {
 
               >
 
-                <FaChevronUp />
+                {showVideoOptions === "mic" && isAudioOn ? <FaChevronUp /> : <FaChevronDown />}
 
               </button>
 
@@ -8147,7 +8143,7 @@ function JoinerScreen() {
 
               >
 
-                <FaChevronUp />
+               {showVideoOptions === "video" && isAudioOn ? <FaChevronUp /> : <FaChevronDown />}
 
               </button>
 
@@ -10111,12 +10107,12 @@ function JoinerScreen() {
 
               boxShadow: "0 4px 24px #0002",
 
-              minWidth: 400,
 
-              maxWidth: "90vw",
+              maxWidth: 400,
 
               color: "#fff",
 
+              margin: "10px",
             }}
 
           >
@@ -10199,7 +10195,7 @@ function JoinerScreen() {
 
             <div
 
-              style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}
+              style={{ display: "flex", gap: 12, justifyContent: "center" }}
 
             >
 
