@@ -342,11 +342,7 @@ function JoinerScreen() {
 
     window.location.hostname !== "127.0.0.1";
 
-  console.log(`🌍 Environment: ${isProduction ? "Production" : "Development"}`);
-
-  console.log(`🌍 Hostname: ${window.location.hostname}`);
-
-  console.log(`🌍 Protocol: ${window.location.protocol}`);
+  // Environment info removed for cleaner console
 
   
 
@@ -356,9 +352,7 @@ function JoinerScreen() {
 
   const hasCrossOriginIsolation = crossOriginIsolated;
 
-  console.log(`🔒 SharedArrayBuffer available: ${hasSharedArrayBuffer}`);
-
-  console.log(`🔒 Cross-origin isolated: ${hasCrossOriginIsolation}`);
+  // SharedArrayBuffer info removed for cleaner console
 
   
 
@@ -485,15 +479,7 @@ function JoinerScreen() {
 
     try {
 
-      console.log(" Calling userJoined webhook with:", {
-
-        meetingId: meetingId,
-
-        userId: userName,
-
-        userType: isHost ? "mentor" : "mentee",
-
-      });
+      // Webhook call info removed for cleaner console
 
 
 
@@ -553,7 +539,7 @@ function JoinerScreen() {
 
       const data = await response.json();
 
-      console.log("✅ User joined webhook sent:", data);
+      // Webhook success info removed for cleaner console
 
     } catch (err) {
 
@@ -585,7 +571,7 @@ function JoinerScreen() {
       );
       
       if (duplicateParticipants.length > 0) {
-        console.log(`🔄 Found ${duplicateParticipants.length} duplicate participants for ${userName}`);
+        // Duplicate participant info removed for cleaner console
         
         // Use host privileges to remove old duplicate users (same approach as duplicate hosts)
         for (const duplicate of duplicateParticipants) {
@@ -606,9 +592,8 @@ function JoinerScreen() {
               }
             }
             
-            console.log(`🗑️ Removing old duplicate participant: ${duplicate.displayName} (${duplicate.userId}) -> ${displayName}`);
+            // Duplicate removal info removed for cleaner console
             await clientRef.current.removeUser(duplicate.userId);
-            console.log(`✅ Successfully removed duplicate: ${displayName}`);
             addNotification(`Removed duplicate participant: ${displayName}`);
           } catch (removeError) {
             // Use URL parameters for error notification too
@@ -1018,11 +1003,11 @@ function JoinerScreen() {
 
           const data = await response.json();
 
-          console.log(`📊 Fetched meeting data:`, data);
+          // Meeting data fetch info removed for cleaner console
 
           if (data.IsSuccess && data.Data) {
 
-            console.log(`📊 Setting meetingData:`, data.Data);
+            // Meeting data setting info removed for cleaner console
 
             setMeetingData(data.Data);
 
@@ -1162,17 +1147,7 @@ function JoinerScreen() {
 
   useEffect(() => {
 
-    console.log("🎯 Setting initial states from URL:", {
-
-      initialVideoOff,
-
-      initialMute,
-
-      isVideoOn: !initialVideoOff,
-
-      isAudioOn: !initialMute
-
-    });
+    // Initial state setting info removed for cleaner console
 
     
 
@@ -1194,51 +1169,16 @@ function JoinerScreen() {
 
         try {
 
-          console.log(`🎥 Attaching video for user: ${userId}`);
-
-          console.log(`🎥 Container element:`, container);
-
-          console.log(`🎥 Container dimensions:`, {
-
-            width: container.offsetWidth,
-
-            height: container.offsetHeight,
-
-            display: container.style.display,
-
-            visibility: container.style.visibility,
-
-          });
+          // Video attachment info removed for cleaner console
 
           
 
-          // Log environment info for debugging
-
-          console.log(`🌍 Environment: ${isProduction ? 'Production' : 'Development'}`);
-
-          console.log(`🌍 Hostname: ${window.location.hostname}`);
-
-          console.log(`🌍 Protocol: ${window.location.protocol}`);
+          // Environment info removed for cleaner console
 
 
 
-          console.log(
+          // Video quality info removed for cleaner console
 
-            `🎥 Attaching video with quality: ${VIDEO_QUALITY} (${
-
-              VIDEO_QUALITY === 1
-
-                ? "360p"
-
-                : VIDEO_QUALITY === 2
-
-                  ? "480p"
-
-                  : "720p"
-
-            })`
-
-          );
 
           const userVideo = await mediaStreamRef.current.attachVideo(
 
@@ -1248,7 +1188,7 @@ function JoinerScreen() {
 
           );
 
-          console.log(`🎥 Video element created:`, userVideo);
+          // Video element creation info removed for cleaner console
 
 
 
@@ -1258,13 +1198,7 @@ function JoinerScreen() {
 
 
 
-          console.log(
-
-            `🎥 Video attached to container. Container children:`,
-
-            container.children.length
-
-          );
+          // Video attachment success info removed for cleaner console
 
 
 
@@ -1286,25 +1220,11 @@ function JoinerScreen() {
 
               const videoElement = container.querySelector("video");
 
-              console.log(`🎥 Video element found:`, videoElement);
+              // Video element found info removed for cleaner console
 
               if (videoElement) {
 
-                console.log(`🎥 Video dimensions:`, {
-
-                  videoWidth: videoElement.videoWidth,
-
-                  videoHeight: videoElement.videoHeight,
-
-                  offsetWidth: videoElement.offsetWidth,
-
-                  offsetHeight: videoElement.offsetHeight,
-
-                  display: videoElement.style.display,
-
-                  visibility: videoElement.style.visibility,
-
-                });
+                // Video dimensions info removed for cleaner console
 
 
 
@@ -1512,7 +1432,7 @@ function JoinerScreen() {
 
           } else {
 
-            console.log(`🎥 Skipping aggressive cleanup for local user: ${userId}`);
+            // Aggressive cleanup info removed for cleaner console
 
           }
 
@@ -1564,7 +1484,7 @@ function JoinerScreen() {
 
   const completeUserRemoval = useCallback((userId) => {
 
-    console.log(`🚫 Complete user removal initiated for: ${userId}`);
+    // Complete user removal info removed for cleaner console
 
 
 
@@ -1572,7 +1492,7 @@ function JoinerScreen() {
 
     if (videoContainerRefs.current[userId]) {
 
-      console.log(`🧹 Complete cleanup of video container for user: ${userId}`);
+      // Complete cleanup info removed for cleaner console
 
       const container = videoContainerRefs.current[userId];
 
@@ -1858,7 +1778,7 @@ function JoinerScreen() {
 
       } else if (document.visibilityState === "visible") {
 
-        console.log("🔄 Tab visible again - user returned to meeting tab");
+        // Tab visible again info removed for cleaner console
 
       }
 
@@ -1916,7 +1836,7 @@ function JoinerScreen() {
 
           );
 
-          console.log("📡 sendBeacon result:", success);
+          // sendBeacon result info removed for cleaner console
 
         }
 
@@ -1942,7 +1862,7 @@ function JoinerScreen() {
 
           xhr.send(data);
 
-          console.log("📡 XMLHttpRequest status:", xhr.status);
+          // XMLHttpRequest status info removed for cleaner console
 
         } catch (err) {
 
@@ -2040,7 +1960,7 @@ function JoinerScreen() {
 
           const data = JSON.parse(pendingUserLeft);
 
-          console.log("📡 Sending pending user left notification:", data);
+          // Sending pending user left notification info removed for cleaner console
 
 
 
@@ -2058,11 +1978,7 @@ function JoinerScreen() {
 
             .then(() => {
 
-              console.log(
-
-                "✅ Pending user left notification sent successfully"
-
-              );
+              // Pending user left notification sent info removed for cleaner console
 
             })
 
@@ -2160,7 +2076,7 @@ function JoinerScreen() {
 
       sessionStorage.removeItem("preventAutoRejoin");
 
-      console.log("🚫 Preventing automatic rejoin due to recent refresh");
+      // Preventing automatic rejoin info removed for cleaner console
 
       return;
 
@@ -2212,7 +2128,7 @@ function JoinerScreen() {
 
       } catch (err) {
 
-        console.warn("Device fetch warning:", err);
+        // Device fetch warning info removed for cleaner console
 
 
 
@@ -2252,7 +2168,7 @@ function JoinerScreen() {
 
           // For other errors, just log them but don't show to user
 
-          console.log("Device fetch error (non-critical):", err);
+          // Device fetch error info removed for cleaner console
 
         }
 
@@ -2270,7 +2186,7 @@ function JoinerScreen() {
 
         if (!initialVideoOff) {
 
-          console.log("📹 Requesting camera permissions for device initialization");
+          // Camera permission request info removed for cleaner console
 
           await navigator.mediaDevices.getUserMedia({
 
@@ -2282,7 +2198,7 @@ function JoinerScreen() {
 
         } else {
 
-          console.log("📹 Skipping camera permission request (camera off from preview)");
+          // Skipping camera permission request info removed for cleaner console
 
           // Still request audio permissions for microphone
 
@@ -2400,7 +2316,7 @@ function JoinerScreen() {
             try {
               await mediaStreamRef.current.switchMicrophone(nonCommMic.deviceId);
               setSelectedMic(nonCommMic.deviceId);
-              console.log("Auto-recovered microphone to:", nonCommMic.label);
+              // Auto-recovered microphone info removed for cleaner console
             } catch (micErr) {
               console.error("Failed to auto-recover microphone:", micErr);
             }
@@ -2416,7 +2332,7 @@ function JoinerScreen() {
             try {
               await mediaStreamRef.current.switchSpeaker(nonCommSpeaker.deviceId);
               setSelectedSpeaker(nonCommSpeaker.deviceId);
-              console.log("Auto-recovered speaker to:", nonCommSpeaker.label);
+              // Auto-recovered speaker info removed for cleaner console
             } catch (speakerErr) {
               console.error("Failed to auto-recover speaker:", speakerErr);
             }
@@ -2531,7 +2447,7 @@ function JoinerScreen() {
 
       // Log network quality changes for debugging
 
-      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level} (numeric: ${numericLevel})`);
+      // Network quality info removed for cleaner console
 
       
 
@@ -2539,7 +2455,7 @@ function JoinerScreen() {
 
       if (payload.level === 'Poor' || payload.level === 'Very Poor') {
 
-        console.log(`⚠️ Poor network quality detected for user ${payload.userId}`);
+        // Poor network quality info removed for cleaner console
 
       }
 
@@ -2551,25 +2467,25 @@ function JoinerScreen() {
 
     client.on("connection-change", (payload) => {
 
-      console.log(`🔗 Connection state changed: ${payload.state}`);
+      // Connection state info removed for cleaner console
 
       
 
       if (payload.state === 'Reconnecting') {
 
-        console.log('🔄 Attempting to reconnect...');
+        // Reconnection attempt info removed for cleaner console
 
         addNotification('Reconnecting to meeting...');
 
       } else if (payload.state === 'Connected') {
 
-        console.log('✅ Successfully connected');
+        // Successfully connected info removed for cleaner console
 
         addNotification('Connected to meeting');
 
       } else if (payload.state === 'Disconnected') {
 
-        console.log('❌ Disconnected from meeting');
+        // Disconnected info removed for cleaner console
 
         addNotification('Disconnected from meeting');
 
@@ -2663,7 +2579,7 @@ function JoinerScreen() {
 
         playRecordingBeep();
 
-        console.log("📹 Recording started (notified via chat)");
+        // Recording started info removed for cleaner console
 
       } else if (payload.message.includes("⏸️ Recording paused — waiting for participant")) {
 
@@ -2679,7 +2595,7 @@ function JoinerScreen() {
 
         playRecordingBeep();
 
-        console.log("⏸️ Recording paused (notified via chat)");
+        // Recording paused info removed for cleaner console
 
       } else if (payload.message.includes("🔴 Recording resumed")) {
 
@@ -2695,7 +2611,7 @@ function JoinerScreen() {
 
         playRecordingBeep();
 
-        console.log("🔴 Recording resumed (notified via chat)");
+        // Recording resumed info removed for cleaner console
 
       } else if (payload.message.includes("⏹️ Recording has stopped")) {
 
@@ -2711,7 +2627,7 @@ function JoinerScreen() {
 
         playRecordingBeep();
 
-        console.log("📹 Recording stopped (notified via chat)");
+        // Recording stopped info removed for cleaner console
 
       }
 
@@ -2749,7 +2665,7 @@ function JoinerScreen() {
 
           setUnreadChatCount(prev => prev + 1);
 
-          console.log("📬 Unread chat message count:", unreadChatCount + 1);
+          // Unread chat message count info removed for cleaner console
 
         }
 
@@ -2785,7 +2701,7 @@ function JoinerScreen() {
 
 
 
-      console.log(`📹 Video state change for user ${userId}: ${action}`);
+      // Video state change info removed for cleaner console
 
 
 
@@ -2811,7 +2727,7 @@ function JoinerScreen() {
 
 
 
-        console.log(`🎥 User ${userId} started video - attaching`);
+        // User video start info removed for cleaner console
 
 
 
@@ -2819,7 +2735,7 @@ function JoinerScreen() {
 
         if (videoContainerRefs.current[userId]) {
 
-          console.log(`📹 Showing video container for user: ${userId}`);
+          // Showing video container info removed for cleaner console
 
           const container = videoContainerRefs.current[userId];
 
@@ -2833,7 +2749,7 @@ function JoinerScreen() {
 
       } else if (action === "Stop") {
 
-        console.log(`📹 User ${userId} stopped video - detaching video only`);
+        // User video stop info removed for cleaner console
 
         await detachVideo(userId);
 
@@ -2843,7 +2759,7 @@ function JoinerScreen() {
 
         if (videoContainerRefs.current[userId]) {
 
-          console.log(`📹 Hiding video container for user: ${userId}`);
+          // Hiding video container info removed for cleaner console
 
           const container = videoContainerRefs.current[userId];
 
@@ -2981,7 +2897,7 @@ function JoinerScreen() {
 
           try {
 
-            console.log("📹 Camera was off from preview - trying to stop video immediately after join");
+            // Camera stop attempt info removed for cleaner console
 
             const tempMediaStream = client.getMediaStream();
 
@@ -2989,13 +2905,13 @@ function JoinerScreen() {
 
               await tempMediaStream.stopVideo();
 
-              console.log("📹 Video stopped immediately after join");
+              // Video stopped immediately info removed for cleaner console
 
             }
 
           } catch (err) {
 
-            console.log("📹 Could not stop video after join:", err.message);
+            // Could not stop video info removed for cleaner console
 
           }
 
@@ -3028,10 +2944,10 @@ function JoinerScreen() {
             );
             
             if (duplicateCount > 0) {
-              console.log(`🔄 Detected ${duplicateCount} duplicate participants, handling...`);
+              // Duplicate participant detection info removed for cleaner console
             }
           } else {
-            console.log("⚠️ No current user info available - skipping duplicate check");
+            // No current user info info removed for cleaner console
           }
         }, 5000); // Wait 5 seconds after join to ensure user is fully connected
 
@@ -3091,7 +3007,7 @@ function JoinerScreen() {
 
         if (isRefresh) {
 
-          console.log("🔄 Page refreshed - maintaining meeting connection");
+          // Page refresh info removed for cleaner console
 
           addNotification("Page refreshed - reconnected to meeting");
 
@@ -3103,7 +3019,7 @@ function JoinerScreen() {
 
         window.addEventListener('online', () => {
 
-          console.log("🌐 Network reconnected");
+          // Network reconnected info removed for cleaner console
 
           addNotification("Network reconnected");
 
@@ -3113,7 +3029,7 @@ function JoinerScreen() {
 
         window.addEventListener('offline', () => {
 
-          console.log("🌐 Network disconnected");
+          // Network disconnected info removed for cleaner console
 
           addNotification("Network disconnected - trying to reconnect...");
 
@@ -3129,7 +3045,7 @@ function JoinerScreen() {
 
         
 
-        console.log("📹 MediaStream obtained, initialVideoOff:", initialVideoOff);
+        // MediaStream obtained info removed for cleaner console
 
         
 
@@ -3139,7 +3055,7 @@ function JoinerScreen() {
 
           try {
 
-            console.log("📹 Camera was off from preview - immediately stopping any initialized camera");
+            // Camera stopping info removed for cleaner console
 
             // Stop video immediately to prevent camera light from staying on
 
@@ -3147,7 +3063,7 @@ function JoinerScreen() {
 
             setIsVideoOn(false);
 
-            console.log("📹 Camera stopped immediately after mediaStream creation");
+            // Camera stopped info removed for cleaner console
 
             
 
@@ -3161,7 +3077,7 @@ function JoinerScreen() {
 
                 videoTrack.stop();
 
-                console.log("📹 Video track stopped");
+                // Video track stopped info removed for cleaner console
 
               }
 
@@ -3169,7 +3085,7 @@ function JoinerScreen() {
 
           } catch (err) {
 
-            console.log("📹 No camera to stop or already stopped:", err.message);
+            // Camera stop error info removed for cleaner console
 
           }
 
@@ -3185,7 +3101,7 @@ function JoinerScreen() {
 
             await mediaStreamRef.current.startAudio();
 
-            console.log("🎤 Audio track started");
+            // Audio track started info removed for cleaner console
 
             if (initialMute) {
 
@@ -3195,13 +3111,13 @@ function JoinerScreen() {
 
               setIsAudioOn(false);
 
-              console.log("🎤 Audio muted (was muted from preview)");
+              // Audio muted info removed for cleaner console
 
             } else {
 
               setIsAudioOn(true);
 
-              console.log("🎤 Audio started and unmuted (not muted from preview)");
+              // Audio started and unmuted info removed for cleaner console
 
             }
 
@@ -3251,7 +3167,7 @@ function JoinerScreen() {
 
                 localContainer.style.display = "flex";
 
-                console.log("📹 Showing local video container (initial video start)");
+                // Local video container info removed for cleaner console
 
               }
 
@@ -3263,7 +3179,7 @@ function JoinerScreen() {
 
               await attachVideo(selfUserIdRef.current);
 
-              console.log("📹 Video started with background:", bgMode);
+              // Video started with background info removed for cleaner console
 
             } catch (e) {
 
@@ -4569,7 +4485,7 @@ function JoinerScreen() {
             try {
               await mediaStreamRef.current.switchMicrophone(nonCommMic.deviceId);
               setSelectedMic(nonCommMic.deviceId);
-              console.log("Auto-recovered microphone to:", nonCommMic.label);
+              // Auto-recovered microphone info removed for cleaner console
             } catch (micErr) {
               console.error("Failed to auto-recover microphone:", micErr);
             }
@@ -4585,7 +4501,7 @@ function JoinerScreen() {
             try {
               await mediaStreamRef.current.switchSpeaker(nonCommSpeaker.deviceId);
               setSelectedSpeaker(nonCommSpeaker.deviceId);
-              console.log("Auto-recovered speaker to:", nonCommSpeaker.label);
+              // Auto-recovered speaker info removed for cleaner console
             } catch (speakerErr) {
               console.error("Failed to auto-recover speaker:", speakerErr);
             }
@@ -4700,7 +4616,7 @@ function JoinerScreen() {
 
       // Log network quality changes for debugging
 
-      console.log(`🌐 Network quality for user ${payload.userId}: ${payload.level} (numeric: ${numericLevel})`);
+      // Network quality info removed for cleaner console
 
       
 
@@ -4708,7 +4624,7 @@ function JoinerScreen() {
 
       if (payload.level === 'Poor' || payload.level === 'Very Poor') {
 
-        console.log(`⚠️ Poor network quality detected for user ${payload.userId}`);
+        // Poor network quality info removed for cleaner console
 
       }
 
@@ -4720,25 +4636,25 @@ function JoinerScreen() {
 
     client.on("connection-change", async (payload) => {
 
-      console.log(`🔗 Connection state changed: ${payload.state}`);
+      // Connection state info removed for cleaner console
 
       
 
       if (payload.state === 'Reconnecting') {
 
-        console.log('🔄 Attempting to reconnect...');
+        // Reconnection attempt info removed for cleaner console
 
         addNotification('Reconnecting to meeting...');
 
       } else if (payload.state === 'Connected') {
 
-        console.log('✅ Successfully connected');
+        // Successfully connected info removed for cleaner console
 
         addNotification('Connected to meeting');
 
       } else if (payload.state === 'Disconnected') {
 
-        console.log('❌ Disconnected from meeting');
+        // Disconnected info removed for cleaner console
 
         addNotification('Disconnected from meeting');
 
@@ -6486,7 +6402,9 @@ function JoinerScreen() {
 
     console.log("🔄 Starting redirect to meeting end. SessionName:", sessionName);
 
-    const redirectLink = sessionName ? await getMeetingRedirectLink(sessionName) : null;
+    // Only fetch redirect link from DB when host explicitly ends the meeting
+
+    const redirectLink = (endReason === "host_ended" && sessionName) ? await getMeetingRedirectLink(sessionName) : null;
 
     console.log("🔗 Retrieved redirect link:", redirectLink);
 
