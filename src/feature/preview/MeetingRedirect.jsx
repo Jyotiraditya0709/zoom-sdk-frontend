@@ -10,7 +10,11 @@ const MeetingRedirect = () => {
 
   // Get meeting data from location state or URL params
   const meetingData = location.state?.meetingData || {};
-  const { redirectLink, meetingStatus, endReason } = meetingData;
+  const { redirectLink, meetingStatus, endReason, userRole, userType } = meetingData;
+  
+  // Debug logging
+  console.log("🔄 MeetingRedirect received data:", meetingData);
+  console.log("🔄 MeetingRedirect extracted values:", { redirectLink, meetingStatus, endReason, userRole, userType });
 
   useEffect(() => {
     // Start countdown
@@ -29,11 +33,19 @@ const MeetingRedirect = () => {
   }, []);
 
   const handleRedirect = () => {
-    if (redirectLink && redirectLink.trim() !== "") {
-      // Redirect to external link
+    // Check if user is host (role = 1 or "1") or mentor (userType = "mentor")
+    const isHost = userRole === 1 || userRole === "1";
+    const isMentor = userType === "mentor";
+    
+    console.log("🔄 handleRedirect called with:", { isHost, isMentor, userRole, userType, redirectLink });
+    
+    if ((isHost || isMentor) && redirectLink && redirectLink.trim() !== "") {
+      // Redirect to external link for hosts/mentors
+      console.log("🔄 Redirecting to external link:", redirectLink);
       window.location.href = redirectLink;
     } else {
-      // Show feedback component
+      // Show feedback component for non-hosts/non-mentors
+      console.log("🔄 Showing feedback component instead of redirect");
       setShowFeedback(true);
     }
   };
@@ -61,7 +73,10 @@ const MeetingRedirect = () => {
 
   // Get redirect destination
   const getRedirectDestination = () => {
-    if (redirectLink && redirectLink.trim() !== "") {
+    const isHost = userRole === 1 || userRole === "1";
+    const isMentor = userType === "mentor";
+    
+    if ((isHost || isMentor) && redirectLink && redirectLink.trim() !== "") {
       return redirectLink;
     }
     return "Feedback page";
@@ -165,8 +180,12 @@ const MeetingRedirect = () => {
           Skip Countdown
         </button>
 
-        {/* Additional info */}
-        {redirectLink && redirectLink.trim() !== "" && (
+        {/* Additional info - only show for hosts/mentors */}
+        {(() => {
+          const isHost = userRole === 1 || userRole === "1";
+          const isMentor = userType === "mentor";
+          return (isHost || isMentor) && redirectLink && redirectLink.trim() !== "";
+        })() && (
           <div
             style={{
               marginTop: "24px",
@@ -187,6 +206,10 @@ const MeetingRedirect = () => {
 };
 
 export default MeetingRedirect;
+
+
+
+
 
 
 

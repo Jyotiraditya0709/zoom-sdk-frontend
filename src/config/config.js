@@ -11,6 +11,7 @@ const config = {
     MEETING_END: "/api/meetingEnd",
     GET_MEETING_INFO: "/api/getMeetingInfo",
     CREATE_MEETING: "/api/createMeeting",
+    REMOVE_USER: "/api/removeUser",
   },
 
   // Get full URL for an endpoint

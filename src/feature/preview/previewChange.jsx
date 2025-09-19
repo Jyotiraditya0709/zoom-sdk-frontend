@@ -168,10 +168,10 @@ const PreJoin = () => {
     } catch (err) {
       console.error("❌ Permission request failed:", err);
       
-      let errorMessage = "Please enable system microphone and video to continue.";
+      let errorMessage = "⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
       
       if (err.name === 'NotAllowedError') {
-        errorMessage = "Please enable system microphone and video to continue.\n\nClick 'Retry' to request permissions again, or manually enable them in your browser settings.";
+        errorMessage = "⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
       } else if (err.name === 'NotFoundError') {
         errorMessage = "No camera or microphone found. Please connect your devices and try again.";
       } else if (err.name === 'NotReadableError') {
@@ -311,7 +311,7 @@ const PreJoin = () => {
       } catch (err) {
         console.error("Error fetching devices:", err);
         if (err.name === 'NotAllowedError') {
-          showPermissionError("Please enable system microphone and video to continue.\n\nClick 'Retry' to request permissions again, or manually enable them in your browser settings.");
+          showPermissionError("⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
         } else {
           setError("Failed to fetch devices. Please check your camera/microphone.");
         }
@@ -630,21 +630,52 @@ const PreJoin = () => {
     const meetingId = params.get("meetingId");
     const userId = params.get("userId");
 
+    // Get the proper names from agenda data
+    const mentorName = agendaData?.mentorName || '';
+    const menteeName = agendaData?.menteeName || '';
+
     if (meetingId && userId) {
       // Navigate to meeting with URL parameters and device selections including camera/mic states
-      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}`);
+      // Also pass the names to avoid showing IDs on video tiles
+      const nameParams = new URLSearchParams();
+      if (mentorName) nameParams.append('mentorName', mentorName);
+      if (menteeName) nameParams.append('menteeName', menteeName);
+      
+      const nameQueryString = nameParams.toString();
+      const separator = nameQueryString ? '&' : '';
+      
+      navigate(`/meeting/${meetingId}/${userId}?role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}${separator}${nameQueryString}`);
     } else {
       // Fallback to old format
+      const nameParams = new URLSearchParams();
+      if (mentorName) nameParams.append('mentorName', mentorName);
+      if (menteeName) nameParams.append('menteeName', menteeName);
+      
+      const nameQueryString = nameParams.toString();
+      const separator = nameQueryString ? '&' : '';
+      
       navigate(
         `/meeting?session=${encodeURIComponent(
           sessionName
-        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}`
+        )}&user=${encodeURIComponent(userName)}&role=${role}&camera=${selectedCamera}&mic=${selectedMic}&speaker=${selectedSpeaker}&bgMode=${bgMode}&videoOff=${isVideoOff}&mute=${isMute}${separator}${nameQueryString}`
       );
     }
   };
 
   // ========== Enhanced Mic Testing Feature ==========
   const handleMicTest = async () => {
+    // Stop any running speaker test before starting mic test
+    if (isSpeakerTesting && speakerTesterRef.current) {
+      try {
+        speakerTesterRef.current.destroy();
+        speakerTesterRef.current = null;
+        setIsSpeakerTesting(false);
+        console.log("🔇 Speaker test stopped (mic test starting)");
+      } catch (err) {
+        console.error("Error stopping speaker test before mic test:", err);
+      }
+    }
+
     // Check if microphone permission is granted
     if (!hasMicPermission) {
       try {
@@ -652,7 +683,7 @@ const PreJoin = () => {
         stream.getTracks().forEach(track => track.stop());
         setHasMicPermission(true);
       } catch (err) {
-        showPermissionError("Microphone permission is required to test audio. Please allow microphone access.\n\nClick 'Retry' to request permissions again.");
+        showPermissionError("⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
         return;
       }
     }
@@ -783,7 +814,7 @@ const PreJoin = () => {
       // Provide more specific error messages
       let errorMessage = "Failed to test microphone";
       if (err.name === "NotAllowedError") {
-        errorMessage = "Microphone access denied. Please allow microphone permissions.\n\nClick 'Retry' to request permissions again.";
+        errorMessage = "⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.";
         showPermissionError(errorMessage);
         return;
       } else if (err.name === "NotFoundError") {
@@ -866,6 +897,20 @@ const PreJoin = () => {
   const speakerTesterRef = useRef(null);
 
   const handleSpeakerTest = () => {
+    // Stop any running mic test before starting speaker test
+    if (isMicTesting && microPhoneTesterRef.current) {
+      try {
+        microPhoneTesterRef.current.stop();
+        microPhoneTesterRef.current = null;
+        setIsMicTesting(false);
+        setMicLevel(0);
+        setMicTestPhase("idle");
+        console.log("🎤 Mic test stopped (speaker test starting)");
+      } catch (err) {
+        console.error("Error stopping mic test before speaker test:", err);
+      }
+    }
+
     if (!localAudioTrack) {
       setError("Please start preview first");
       return;
@@ -1031,7 +1076,7 @@ const PreJoin = () => {
                   </div>
                 </video-player-container>
               </div>
-              {isLoading && <div className="loading">Camera is Starting...</div>}
+              {isLoading && <div className="loading">Loading...</div>}
 
               <div className="bottomControls">
                 <div className="bottomControlsLeft">
@@ -1045,7 +1090,7 @@ const PreJoin = () => {
                           micTestPhase === "playing" ? "playing" : ""
                         }`}
                       onClick={handleMicTest}
-                      disabled={!hasMicPermission}
+                      disabled={!hasMicPermission || isSpeakerTesting}
                     >
                       {micTestPhase === "recording" && <span className="recording-dot"></span>}
                       {micTestPhase === "playing" && <span className="playing-dot"></span>}
@@ -1060,6 +1105,7 @@ const PreJoin = () => {
                       className={`commonTextBtn testSpeaker ${isSpeakerTesting ? "testing" : ""
                         }`}
                       onClick={handleSpeakerTest}
+                      disabled={isMicTesting}
                     >
                       {isSpeakerTesting ? "Stop Speaker Test" : "Test Speaker"}
                     </button>
@@ -1311,7 +1357,7 @@ const PreJoin = () => {
             <div
               style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}
             >
-              <button
+              {/* <button
                 onClick={() => {
                   setShowPermissionDialog(false);
                 }}
@@ -1326,8 +1372,8 @@ const PreJoin = () => {
                 }}
               >
                 Cancel
-              </button>
-              <button
+              </button> */}
+              {/* <button
                 onClick={requestPermissions}
                 style={{
                   background: "#007bff",
@@ -1341,7 +1387,7 @@ const PreJoin = () => {
                 }}
               >
                 Retry
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
