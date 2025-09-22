@@ -558,63 +558,47 @@ function JoinerScreen() {
   };
 
   
-  // Function to handle duplicate participants - use host privileges to remove old users
-  const handleDuplicateParticipants = async (newUserConnectionId, userRole, userId) => {
+  // Function to handle self-duplicate (when someone else joins with same ID)
+  const handleSelfDuplicate = async () => {
+    try {
+      console.warn("⚠️ Duplicate detected for myself, leaving meeting...");
+
+      // Step 1: Actually leave meeting (cleanup)
+      await cleanupMediaAndLeave();
+
+      // Step 2: Redirect to exit page WITH modal
+      navigate(
+        `/meeting-exit?meetingId=${encodeURIComponent(sessionName)}&userId=${encodeURIComponent(userName)}&role=${role}`
+      );
+
+    } catch (err) {
+      console.error("❌ Error handling self-duplicate:", err);
+    }
+  };
+
+  // Function to handle duplicate participants - if someone else joins with same ID, I leave
+  const handleDuplicateParticipants = async () => {
     try {
       const allUsers = clientRef.current?.getAllUser() || [];
-      
-      // Find users with the same displayName (mentor/mentee ID) but different connection ID
-      const duplicateParticipants = allUsers.filter(user => 
-        user.displayName === userName && 
-        user.userId !== newUserConnectionId &&
-        user.userId !== selfUserIdRef.current
+
+      // My real fixed ID (mentorId or menteeId from URL)
+      const myRealId = userName;
+
+      // My connection id from SDK
+      const myConnectionId = selfUserIdRef.current;
+
+      // Check if there is any OTHER connection with the same real userId
+      const duplicateExists = allUsers.some(user =>
+        user.displayName === myRealId && user.userId !== myConnectionId
       );
-      
-      if (duplicateParticipants.length > 0) {
-        // Duplicate participant info removed for cleaner console
-        
-        // Use host privileges to remove old duplicate users (same approach as duplicate hosts)
-        for (const duplicate of duplicateParticipants) {
-          try {
-            // Use URL parameters directly for notifications
-            let displayName = duplicate.displayName; // Default to SDK displayName
-            
-            // If we have URL parameters, use them to map the displayName to actual names
-            if (urlParamNames.mentorName && urlParamNames.menteeName) {
-              // Check if this is the mentor or mentee based on the displayName
-              if (duplicate.displayName === meetingData?.mentorId || duplicate.displayName === userName && userType === "mentor") {
-                displayName = urlParamNames.mentorName;
-              } else if (duplicate.displayName === meetingData?.menteeId || duplicate.displayName === userName && userType === "mentee") {
-                displayName = urlParamNames.menteeName;
-              } else {
-                // For the other participant, use the opposite role's name
-                displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
-              }
-            }
-            
-            // Duplicate removal info removed for cleaner console
-            await clientRef.current.removeUser(duplicate.userId);
-            addNotification(`Removed duplicate participant: ${displayName}`);
-          } catch (removeError) {
-            // Use URL parameters for error notification too
-            let displayName = duplicate.displayName;
-            if (urlParamNames.mentorName && urlParamNames.menteeName) {
-              if (duplicate.displayName === meetingData?.mentorId || duplicate.displayName === userName && userType === "mentor") {
-                displayName = urlParamNames.mentorName;
-              } else if (duplicate.displayName === meetingData?.menteeId || duplicate.displayName === userName && userType === "mentee") {
-                displayName = urlParamNames.menteeName;
-              } else {
-                displayName = userType === "mentor" ? urlParamNames.menteeName : urlParamNames.mentorName;
-              }
-            }
-            console.error(`❌ Failed to remove duplicate ${displayName}:`, removeError);
-            addNotification(`Failed to remove duplicate participant: ${displayName}`);
-          }
-        }
+
+      if (duplicateExists) {
+        console.warn("⚠️ Duplicate detected (same real userId). Leaving myself...");
+        await handleSelfDuplicate();
+        return 1;
       }
-      
-      return duplicateParticipants.length;
-      
+
+      return 0;
     } catch (err) {
       console.error("❌ Error in handleDuplicateParticipants:", err);
       return 0;
@@ -2937,11 +2921,7 @@ function JoinerScreen() {
           
           // Only proceed if we successfully joined and have user info
           if (currentUserInfo && currentUserInfo.userId) {
-            const duplicateCount = await handleDuplicateParticipants(
-              currentUserInfo.userId, // Zoom connection ID
-              userType, // "mentor" or "mentee"
-              userName  // The actual user ID (mentorId or menteeId)
-            );
+            const duplicateCount = await handleDuplicateParticipants();
             
             if (duplicateCount > 0) {
               // Duplicate participant detection info removed for cleaner console
@@ -4021,6 +4001,18 @@ function JoinerScreen() {
       console.log(`🔄 handleUserAdded: Transformed users:`, transformedUsers);
 
       setParticipants(transformedUsers);
+
+      // Check for duplicates immediately when a new user joins
+      setTimeout(async () => {
+        try {
+          const duplicateCount = await handleDuplicateParticipants();
+          if (duplicateCount > 0) {
+            console.log(`🔄 handleUserAdded: Duplicate detected, leaving meeting...`);
+          }
+        } catch (err) {
+          console.error("❌ Error checking duplicates in handleUserAdded:", err);
+        }
+      }, 1000); // Small delay to ensure the new user is fully added
 
     };
 
