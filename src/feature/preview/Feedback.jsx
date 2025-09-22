@@ -26,7 +26,6 @@ const Feedback = () => {
         <form
           onSubmit={handleSubmit}
           style={{
-            width: 450,
             background: "#fff",
             padding: 32,
             borderRadius: 12,

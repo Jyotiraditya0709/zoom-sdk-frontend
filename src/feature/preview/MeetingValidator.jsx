@@ -130,7 +130,7 @@ const MeetingValidator = () => {
       return (
         <div className="meeting-validator-container">
           <div className="meeting-validator-content meeting-validator-warning">
-            <div className="meeting-validator-icon">🏁</div>
+            <div className="meeting-validator-icon"><img src="/assest/svg/accessDenied.svg" alt="" /></div>
             <h2 className="meeting-validator-title warning">
               Meeting is already completed
             </h2>

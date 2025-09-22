@@ -195,7 +195,7 @@ const MeetingRedirect = () => {
               border: "1px solid rgba(0, 186, 255, 0.3)",
             }}
           >
-            <p style={{ margin: "0", fontSize: "14px", color: "#0E77D3" }}>
+            <p style={{ margin: "0", fontSize: "14px", color: "#0E77D3", wordBreak: "break-all" , textAlign:"justify"}}>
               You will be redirected to: {redirectLink}
             </p>
           </div>
