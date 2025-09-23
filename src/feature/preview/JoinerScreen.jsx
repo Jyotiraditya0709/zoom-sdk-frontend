@@ -958,7 +958,16 @@ function JoinerScreen() {
     });
   }, [mentorName, menteeName]);
 
-
+  // Set default background based on user type
+  useEffect(() => {
+    if (userType === "mentor") {
+      // Set Tetr background as default for mentors
+      setBgMode("image");
+    } else if (userType === "mentee") {
+      // Set None as default for mentees
+      setBgMode("none");
+    }
+  }, [userType, setBgMode]);
 
   // Fetch meeting data to get proper names
 
@@ -8195,11 +8204,16 @@ function JoinerScreen() {
 
                     >
 
-                      <option value="none">None</option>
-
-                      <option value="blur">Blur</option>
-
-                      <option value="image">Tetr Background</option>
+                      {userType === "mentor" ? (
+                        // Only Tetr Background for mentors
+                        <option value="image">Tetr Background</option>
+                      ) : (
+                        // Only None and Blur for mentees
+                        <>
+                          <option value="none">No Virtual Background</option>
+                          <option value="blur">Blur</option>
+                        </>
+                      )}
 
                     </select>
 
@@ -8343,6 +8357,8 @@ function JoinerScreen() {
 
 
 
+            {/* Info button commented out - not needed for mentor/mentee */}
+            {/* 
             <button
 
               className={`commonJoinderBtn infoSetting  ${
@@ -8380,6 +8396,7 @@ function JoinerScreen() {
               <span>{showModals.info ? "Close Info" : "Info"}</span>
 
             </button>
+            */}
 
 
 
@@ -9497,8 +9514,8 @@ function JoinerScreen() {
 
 
 
-      {/* Info Modal */}
-
+      {/* Info Modal commented out - not needed for mentor/mentee */}
+      {/* 
       {showModals.info && (
 
         <div
@@ -9942,6 +9959,7 @@ function JoinerScreen() {
         </div>
 
       )}
+      */}
 
 
 
