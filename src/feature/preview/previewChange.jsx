@@ -328,6 +328,17 @@ const PreJoin = () => {
     }
   }, [sessionName, userName]);
 
+  // Set default background based on user type
+  useEffect(() => {
+    if (userType === "mentor") {
+      // Set Tetr background as default for mentors
+      setBgMode("image");
+    } else if (userType === "mentee") {
+      // Set None as default for mentees
+      setBgMode("none");
+    }
+  }, [userType, setBgMode]);
+
   // ========== Cleanup function ==========
   // Removed duplicate cleanup, use contextCleanup instead
 
@@ -1035,7 +1046,7 @@ const PreJoin = () => {
                               await localVideoTrack.start(videoElement);
                             } else if (bgMode === "blur") {
                               await localVideoTrack.start(videoElement, { imageUrl: "blur" });
-                            } else if (bgMode === "Tetr Background") {
+                            } else if (bgMode === "image") {
                               await localVideoTrack.start(videoElement, {
                                 imageUrl: "/lib/vb-resource/background.jpg",
                               });
@@ -1226,9 +1237,16 @@ const PreJoin = () => {
                     value={bgMode}
                     onChange={(e) => setBgMode(e.target.value)}
                   >
-                    <option value="none">None</option>
-                    <option value="blur">Blur</option>
-                    <option value="image">Tetr Background</option>
+                    {userType === "mentor" ? (
+                      // Only Tetr Background for mentors
+                      <option value="image">Tetr Background</option>
+                    ) : (
+                      // Only None and Blur for mentees
+                      <>
+                        <option value="none">No Virtual Background</option>
+                        <option value="blur">Blur</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -1246,7 +1264,7 @@ const PreJoin = () => {
                     }
                   }}
                 />
-                This session will be recorded for future reference.
+                By participating, I give my consent to this session being recorded and stored for future reference.
               </div>
               {showConsentError && (
                 <div className="warning-message" style={{

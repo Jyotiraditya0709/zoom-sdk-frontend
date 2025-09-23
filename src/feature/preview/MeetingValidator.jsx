@@ -67,20 +67,13 @@ const MeetingValidator = () => {
 
   if (isValidating) {
     return (
-      <>
-        <div className="meeting-validator-container">
-          <div className="meeting-validator-content">
-            <div className="meeting-validator-icon"><img src="/assest/greenTick.gif" alt="" style={{ width: "70px" }} /></div>
-            <h2 className="meeting-validator-title">Meeting Validated!</h2>
-            <p className="meeting-validator-message">Please wait while we validate your meeting access.</p>
-            {/* <div className="meetingValidatedDetails">
-            <div className="itemsMeeting"><strong>Meeting ID:</strong> 123454567788</div>
-            <div className="itemsMeeting"><strong>Agenda:</strong> Design</div>
-            <div className="itemsMeeting"><strong>Status:</strong> In Progress</div>
-          </div> */}
-          </div>
+      <div className="meeting-validator-container">
+        <div className="meeting-validator-content">
+          <div className="meeting-validator-icon"><img src="/assest/greenTick.gif" alt="" style={{ width: "70px" }} /></div>
+          <h2 className="meeting-validator-title">Validating Meeting Access...</h2>
+          <p className="meeting-validator-message">Please wait while we validate your meeting access.</p>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -134,24 +127,9 @@ const MeetingValidator = () => {
             <h2 className="meeting-validator-title warning">
               Meeting is already completed
             </h2>
-            <div className="meeting-validator-details meetingValidatedDetails">
-              <p className="itemsMeeting">
-                <strong>Meeting ID:</strong> {meetingData.meetingId}
-              </p>
-              <p className="itemsMeeting">
-                <strong>Joinee:</strong> {
-                  meetingData.mentorId === userId
-                    ? (meetingData.mentorName || meetingData.mentorId)
-                    : (meetingData.menteeName || meetingData.menteeId)
-                }
-              </p>
-              <p className="itemsMeeting">
-                <strong>Agenda:</strong> {meetingData.agenda}
-              </p>
-              <p className="itemsMeeting">
-                <strong>Status:</strong> {meetingData.meetingStatus}
-              </p>
-            </div>
+            <p className="meeting-validator-message">
+              This meeting has already been completed. Please contact the meeting organizer for more information.
+            </p>
             <button
               className="meeting-validator-button"
               onClick={() => navigate("/")}
@@ -163,39 +141,62 @@ const MeetingValidator = () => {
       );
     }
 
+    // Determine if user is mentor or mentee
+    const isMentor = meetingData.mentorId === userId;
+    const userType = isMentor ? "mentor" : "mentee";
+    const role = isMentor ? "1" : "0"; // 1 = host, 0 = attendee
+
     return (
       <div className="meeting-validator-container">
         <div className="meeting-validator-content meeting-validator-success">
-          <div className="meeting-validator-icon"><img src="/assest/greenTick.gif" alt="" style={{ width: "70px" }} /></div>
-          <h2 className="meeting-validator-title success">
-            Meeting Validated!
-          </h2>
-          <div className="meeting-validator-details meetingValidatedDetails">
-            <p className="itemsMeeting">
-              <strong>Meeting ID:</strong> {meetingData.meetingId}
-            </p>
-            <p className="itemsMeeting">
-              <strong>Joinee:</strong> {
-                meetingData.mentorId === userId
-                  ? (meetingData.mentorName || meetingData.mentorId)
-                  : (meetingData.menteeName || meetingData.menteeId)
-              }
-            </p>
-            <p className="itemsMeeting">
-              <strong>Agenda:</strong> {meetingData.agenda}
-            </p>
-            <p className="itemsMeeting">
-              <strong>Status:</strong> {meetingData.meetingStatus}
-            </p>
-          </div>
+          <div className="meeting-validator-icon"><img src="/assest/tetr-logo.png" alt="" style={{ width: "150px" }} /></div>
+          
+          {isMentor ? (
+            <>
+              <h2 className="meeting-validator-title success">
+                Welcome <strong>{meetingData.mentorName || "Interviewer"}</strong>!
+              </h2>
+              <div className="meeting-validator-details">
+                <p className="meeting-validator-message">
+                  This is a personal interview round with <strong>{meetingData.menteeName || "the candidate"}</strong>
+                </p>
+                <div className="evaluation-criteria">
+                  <h3 className="criteria-title">What We're Looking For:</h3>
+                  <ul className="criteria-list">
+                    <li>Strong communication skills</li>
+                    <li>Leadership potential</li>
+                    <li>Curiosity and resilience</li>
+                    <li>Global perspective</li>
+                    <li>Passion for entrepreneurship</li>
+                    <li>Genuine alignment with Tetr's vision and values</li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="meeting-validator-title success">
+                Welcome to Your Interview Round <strong>{meetingData.menteeName || "Candidate"}</strong>!
+              </h2>
+              <div className="meeting-validator-details">
+                <p className="meeting-validator-message">
+                  This stage evaluates interpersonal skills, emotional intelligence, and cultural fit that cannot be fully captured through written applications or standardized assessments.
+                </p>
+                <div className="interview-preparation">
+                  <h3 className="preparation-title">Interview Preparation</h3>
+                  <ul className="preparation-list">
+                    <li>Reflect on how your experiences connect to your future goals</li>
+                    <li>Arrange a professional setting with appropriate technical setup</li>
+                    <li>Review your application materials to ensure consistency in how you present yourself</li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          )}
+          
           <button
             className="meeting-validator-button"
             onClick={() => {
-              // Determine if user is mentor or mentee
-              const isMentor = meetingData.mentorId === userId;
-              const userType = isMentor ? "mentor" : "mentee";
-              const role = isMentor ? "1" : "0"; // 1 = host, 0 = attendee
-
               console.log("🔍 User type determined:", {
                 userId,
                 userType,
