@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Feedback from "./Feedback.jsx";
 
 const MeetingRedirect = () => {
   const [countdown, setCountdown] = useState(3);
   const [showFeedback, setShowFeedback] = useState(false);
-  const navigate = useNavigate();
+  const [isLoadingRedirect, setIsLoadingRedirect] = useState(false);
   const location = useLocation();
 
   // Get meeting data from location state or URL params
@@ -17,6 +17,20 @@ const MeetingRedirect = () => {
   console.log("🔄 MeetingRedirect extracted values:", { redirectLink, meetingStatus, endReason, userRole, userType });
 
   useEffect(() => {
+    // Only start countdown when we have a redirectLink (for hosts/mentors) or when we're sure we should show feedback
+    const isHost = userRole === 1 || userRole === "1";
+    const isMentor = userType === "mentor";
+    
+    // If user is host/mentor but no redirectLink yet, wait for it
+    if ((isHost || isMentor) && !redirectLink) {
+      console.log("⏳ Waiting for redirect link to be available...");
+      setIsLoadingRedirect(true);
+      return;
+    }
+    
+    // If we have a redirectLink or user is not host/mentor, stop loading
+    setIsLoadingRedirect(false);
+    
     // Start countdown
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -30,7 +44,7 @@ const MeetingRedirect = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [redirectLink, userRole, userType]); // Re-run when redirectLink changes
 
   const handleRedirect = () => {
     // Check if user is host (role = 1 or "1") or mentor (userType = "mentor")
@@ -84,6 +98,15 @@ const MeetingRedirect = () => {
 
   return (
     <div className="meetingRedirectContainer">
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+          }
+        `}
+      </style>
       <div className="meetingRedirectBox">
         {/* Icon */}
         <div
@@ -93,7 +116,6 @@ const MeetingRedirect = () => {
             color: "#0E77D3",
           }}
         >
-          {/* {endReason === "host_ended" ? "👋" : "🏁"} */}
         </div>
 
         <div className="meetingEndedHost">
@@ -119,17 +141,34 @@ const MeetingRedirect = () => {
             color: "#444",
           }}
         >
-          Redirecting to {getRedirectDestination()} in{" "}
-          <span
-            style={{
-              color: "#0E77D3",
-              fontWeight: "bold",
-              fontSize: "24px",
-            }}
-          >
-            {countdown}
-          </span>{" "}
-          seconds...
+          {isLoadingRedirect ? (
+            <>
+              Loading redirect link...{" "}
+              <span
+                style={{
+                  color: "#0E77D3",
+                  fontWeight: "bold",
+                  fontSize: "24px",
+                }}
+              >
+                ⏳
+              </span>
+            </>
+          ) : (
+            <>
+              Redirecting to {getRedirectDestination()} in{" "}
+              <span
+                style={{
+                  color: "#0E77D3",
+                  fontWeight: "bold",
+                  fontSize: "24px",
+                }}
+              >
+                {countdown}
+              </span>{" "}
+              seconds...
+            </>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -145,10 +184,11 @@ const MeetingRedirect = () => {
         >
           <div
             style={{
-              width: `${((3 - countdown) / 3) * 100}%`,
+              width: isLoadingRedirect ? "100%" : `${((3 - countdown) / 3) * 100}%`,
               height: "100%",
-              background: "#0E77D3",
-              transition: "width 1s linear",
+              background: isLoadingRedirect ? "#FFA500" : "#0E77D3",
+              transition: isLoadingRedirect ? "none" : "width 1s linear",
+              animation: isLoadingRedirect ? "pulse 1.5s ease-in-out infinite" : "none",
             }}
           />
         </div>
@@ -156,28 +196,34 @@ const MeetingRedirect = () => {
         {/* Skip button */}
         <button
           onClick={handleRedirect}
+          disabled={isLoadingRedirect}
           style={{
             background: "transparent",
             border: "2px solid #ABABAB",
             color: "#ABABAB",
             padding: "10px 20px",
             borderRadius: "6px",
-            cursor: "pointer",
+            cursor: isLoadingRedirect ? "not-allowed" : "pointer",
             fontSize: "14px",
             fontWeight: "600",
             lineHeight: "150%",
             transition: "all 0.2s ease",
+            opacity: isLoadingRedirect ? 0.5 : 1,
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = "#101010";
-            e.target.style.color = "#fff";
+            if (!isLoadingRedirect) {
+              e.target.style.background = "#101010";
+              e.target.style.color = "#fff";
+            }
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = "transparent";
-            e.target.style.color = "#101010";
+            if (!isLoadingRedirect) {
+              e.target.style.background = "transparent";
+              e.target.style.color = "#101010";
+            }
           }}
         >
-          Skip Countdown
+          {isLoadingRedirect ? "Loading..." : "Skip Countdown"}
         </button>
 
         {/* Additional info - only show for hosts/mentors */}
