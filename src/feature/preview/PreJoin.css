@@ -187,7 +187,7 @@
       color: #242424;
       font-size: 14px;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 4px;
       width: 100%;
       margin-top: 8px;
@@ -195,6 +195,7 @@
       input {
         accent-color: #0e77d3;
         background-color: #f0f0f0;
+        margin-top: 5px;
       }
     }
 
@@ -326,6 +327,11 @@
 
   .bottomControls .commonTextBtn:hover {
     color: #101010;
+  }
+
+  .bottomControls .commonTextBtn:disabled{
+    opacity: .6;
+    cursor: no-drop;
   }
 
   .sliderMeetingWrapper {
@@ -644,4 +650,8 @@
   .commonDetail{
     margin-bottom: 12px;
   }
+}
+
+.commonTextBtn.testMicrophone:disabled{
+  cursor: no-drop;
 }

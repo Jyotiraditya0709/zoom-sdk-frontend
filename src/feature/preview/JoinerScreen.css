@@ -237,7 +237,7 @@
     }
 
     .commonJoinderBtn:hover {
-      background: #f5f5f5;
+      background: #d6d6d6
     }
 
     .commonJoinderBtn.active:hover {
@@ -964,6 +964,12 @@
   .joinerScreen.sharingScreenActive .shareScreenContainer .videoTagBlock {
     max-width: 100%;
   }
+
+  .joinerScreen {
+    &.sharingScreenActive .shareScreenContainer {
+        height: calc(100vh - 303px);
+    }
+}
 }
 
 @media (min-width: 290px) and (max-width: 375px) {

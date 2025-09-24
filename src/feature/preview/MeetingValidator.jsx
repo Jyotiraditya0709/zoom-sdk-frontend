@@ -154,11 +154,11 @@ const MeetingValidator = () => {
           {isMentor ? (
             <>
               <h2 className="meeting-validator-title success">
-                Welcome <strong>{meetingData.mentorName || "Interviewer"}</strong>!
+                Welcome <strong style={{textTransform: "capitalize"}}>{meetingData.mentorName || "Interviewer"}</strong>!
               </h2>
               <div className="meeting-validator-details">
                 <p className="meeting-validator-message">
-                  This is a personal interview round with <strong>{meetingData.menteeName || "the candidate"}</strong>
+                  This is a personal interview round with <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "the candidate"}</strong>
                 </p>
                 <div className="evaluation-criteria">
                   <h3 className="criteria-title">What We're Looking For:</h3>
@@ -176,7 +176,7 @@ const MeetingValidator = () => {
           ) : (
             <>
               <h2 className="meeting-validator-title success">
-                Welcome to Your Interview Round <strong>{meetingData.menteeName || "Candidate"}</strong>!
+                Welcome to Your Interview Round <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "Candidate"}</strong>!
               </h2>
               <div className="meeting-validator-details">
                 <p className="meeting-validator-message">

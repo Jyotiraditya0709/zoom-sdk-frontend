@@ -1149,7 +1149,7 @@ const PreJoin = () => {
               <div>
                 <div className="commonDetail">
                   <span>Joinee: </span>
-                  <p>{
+                  <p style={{textTransform: "capitalize"}}>{
                     agendaData && (agendaData.mentorName || agendaData.menteeName)
                       ? (agendaData.mentorId === userName 
                           ? (agendaData.mentorName || agendaData.mentorId)

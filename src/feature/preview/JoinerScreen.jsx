@@ -7606,7 +7606,7 @@ function JoinerScreen() {
 
                   >
 
-                    <span>
+                    <span style={{textTransform: "capitalize"}}>
 
                       {getProperDisplayName(user.userId, user.displayName)}
 
