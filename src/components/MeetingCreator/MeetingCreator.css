@@ -149,9 +149,11 @@
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   display: inline-block;
+  width: max-content;
+  text-transform: capitalize;
 }
 
 .link-section {

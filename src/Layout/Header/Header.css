@@ -27,13 +27,13 @@
 
     .logoOrg {
       width: 100%;
-      max-width: 140px;
+      max-width: 105px;
     }
   }
 
   .headerLeftJoinerScreen .logoOrg {
     width: 100%;
-    max-width: 140px;
+    max-width: 120px;
   }
 
 
@@ -64,6 +64,7 @@
     font-weight: 500;
     line-height: 120%;
     text-align: right;
+    text-transform: capitalize;
   }
 
   .profileImage {
