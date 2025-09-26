@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ZoomVideo from "@zoom/videosdk";
 import { useZoom } from "../preview/ZoomContext";
 import MeetingLeft from "./MeetingLeft";
+import ChatSidebar from "./ChatSidebar/ChatSidebar";
 import "./MeetingPage.css";
 import config from "../../config/config.js";
 import {
@@ -104,6 +105,12 @@ const MeetingPage = () => {
   };
 
   const notifyUserLeft = async () => {
+    // Prevent calling userLeft during initial join process
+    if (isJoining) {
+      console.log("🚫 Skipping userLeft webhook during join process");
+      return;
+    }
+
     try {
       console.log("🎯 Calling userLeft webhook with:", {
         meetingId: meetingId,
@@ -149,45 +156,45 @@ const MeetingPage = () => {
 
   const notifyMeetingEnd = async () => {
     try {
-      console.log("🏁 Calling meetingEnd webhook with:", {
+      console.log("🏁 Meeting ended by host:", {
         meetingId: meetingId,
         userId: userName,
       });
+
+      const requestBody = {
+        meetingId: meetingId,
+        userId: userName,
+        userType: "mentor",
+        role: "1",
+        isMentor: true,
+        isHost: true,
+        mentorId: userName,
+      };
+
+      console.log("📡 Making meeting end API call with:", requestBody);
 
       const response = await fetch(
         config.getApiUrl(config.API_ENDPOINTS.MEETING_END),
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            meetingId: meetingId,
-            userId: userName,
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
         }
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ Backend Error Response:", {
+        console.error("❌ Meeting end API Error:", {
           status: response.status,
           statusText: response.statusText,
           body: errorText,
         });
-        throw new Error(
-          `HTTP error! status: ${response.status} - ${errorText}`
-        );
+      } else {
+        const data = await response.json();
+        console.log("✅ Meeting end API call successful:", data);
       }
-
-      const data = await response.json();
-      console.log("✅ Meeting end webhook sent:", data);
     } catch (err) {
-      console.error("❌ Failed to send meeting end webhook:", err);
-      console.error("❌ Error details:", {
-        message: err.message,
-        status: err.status,
-      });
+      console.error("❌ Failed to notify meeting end:", err);
     }
   };
   // Notification helper (move this above useEffect)
@@ -207,7 +214,6 @@ const MeetingPage = () => {
   const [showEndMeetingConfirm, setShowEndMeetingConfirm] = useState(false);
   const [showMediaWarning, setShowMediaWarning] = useState(false);
   const [mediaWarningMessage, setMediaWarningMessage] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Refs
   const clientRef = useRef(null);
@@ -238,19 +244,138 @@ const MeetingPage = () => {
   }, [location.search, meetingId, userId]);
   const isHost = role === 1;
 
+  // Check SharedArrayBuffer support (critical for Zoom SDK remote video)
+  const isProduction = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+  const hasSharedArrayBuffer = typeof SharedArrayBuffer === 'function';
+  const hasCrossOriginIsolation = crossOriginIsolated;
+  console.log(`🔒 SharedArrayBuffer available: ${hasSharedArrayBuffer}`);
+  console.log(`🔒 Cross-origin isolated: ${hasCrossOriginIsolation}`);
+  
+  if (isProduction && !hasSharedArrayBuffer) {
+    console.error(`❌ CRITICAL: SharedArrayBuffer not available in production!`);
+    console.error(`❌ This will cause remote video to not display.`);
+    console.error(`❌ Server needs Cross-Origin-Opener-Policy: same-origin`);
+    console.error(`❌ Server needs Cross-Origin-Embedder-Policy: require-corp`);
+  }
+
   const attachVideo = useCallback(
     async (userId) => {
       const container = videoContainerRefs.current[userId];
       if (container && mediaStreamRef.current) {
         try {
+          console.log(`🎥 Attaching video for user: ${userId}`);
           const userVideo = await mediaStreamRef.current.attachVideo(
             userId,
             VIDEO_QUALITY
           );
           container.innerHTML = "";
           container.appendChild(userVideo);
+
+          // Immediate check for black tile (after 500ms)
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement) {
+                // Check if video has actual content
+                if (
+                  videoElement.videoWidth === 0 ||
+                  videoElement.videoHeight === 0
+                ) {
+                  console.log(
+                    `🧹 Immediate aggressive cleanup of black tile for user: ${userId}`
+                  );
+                  container.innerHTML = "";
+                  container.style.display = "none";
+                  // Remove from DOM completely
+                  if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                  }
+                  // Remove from refs
+                  delete videoContainerRefs.current[userId];
+
+                  if (mediaStreamRef.current) {
+                    mediaStreamRef.current
+                      .detachVideo(userId)
+                      .catch((e) =>
+                        console.error(`Failed to detach video for ${userId}`, e)
+                      );
+                  }
+
+                  // Force UI update
+                  setParticipants(clientRef.current?.getAllUser() || []);
+                }
+              }
+            }
+          }, 500); // Check after 500ms for immediate cleanup
+
+          // Additional timeout to clean up black tiles that don't load
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement && videoElement.videoWidth === 0) {
+                console.log(
+                  `🧹 Aggressive cleanup of persistent black tile for user: ${userId}`
+                );
+                container.innerHTML = "";
+                container.style.display = "none";
+                // Remove from DOM completely
+                if (container.parentNode) {
+                  container.parentNode.removeChild(container);
+                }
+                // Remove from refs
+                delete videoContainerRefs.current[userId];
+
+                // Use mediaStreamRef directly to avoid circular dependency
+                if (mediaStreamRef.current) {
+                  mediaStreamRef.current
+                    .detachVideo(userId)
+                    .catch((e) =>
+                      console.error(`Failed to detach video for ${userId}`, e)
+                    );
+                }
+
+                // Force UI update
+                setParticipants(clientRef.current?.getAllUser() || []);
+              }
+            }
+          }, 2000); // Reduced to 2 seconds for faster cleanup
+
+          // Additional check for video element that doesn't start playing
+          setTimeout(() => {
+            if (container && container.children.length > 0) {
+              const videoElement = container.querySelector("video");
+              if (videoElement && videoElement.paused) {
+                console.log(
+                  `🧹 Aggressive cleanup of non-playing video for user: ${userId}`
+                );
+                container.innerHTML = "";
+                container.style.display = "none";
+                // Remove from DOM completely
+                if (container.parentNode) {
+                  container.parentNode.removeChild(container);
+                }
+                // Remove from refs
+                delete videoContainerRefs.current[userId];
+
+                if (mediaStreamRef.current) {
+                  mediaStreamRef.current
+                    .detachVideo(userId)
+                    .catch((e) =>
+                      console.error(`Failed to detach video for ${userId}`, e)
+                    );
+                }
+
+                // Force UI update
+                setParticipants(clientRef.current?.getAllUser() || []);
+              }
+            }
+          }, 2000); // Check after 2 seconds
         } catch (e) {
           console.error(`Failed to attach video for ${userId}`, e);
+          // Clean up container if attachment fails
+          if (container) {
+            container.innerHTML = "";
+          }
         }
       }
     },
@@ -267,45 +392,264 @@ const MeetingPage = () => {
     }
   }, []);
 
-  // Refresh detection effect
+  // Complete user removal function - handles all cleanup
+  const completeUserRemoval = useCallback((userId) => {
+    console.log(`🚫 Complete user removal initiated for: ${userId}`);
+
+    // 1. Clean up video container
+    if (videoContainerRefs.current[userId]) {
+      console.log(`🧹 Complete cleanup of video container for user: ${userId}`);
+      const container = videoContainerRefs.current[userId];
+      container.innerHTML = "";
+      container.style.display = "none";
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      delete videoContainerRefs.current[userId];
+    }
+
+    // 2. Remove from participants list
+    setParticipants((prevParticipants) => {
+      const updatedParticipants = prevParticipants.filter(
+        (p) => p.userId !== userId
+      );
+      console.log(
+        `📊 Complete removal - Participants updated: ${prevParticipants.length} -> ${updatedParticipants.length}`
+      );
+      return updatedParticipants;
+    });
+
+    // 3. Force additional cleanup
+    setTimeout(() => {
+      // Final check and cleanup
+      const remainingContainer = videoContainerRefs.current[userId];
+      if (remainingContainer) {
+        console.log(
+          `🧹 Final cleanup of remaining container for user: ${userId}`
+        );
+        remainingContainer.innerHTML = "";
+        remainingContainer.style.display = "none";
+        if (remainingContainer.parentNode) {
+          remainingContainer.parentNode.removeChild(remainingContainer);
+        }
+        delete videoContainerRefs.current[userId];
+      }
+
+      // Force final participants update
+      setParticipants((prevParticipants) => {
+        const finalParticipants = prevParticipants.filter(
+          (p) => p.userId !== userId
+        );
+        console.log(
+          `🔄 Complete removal - Final participants count: ${finalParticipants.length}`
+        );
+        return finalParticipants;
+      });
+    }, 100);
+  }, []);
+
+  // Cleanup function to stop media and leave session
+  const cleanupMediaAndLeave = async () => {
+    try {
+      if (mediaStreamRef.current) {
+        await mediaStreamRef.current.stopVideo?.();
+        await mediaStreamRef.current.muteAudio?.();
+      }
+      if (clientRef.current) {
+        await clientRef.current.leave();
+      }
+    } catch (err) {
+      // Ignore errors on cleanup
+    }
+  };
+
+  // Handle refresh detection and automatic redirect
   useEffect(() => {
-    const handleBeforeUnload = (event) => {
-      // Check if this is a hard refresh (not just navigation)
-      if (event.type === "beforeunload") {
-        // Set a flag in sessionStorage to indicate this was a refresh
-        sessionStorage.setItem("meetingRefreshed", "true");
+    // Only set up refresh detection if we have valid meeting info
+    if (!sessionName || !userName) {
+      return;
+    }
+
+    const handleBeforeUnload = () => {
+      // Store meeting info in sessionStorage for after refresh
+      sessionStorage.setItem(
+        "meetingExitInfo",
+        JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+          role: role,
+          timestamp: Date.now(),
+        })
+      );
+
+      // 🔑 CRITICAL: Force immediate client.leave() to notify Zoom
+      try {
+        if (
+          clientRef.current &&
+          clientRef.current.getCurrentUserInfo()?.userId
+        ) {
+          console.log(
+            "🔄 Page unloading - forcing immediate client.leave() to notify Zoom"
+          );
+          clientRef.current.leave(true); // true => force immediate leave
+        }
+      } catch (err) {
+        console.error("❌ Error leaving meeting on page unload:", err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Only handle visibility change if we're actually leaving the page
+      // Tab switches should NOT cause users to leave the meeting
+      if (document.visibilityState === "hidden") {
+        // Check if this is likely a page unload vs just a tab switch
+        // We'll use a small delay to differentiate between tab switch and page unload
+        setTimeout(() => {
+          // If the page is still hidden after a short delay, it might be a page unload
+          // But we won't force leave here - let the beforeunload and pagehide handlers deal with it
+          console.log(
+            "🔄 Tab hidden - but not forcing leave (likely just tab switch)"
+          );
+        }, 100);
+      } else if (document.visibilityState === "visible") {
+        console.log("🔄 Tab visible again - user returned to meeting tab");
+      }
+    };
+
+    const handlePageHide = () => {
+      // Immediately notify backend that user is leaving due to refresh/page close
+      if (clientRef.current && clientRef.current.getCurrentUserInfo()?.userId) {
+        console.log("🔄 User leaving page - immediately notifying backend");
+
+        // Try multiple methods to ensure the webhook is called
+        const data = JSON.stringify({
+          meetingId: sessionName,
+          userId: userName,
+        });
+
+        // Method 1: sendBeacon (most reliable for page unload)
+        if (navigator.sendBeacon) {
+          const success = navigator.sendBeacon(
+            config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+            data
+          );
+          console.log("📡 sendBeacon result:", success);
+        }
+
+        // Method 2: Synchronous XMLHttpRequest (fallback)
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open(
+            "POST",
+            config.getApiUrl(config.API_ENDPOINTS.USER_LEFT),
+            false
+          );
+          xhr.setRequestHeader("Content-Type", "application/json");
+          xhr.send(data);
+          console.log("📡 XMLHttpRequest status:", xhr.status);
+        } catch (err) {
+          console.error("📡 XMLHttpRequest failed:", err);
+        }
+
+        // Method 3: Store in sessionStorage for next page load
+        sessionStorage.setItem("pendingUserLeft", data);
       }
     };
 
     const handleLoad = () => {
-      // Check if we're returning from a refresh
-      const wasRefreshed = sessionStorage.getItem("meetingRefreshed");
-      if (wasRefreshed === "true") {
-        setIsRefreshing(true);
-        sessionStorage.removeItem("meetingRefreshed");
+      // Check if we have stored meeting info from a refresh
+      const storedInfo = sessionStorage.getItem("meetingExitInfo");
+      if (storedInfo) {
+        try {
+          const info = JSON.parse(storedInfo);
+          const timeDiff = Date.now() - info.timestamp;
+
+          // Only redirect if the refresh happened within the last 5 seconds
+          if (timeDiff < 5000) {
+            sessionStorage.removeItem("meetingExitInfo");
+            // Prevent automatic rejoin by setting a flag
+            sessionStorage.setItem("preventAutoRejoin", "true");
+            navigate(
+              `/meeting-exit?meetingId=${encodeURIComponent(
+                info.meetingId
+              )}&userId=${encodeURIComponent(info.userId)}&role=${info.role}`
+            );
+          } else {
+            sessionStorage.removeItem("meetingExitInfo");
+          }
+        } catch (err) {
+          sessionStorage.removeItem("meetingExitInfo");
+        }
+      }
+
+      // Check for pending user left notification
+      const pendingUserLeft = sessionStorage.getItem("pendingUserLeft");
+      if (pendingUserLeft) {
+        try {
+          const data = JSON.parse(pendingUserLeft);
+          console.log("📡 Sending pending user left notification:", data);
+
+          // Send the pending notification
+          fetch(config.getApiUrl(config.API_ENDPOINTS.USER_LEFT), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: pendingUserLeft,
+          })
+            .then(() => {
+              console.log(
+                "✅ Pending user left notification sent successfully"
+              );
+            })
+            .catch((err) => {
+              console.error(
+                "❌ Failed to send pending user left notification:",
+                err
+              );
+            });
+
+          sessionStorage.removeItem("pendingUserLeft");
+        } catch (err) {
+          console.error("❌ Failed to parse pending user left data:", err);
+          sessionStorage.removeItem("pendingUserLeft");
+        }
       }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("unload", handleBeforeUnload); // Backup unload handler
+    window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("load", handleLoad);
 
-    // Check on initial load
-    const wasRefreshed = sessionStorage.getItem("meetingRefreshed");
-    if (wasRefreshed === "true") {
-      setIsRefreshing(true);
-      sessionStorage.removeItem("meetingRefreshed");
-    }
+    // Check immediately on mount
+    handleLoad();
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("unload", handleBeforeUnload);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("load", handleLoad);
     };
-  }, []);
+  }, [navigate, sessionName, userName, role]);
 
   // Main session lifecycle effect
   useEffect(() => {
     const client = getClient();
     clientRef.current = client;
+
+    // Only proceed if we have valid meeting info
+    if (!sessionName || !userName) {
+      return;
+    }
+
+    // Check if we should prevent automatic rejoin (user just left due to refresh)
+    const preventAutoRejoin = sessionStorage.getItem("preventAutoRejoin");
+    if (preventAutoRejoin === "true") {
+      sessionStorage.removeItem("preventAutoRejoin");
+      console.log("🚫 Preventing automatic rejoin due to recent refresh");
+      return;
+    }
 
     // Fetch devices and set state
     const fetchDevices = async () => {
@@ -374,7 +718,7 @@ const MeetingPage = () => {
           {
             sender: payload.sender.name,
             content: payload.message,
-            timestamp: new Date(payload.timestamp).toLocaleTimeString(),
+            timestamp: payload.timestamp, // Store the original timestamp, not formatted string
           },
         ]);
       });
@@ -382,11 +726,32 @@ const MeetingPage = () => {
       client.on("peer-video-state-change", async (payload) => {
         const { action, userId } = payload;
         if (userId === selfUserIdRef.current) return; // Ignore self events
+
+        console.log(`📹 Video state change for user ${userId}: ${action}`);
+
         if (action === "Start") {
+          // Check if user is still in the meeting before attaching video
+          const allUsers = client.getAllUser();
+          const user = allUsers.find((u) => u.userId === userId);
+          if (!user) {
+            console.log(
+              `🚫 User ${userId} no longer in meeting - skipping video attachment`
+            );
+            return;
+          }
+
+          console.log(`🎥 User ${userId} started video - attaching`);
           await attachVideo(userId);
         } else if (action === "Stop") {
+          console.log(
+            `📹 User ${userId} stopped video - complete cleanup initiated`
+          );
           await detachVideo(userId);
+
+          // Use the complete user removal function
+          completeUserRemoval(userId);
         }
+
         // Update participants state so UI reflects remote video changes
         setParticipants(client.getAllUser());
       });
@@ -416,6 +781,26 @@ const MeetingPage = () => {
           patchJsMedia: true,
           enforceVirtualBackground: true,
           virtualBackground: { isSupport: true },
+          // Add TURN/STUN server configuration for production environments
+          webRTC: {
+            iceServers: [
+              { urls: 'stun:stun.zoom.us:3478' },
+              { urls: 'stun:stun1.zoom.us:3478' },
+              { 
+                urls: 'turn:turn.zoom.us:3478',
+                username: 'zoom',
+                credential: 'zoom'
+              },
+              { 
+                urls: 'turn:turn1.zoom.us:3478',
+                username: 'zoom',
+                credential: 'zoom'
+              }
+            ],
+            iceCandidatePoolSize: 10,
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
+          }
         });
         const signature = await getSignature();
         if (!signature) return;
@@ -424,8 +809,10 @@ const MeetingPage = () => {
 
         // notify backend that user joined
         await notifyUserJoined();
-        // Leave on page unload
-        if (client.leaveOnPageUnload) client.leaveOnPageUnload();
+
+        // Enable leave on page unload after successful join
+        client.leaveOnPageUnload = true;
+
         mediaStreamRef.current = client.getMediaStream();
         selfUserIdRef.current = client.getCurrentUserInfo().userId;
         setParticipants(client.getAllUser());
@@ -466,7 +853,17 @@ const MeetingPage = () => {
           // Attach videos for users already in the session
           client.getAllUser().forEach(async (user) => {
             if (user.bVideoOn && user.userId !== selfUserIdRef.current) {
+              console.log(
+                `🎥 Attaching video for existing user: ${user.userId} (${user.displayName})`
+              );
               await attachVideo(user.userId);
+            } else if (
+              !user.bVideoOn &&
+              user.userId !== selfUserIdRef.current
+            ) {
+              console.log(
+                `📹 Skipping video for user without video: ${user.userId} (${user.displayName})`
+              );
             }
           });
 
@@ -577,10 +974,23 @@ const MeetingPage = () => {
           userId: item.userId,
           displayName: item.displayName,
           isLocal: item.userId === selfUserIdRef.current,
+          timestamp: new Date().toISOString(),
+          hasVideo: item.bVideoOn,
         });
-        addNotification(
-          `${item.displayName || item.userId} joined the session.`
-        );
+
+        // Only show notification for non-local users or if it's not a rejoin
+        if (item.userId !== selfUserIdRef.current) {
+          addNotification(
+            `${item.displayName || item.userId} joined the session.`
+          );
+        }
+
+        // If user joined without video, don't create a video container
+        if (!item.bVideoOn && item.userId !== selfUserIdRef.current) {
+          console.log(
+            `📹 User ${item.userId} joined without video - skipping video container`
+          );
+        }
 
         // Re-register screen share event listeners for new participants
         if (item.userId !== selfUserIdRef.current) {
@@ -669,8 +1079,27 @@ const MeetingPage = () => {
         console.log("[USER] User left:", {
           userId: item.userId,
           displayName: item.displayName,
+          timestamp: new Date().toISOString(),
+          isLocal: item.userId === selfUserIdRef.current,
         });
-        addNotification(`${item.displayName || item.userId} left the session.`);
+
+        // Complete user removal - handle like userLeft webhook
+        console.log(
+          `🚫 Complete removal of user: ${item.userId} (${item.displayName})`
+        );
+
+        // Use the complete user removal function
+        completeUserRemoval(item.userId);
+
+        // Additional detach video call
+        detachVideo(item.userId);
+
+        // Only show notification for non-local users
+        if (item.userId !== selfUserIdRef.current) {
+          addNotification(
+            `${item.displayName || item.userId} left the session.`
+          );
+        }
       });
       setParticipants(client.getAllUser());
     };
@@ -679,10 +1108,15 @@ const MeetingPage = () => {
 
     // Connection status handling
     client.on("connection-change", (payload) => {
+      console.log("🔗 Connection change:", payload);
+
       if (payload.state === "Closed") {
-        notifyUserLeft().catch((err) =>
-          console.error("failed to notify user left: ", err)
-        );
+        // Only notify if we were actually connected before
+        if (client.getCurrentUserInfo()?.userId) {
+          notifyUserLeft().catch((err) =>
+            console.error("failed to notify user left: ", err)
+          );
+        }
         addNotification(
           payload.reason === "ended by host"
             ? "The host has ended the meeting."
@@ -694,9 +1128,12 @@ const MeetingPage = () => {
       } else if (payload.state === "Connected") {
         addNotification(`Connected to session.`);
       } else if (payload.state === "Fail") {
-        notifyUserLeft().catch((err) =>
-          console.error("Failed to notify user left:", err)
-        );
+        // Only notify if we were actually connected before
+        if (client.getCurrentUserInfo()?.userId) {
+          notifyUserLeft().catch((err) =>
+            console.error("Failed to notify user left:", err)
+          );
+        }
 
         addNotification(
           `Session failed: ${payload.reason || payload.errorCode}`
@@ -769,6 +1206,17 @@ const MeetingPage = () => {
     });
 
     return () => {
+      // Clean up all video containers immediately
+      Object.keys(videoContainerRefs.current).forEach((userId) => {
+        if (videoContainerRefs.current[userId]) {
+          console.log(
+            `🧹 Cleaning up video container on unmount for user: ${userId}`
+          );
+          videoContainerRefs.current[userId].innerHTML = "";
+        }
+      });
+      videoContainerRefs.current = {};
+
       if (clientRef.current) {
         clientRef.current.leave();
       }
@@ -1071,6 +1519,14 @@ const MeetingPage = () => {
         setError("Failed to end meeting for all.");
       }
     }
+    navigate(
+      "/meeting-exit?meetingId=" +
+        encodeURIComponent(sessionName) +
+        "&userId=" +
+        encodeURIComponent(userName) +
+        "&role=" +
+        role
+    );
   };
   const handleLeave = async () => {
     if (clientRef.current) {
@@ -1083,10 +1539,16 @@ const MeetingPage = () => {
         setError("Failed to leave meeting.");
       }
     }
-    navigate("/meeting-left");
+    navigate(
+      "/meeting-exit?meetingId=" +
+        encodeURIComponent(sessionName) +
+        "&userId=" +
+        encodeURIComponent(userName) +
+        "&role=" +
+        role
+    );
   };
 
-  if (isRefreshing) return <MeetingLeft />;
   if (isJoining) return <div>Joining meeting...</div>;
   if (error)
     return (
@@ -1167,7 +1629,7 @@ const MeetingPage = () => {
               borderRadius: 8,
               marginBottom: 8,
               boxShadow: "0 2px 8px #0006",
-              minWidth: 220,
+              width: 300,
               position: "relative",
               opacity: 1,
               transition: "opacity 0.4s",
@@ -1270,7 +1732,7 @@ const MeetingPage = () => {
                 )}
                 {(
                   user.userId === selfUserIdRef.current
-                    ? isVideoOn
+                    ? 2000000000002020
                     : user.bVideoOn
                 ) ? (
                   <FaVideo
@@ -1378,9 +1840,7 @@ const MeetingPage = () => {
       <div className="control-bar">
         {/* Mic button with dropdown for mic and speaker selection */}
         <div
-          className="control-button video-control-group"
-          style={{ position: "relative", marginRight: 8 }}
-        >
+          className="control-button video-control-group controlViewBlock">
           <button onClick={toggleAudio}>
             {isAudioOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
           </button>
@@ -1444,9 +1904,7 @@ const MeetingPage = () => {
         </div>
         {/* Camera button with dropdown for camera and background selection */}
         <div
-          className="control-button video-control-group"
-          style={{ position: "relative", marginRight: 8 }}
-        >
+          className="control-button video-control-group controlViewBlock">
           <button onClick={toggleVideo}>
             {isVideoOn ? <FaVideo /> : <FaVideoSlash />}
           </button>
@@ -1473,7 +1931,7 @@ const MeetingPage = () => {
                       await mediaStreamRef.current.switchCamera(e.target.value);
                     }
                   }}
-                  style={{ width: "100%" }}
+                  style={{ width: "50%" }}
                 >
                   {videoDevices.map((d) => (
                     <option key={d.deviceId} value={d.deviceId}>
@@ -1568,189 +2026,19 @@ const MeetingPage = () => {
           </button>
         )}
       </div>
-      {showModals.chat && (
-        <div
-          className="modal chat-modal"
-          style={{
-            position: "fixed",
-            top: 0,
-            right: 0,
-            height: "100%",
-            width: 340,
-            background: "#fff",
-            boxShadow: "-2px 0 12px #0002",
-            zIndex: 2100,
-            display: "flex",
-            flexDirection: "column",
-            borderLeft: "1px solid #e0e0e0",
-            padding: 0,
-            animation: "slideInRight 0.3s",
-          }}
-          onClick={() => handleModal("chat", false)}
-        >
-          <div
-            className="modal-content"
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              padding: 0,
-              background: "#f8f9fa",
-              borderRadius: 0,
-              boxShadow: "none",
-              minWidth: 0,
-              minHeight: 0,
-              height: "100%",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "18px 24px 12px 24px",
-                borderBottom: "1px solid #e0e0e0",
-                background: "#fff",
-              }}
-            >
-              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>Chat</h3>
-              <button
-                onClick={() => handleModal("chat", false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: 22,
-                  color: "#888",
-                  cursor: "pointer",
-                  marginLeft: 8,
-                }}
-                aria-label="Close chat panel"
-              >
-                ×
-              </button>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "16px 0 0 0",
-                minHeight: 0,
-              }}
-            >
-              {chatMessages.length === 0 ? (
-                <div
-                  style={{ color: "#888", textAlign: "center", marginTop: 32 }}
-                >
-                  No messages yet.
-                </div>
-              ) : (
-                chatMessages.map((msg, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      padding: "8px 24px 8px 24px",
-                      fontSize: 15,
-                      gap: 8,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: "#226",
-                        minWidth: 60,
-                        flexShrink: 0,
-                        textAlign: "right",
-                        marginRight: 8,
-                      }}
-                    >
-                      {msg.sender}:
-                    </div>
-                    <div
-                      style={{
-                        color: "#222",
-                        wordBreak: "break-word",
-                        flex: 1,
-                      }}
-                    >
-                      {msg.content}
-                    </div>
-                    <div
-                      style={{
-                        color: "#aaa",
-                        fontSize: 12,
-                        marginLeft: 8,
-                        minWidth: 48,
-                        textAlign: "right",
-                      }}
-                    >
-                      {msg.timestamp}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <form
-              onSubmit={sendChatMessage}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                padding: "18px 24px 18px 24px",
-                borderTop: "1px solid #e0e0e0",
-                background: "#fff",
-                position: "relative",
-              }}
-            >
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type a message..."
-                style={{
-                  padding: "10px 12px",
-                  border: "1px solid #cfd8dc",
-                  borderRadius: 8,
-                  fontSize: 15,
-                  outline: "none",
-                  marginBottom: 0,
-                  background: "#f8f9fa",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  color: "#222", // Ensure text is visible
-                }}
-                autoFocus
-              />
-              <button
-                type="submit"
-                style={{
-                  background: "#1976f6",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 0",
-                  fontWeight: 600,
-                  fontSize: 16,
-                  cursor: "pointer",
-                  transition: "background 0.2s",
-                  marginTop: 0,
-                  width: "100%",
-                }}
-              >
-                Send
-              </button>
-            </form>
-          </div>
-          <style>{`
-            @keyframes slideInRight {
-              from { transform: translateX(100%); opacity: 0; }
-              to { transform: translateX(0); opacity: 1; }
-            }
-          `}</style>
-        </div>
-      )}
+      <ChatSidebar
+        isChatOpen={showModals.chat}
+        setIsChatOpen={(state) => handleModal("chat", state)}
+        participants={participants}
+        chatMessages={chatMessages}
+        onSendMessage={(message) => {
+          if (message && message.trim()) {
+            setChatInput(message);
+            sendChatMessage({ preventDefault: () => {} });
+          }
+        }}
+        userName={userName}
+      />
       {showModals.participants && (
         <div
           className="modal participants-modal"
@@ -1759,7 +2047,7 @@ const MeetingPage = () => {
             top: 0,
             right: 0,
             height: "100%",
-            width: 340,
+            width: 350,
             background: "#fff",
             boxShadow: "-2px 0 12px #0002",
             zIndex: 2000,

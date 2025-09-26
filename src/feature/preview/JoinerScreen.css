@@ -1,0 +1,989 @@
+.joinerScreen {
+  .borderBottom {
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  &.sharingScreenActive .shareScreenContainer {
+    height: calc(100vh - 260px);
+  }
+
+  .joinerScreenContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(100vh - 76px);
+    width: 100%;
+  }
+
+  .joinerScreenBlock {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    width: 70%;
+    -webkit-box-flex: 1;
+    box-flex: 1;
+    -webkit-flex-grow: 1;
+    flex-grow: 1;
+    flex: 1;
+    overflow: visible;
+    height: 100%;
+    padding: 20px;
+  }
+
+  .joinerVideoScreen {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+    height: calc(100vh - 260px);
+    gap: 10px;
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  .joinerVideoScreen.sharing-on {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .shareScreenContainer {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+    z-index: 10;
+    gap: 10px;
+  }
+
+  .shareScreenContainer .videoTagBlock {
+    display: none;
+    height: 100% !important;
+    width: 100% !important;
+    max-width: 50%;
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .joinerVideoScreen .joinerVideoBox {
+    background: #fafafa;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .joinerVideoScreen.grid-1.sharing-on .joinerVideoBox {
+    max-width: 20%;
+  }
+
+  .joinerVideoScreen.grid-2 .joinerVideoBox {
+    max-width: calc(50% - 10px);
+  }
+
+  &.sharingScreenActive .joinerVideoScreen.grid-2 .joinerVideoBox {
+    max-width: 20%;
+  }
+
+  .joinerVideoScreen.grid-3 .joinerVideoBox {
+    max-width: calc(50% - 10px);
+    height: 48%;
+  }
+
+  &.sharingScreenActive .joinerVideoScreen.grid-3 .joinerVideoBox {
+    max-width: calc(25% - 10px);
+    height: 100%;
+  }
+
+  .joinerVideoScreen.grid-4 .joinerVideoBox {
+    max-width: calc(50% - 10px);
+    height: 48%;
+  }
+
+  &.sharingScreenActive .joinerVideoScreen.grid-4 .joinerVideoBox {
+    max-width: 24%;
+    height: 100%;
+  }
+
+  .joinerVideoScreen.grid-5 .joinerVideoBox {
+    max-width: calc(20% - 10px);
+  }
+
+  .joinerVideoScreen.grid-6 .joinerVideoBox {
+    max-width: calc(16.6% - 10px);
+  }
+
+  .joinerVideoScreen.grid-7 .joinerVideoBox {
+    max-width: calc(14.2% - 10px);
+  }
+
+  .joinerVideoScreen.grid-8 .joinerVideoBox {
+    max-width: calc(12.5% - 10px);
+  }
+
+  .joinerVideoScreen.grid-9 .joinerVideoBox {
+    max-width: calc(11.1% - 10px);
+  }
+
+  .joinerVideoScreen.grid-10 .joinerVideoBox {
+    max-width: calc(10% - 10px);
+  }
+
+  .joinerVideoScreen.grid-11 .joinerVideoBox {
+    max-width: calc(9.1% - 10px);
+  }
+
+  .joinerVideoScreen.grid-12 .joinerVideoBox {
+    max-width: calc(8.3% - 10px);
+  }
+
+  .joinerVideoScreen.grid-13 .joinerVideoBox {
+    max-width: calc(7.7% - 10px);
+  }
+
+  .joinerVideoScreen.grid-14 .joinerVideoBox {
+    max-width: calc(7.1% - 10px);
+  }
+
+  .joinerVideoScreen.grid-15 .joinerVideoBox {
+    max-width: calc(6.6% - 10px);
+  }
+
+  .recordingSetting {
+    position: relative;
+  }
+
+  .joinerVideoBox.active {
+    border: 2px solid #0e77d3;
+  }
+
+  /* Add active speaker highlighting */
+  .joinerVideoBox.active-speaker {
+    border: 3px solid #00baff;
+    box-shadow: 0 0 20px rgba(0, 186, 255, 0.5);
+    transform: scale(1.01);
+    transition: all 0.3s ease;
+  }
+
+  /* Video player container styling for Zoom SDK */
+  .video-player-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-player-container video-player {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .joinerSettingBottom {
+    background: #f5f5f5;
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 8px;
+    flex-wrap: wrap;
+    overflow: visible;
+
+    .commonJoinderBtn {
+      border-radius: 10px;
+      background: #fafafa;
+      border: 1px solid transparent;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: auto;
+      min-width: 120px;
+      max-width: 150px;
+      height: 80px;
+      outline: none;
+      flex-shrink: 0;
+
+      span {
+        color: #171717;
+        font-size: 13px;
+        font-weight: 400;
+      }
+    }
+
+    .commonJoinderBtn.active {
+      background: #171717;
+    }
+
+    .commonJoinderBtn:hover {
+      background: #d6d6d6
+    }
+
+    .commonJoinderBtn.active:hover {
+      background: #171717;
+    }
+
+    .commonJoinderBtn.active svg path {
+      fill: #fff;
+    }
+
+    .commonJoinderBtn.muteBoxSetting.active svg path {
+      stroke: #fff;
+      fill: unset;
+    }
+
+    .commonJoinderBtn.active span {
+      color: #fff;
+    }
+
+    .commonJoinderBtn.disabled {
+      background: #f0f0f0;
+      color: #999;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .commonJoinderBtn.disabled:hover {
+      background: #f0f0f0;
+    }
+
+    .commonJoinderBtn.disabled svg path {
+      fill: #999;
+    }
+
+    .commonJoinderBtn.disabled span {
+      color: #999;
+    }
+
+    .commonJoinderBtn .messageRound {
+      position: relative;
+    }
+
+    .commonJoinderBtn .messageRound span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ec3834;
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    .leaveMeetingButton {
+      border-radius: 6px;
+      background: #ef5350;
+      padding: 10px 16px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 120%;
+      outline: none;
+      border: none;
+      transition: 0.3s;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 120px;
+    }
+
+    .leaveMeetingButton:hover {
+      background: #ec3834;
+    }
+  }
+
+  .dummyVideo span {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 120%;
+    color: #171717;
+  }
+
+  .joinerName {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    border-radius: 5px;
+    background: #171717;
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 10px;
+  }
+}
+
+/* Control button group styling */
+.control-button.video-control-group {
+  position: relative;
+  display: inline-block;
+  margin-right: 8px;
+  z-index: 1000;
+  overflow: visible;
+}
+
+.video-options-toggle {
+  position: absolute;
+  right: 0;
+  bottom: 40px;
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.video-options-toggle:hover {
+  background: #333;
+}
+
+.video-options-menu {
+  position: absolute;
+  bottom: 50px;
+  background: #222;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  min-width: 220px;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease;
+  border: 1px solid #333;
+  backdrop-filter: blur(10px);
+  overflow: visible;
+  white-space: nowrap;
+  max-height: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Status icons styling */
+.joinerName .fa-microphone,
+.joinerName .fa-microphone-slash,
+.joinerName .fa-video,
+.joinerName .fa-video-slash,
+.joinerName .fa-signal {
+  transition: all 0.2s ease;
+}
+
+.joinerName .fa-microphone:hover,
+.joinerName .fa-video:hover,
+.joinerName .fa-signal:hover {
+  transform: scale(1.1);
+}
+
+/* 🆕 Recording Banner Styles */
+.recording-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ff4757, #ff3742);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  z-index: 1000;
+  animation: recordingPulse 2s ease-in-out infinite;
+}
+
+.recording-banner svg {
+  width: 20px;
+  height: 20px;
+  fill: white;
+}
+
+@keyframes recordingPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+    transform: translateX(-50%) scale(1);
+  }
+
+  50% {
+    box-shadow: 0 6px 20px rgba(255, 71, 87, 0.5);
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+/* 🆕 Recording Status Bar Styles */
+.recording-status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, #ff4757, #ff3742);
+  color: white;
+  padding: 8px 0;
+  z-index: 1001;
+  text-align: center;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  animation: recordingBlink 1.5s ease-in-out infinite;
+}
+
+@keyframes recordingBlink {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.control-button.video-control-group.controlViewBlock {
+  position: relative;
+  display: inline-block;
+  margin-right: 8px;
+  z-index: 1000;
+}
+
+.optionToggleBlock {
+  position: absolute;
+  right: 0;
+  bottom: 40px;
+  background: #222;
+  color: #fff;
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.bottomButtonOption {
+  position: absolute;
+  bottom: 105px;
+  background: #222;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  z-index: 9999;
+  border: 1px solid #333;
+  width: 250px;
+}
+
+.dropdownPopupArea {
+  display: flex !important;
+  flex-direction: column;
+
+  select {
+    width: 100% !important;
+  }
+}
+
+.modalMeetingEndPopup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalMeetingEndContentPopup {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 90vh;
+  overflow: auto;
+  color: #222;
+
+  h3 {
+    color: #171717;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 120%;
+  }
+
+  .textMeeting {
+    color: #737373;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+  }
+}
+
+.feedbackFormPopup {
+  width: 100%;
+  max-width: 600px;
+  margin: 10px;
+
+  .titleFeedback {
+    color: #171717;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 120%;
+    text-align: center;
+  }
+
+  label {
+    color: #171717;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+    margin-top: 40px;
+  }
+
+  textarea {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    color: #171717;
+    resize: none;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+    margin-top: 5px;
+    margin-bottom: 20px;
+  }
+
+  button {
+    border-radius: 6px;
+    border: 1px solid #0E77D3;
+    background: #0E77D3;
+    text-align: center;
+    width: 100%;
+    padding: 10px 20px;
+    color: #FFF;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 150%;
+  }
+}
+
+.feedbackThankYouPopup h2 {
+  color: #171717;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 120%;
+}
+
+.feedbackThankYouPopup p {
+  color: #737373;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.feedbackThankYou {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: center;
+}
+
+.meetingEndedHost {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.meetingRedirectContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #101010;
+  text-align: center;
+  padding: 20px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+}
+
+.meetingRedirectBox {
+  background: #fff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+}
+
+.activeRotateButton svg{
+  transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+
+  .joinerScreen {
+    .joinerScreenContainer {
+      height: calc(100vh - 70px);
+    }
+  }
+
+  .joinerScreen .joinerScreenBlock .joinerVideoScreen {
+    padding: 20px 0 !important;
+  }
+
+  .joinerScreen .joinerVideoScreen .joinerVideoBox {
+    height: 200px;
+  }
+
+  .joinerScreen {
+    .joinerVideoScreen .joinerVideoBox {
+      min-height: unset;
+    }
+  }
+
+
+  .control-button.video-control-group.controlViewBlock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #d4d4d4;
+    border-radius: 8px;
+    padding: 5px 10px;
+    width: 100%;
+    max-width: 50px;
+    justify-content: center;
+  }
+
+  .joinerScreen .joinerSettingBottom .commonJoinderBtn.active {
+    background: transparent !important;
+  }
+
+  .joinerScreen .joinerSettingBottom .muteBoxSetting>svg path {
+    fill: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .videoBoxSetting>svg path {
+    fill: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .infoSetting>svg path {
+    stroke: #5c5c5c;
+  }
+
+  .joinerScreen .joinerSettingBottom .muteBoxSetting.active>svg path {
+    stroke: #171717 !important;
+    fill: unset !important;
+  }
+
+  .joinerScreen .joinerSettingBottom .videoBoxSetting.active>svg path {
+    fill: #171717 !important;
+  }
+
+  .joinerScreen .joinerSettingBottom .infoSetting.active>svg path {
+    fill: #171717 !important;
+  }
+
+  .joinerScreenContainer .joinerSettingBottom .chatSetting,
+  .joinerScreen .joinerSettingBottom .infoSetting {
+    border: 1px solid #d4d4d4;
+    border-radius: 8px;
+    padding: 5px 10px;
+    width: 100%;
+    max-width: 50px !important;
+    min-height: 37px;
+  }
+
+  .joinerScreen .joinerSettingBottom .commonJoinderBtn {
+    padding: 0;
+    height: auto;
+    min-width: auto;
+    max-width: unset;
+    background: transparent;
+  }
+
+  .joinerSettingBottom .optionToggleBlock {
+    position: unset;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .joinerSettingBottom .optionToggleBlock path {
+    fill: #171717;
+  }
+
+  .joinerSettingBottom .video-options-toggle {
+    background: transparent;
+    padding: 0;
+    position: unset;
+  }
+
+  .joinerSettingBottom .video-options-toggle path {
+    fill: #171717;
+  }
+
+  .joinerScreen .joinerSettingBottom {
+    gap: 10px;
+  }
+
+  .joinerScreen .joinerSettingBottom .commonJoinderBtn span {
+    display: none;
+  }
+
+  .joinerScreen {
+    .joinerScreenBlock {
+      justify-content: unset;
+    }
+  }
+
+  .joinerScreen .joinerSettingBottom {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    border-radius: 0;
+    z-index: 10;
+  }
+
+  .bottomButtonOption {
+    bottom: 60px;
+  }
+
+  .joinerScreen {
+    & .joinerSettingBottom {
+      .leaveMeetingButton {
+        min-width: auto;
+        line-height: 0;
+        padding: 9.5px 16px;
+      }
+    }
+  }
+
+  .joinerScreen .joinerSettingBottom .leaveMeetingButton svg path {
+    stroke: #fff;
+  }
+
+  .sharingScreenActive.joinerScreen {
+    .joinerVideoScreen.grid-1 .joinerVideoBox {
+      max-width: 48%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-2 .joinerVideoBox {
+      max-width: 48%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-3 .joinerVideoBox {
+      max-width: 31%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-4 .joinerVideoBox {
+      max-width: 21%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-5 .joinerVideoBox {
+      max-width: 11%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerVideoScreen.grid-6 .joinerVideoBox {
+      max-width: 11%;
+      height: 108px;
+      flex-wrap: nowrap;
+    }
+
+    .joinerScreenBlock {
+      gap: 30px;
+    }
+
+    .shareScreenContainer {
+      height: auto;
+    }
+
+  }
+
+  .joinerScreen {
+    .joinerVideoScreen.grid-1.sharing-on .joinerVideoBox {
+      max-width: 20%;
+    }
+
+    .joinerVideoScreen.grid-3 .joinerVideoBox {
+      max-width: 48%;
+      height: 200px;
+    }
+
+    .joinerVideoScreen.grid-4 .joinerVideoBox {
+      max-width: 48%;
+    }
+
+    .joinerVideoScreen.grid-5 .joinerVideoBox {
+      max-width: 31%;
+    }
+
+    .joinerVideoScreen.grid-6 .joinerVideoBox {
+      max-width: 31%;
+    }
+
+    .joinerVideoScreen.grid-7 .joinerVideoBox {
+      max-width: 18%;
+    }
+
+    .joinerVideoScreen.grid-8 .joinerVideoBox {
+      max-width: 18%;
+    }
+
+    .joinerVideoScreen.grid-9 .joinerVideoBox {
+      max-width: calc(11.1% - 10px);
+    }
+
+    .joinerVideoScreen.grid-10 .joinerVideoBox {
+      max-width: calc(10% - 10px);
+    }
+
+    .joinerVideoScreen.grid-11 .joinerVideoBox {
+      max-width: calc(9.1% - 10px);
+    }
+
+    .joinerVideoScreen.grid-12 .joinerVideoBox {
+      max-width: calc(8.3% - 10px);
+    }
+
+    .joinerVideoScreen.grid-13 .joinerVideoBox {
+      max-width: calc(7.7% - 10px);
+    }
+
+    .joinerVideoScreen.grid-14 .joinerVideoBox {
+      max-width: calc(7.1% - 10px);
+    }
+
+    .joinerVideoScreen.grid-15 .joinerVideoBox {
+      max-width: calc(6.6% - 10px);
+    }
+  }
+
+  .joinerScreen {
+    .shareScreenContainer .videoTagBlock {
+      max-width: 100%;
+    }
+  }
+
+  .joinerScreen .shareScreenContainer .videoTagBlock {
+    height: auto !important;
+  }
+}
+
+
+/* Chat notification indicator animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 376px) {
+  .mainMeetingContainer .leftMeetingDetail .videoBoxPreJoin {
+    height: 176px !important;
+  }
+}
+
+
+@media (min-width: 1700px) {
+  .joinerScreen.sharingScreenActive .shareScreenContainer .videoTagBlock {
+    max-width: 100%;
+  }
+
+  .joinerScreen {
+    &.sharingScreenActive .shareScreenContainer {
+        height: calc(100vh - 303px);
+    }
+}
+}
+
+@media (min-width: 290px) and (max-width: 375px) {
+  .joinerScreen .joinerVideoScreen.grid-2 .joinerVideoBox {
+    max-width: 100%;
+    height: 220px;
+  }
+
+}
+
+@media (min-width: 376px) and (max-width: 768px) {
+  .joinerScreen .joinerVideoScreen.grid-2 .joinerVideoBox {
+    max-width: 100%;
+    height: 260px;
+  }
+
+}

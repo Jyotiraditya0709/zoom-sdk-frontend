@@ -1,16 +1,32 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap");
 
-body {
+*{
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+body {
   font-family: "Poppins", sans-serif;
-  background: radial-gradient(ellipse at top left, #0d0d0d, #1a1a1a);
+  background: radial-gradient(ellipse at top left, #ffffff, #ffffff);
   color: white;
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  /* overflow: hidden; */
+  width: 100%;  
+  height: 100%;
+  max-width: none !important;
+}
+
+::-webkit-scrollbar {
+    height: 15px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 15px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 0;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .app-container {
@@ -128,7 +144,10 @@ body {
   background-color: black;
   border-radius: 10px;
   overflow: hidden;
-  border: 2px solid #ccc;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 video-player {
@@ -143,4 +162,31 @@ video-player {
   margin-top: 20px;
   font-size: 16px;
   cursor: pointer;
+}
+
+.warning-message{
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blackColor{
+  color: #101010;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 120%;
+}
+
+@media (max-width: 768px) {
+  .mobHide {
+    display: none !important;
+  }
+
+  .commonJoinderBtn.mobHide {
+    display: none !important;
+  }
 }

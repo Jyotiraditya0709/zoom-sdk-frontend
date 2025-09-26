@@ -1,0 +1,33 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing dependencies..."
+        - node --version
+        - npm --version
+        - echo "Cleaning up existing lock files and node_modules..."
+        - rm -rf node_modules package-lock.json
+        - npm cache clean --force
+        - echo "Installing fresh dependencies with legacy peer deps..."
+        - npm install --legacy-peer-deps
+        - echo "Dependencies installed successfully"
+    build:
+      commands:
+        - echo "Starting build process..."
+        - npm run build
+        - echo "Build completed successfully"
+        - ls -la dist/
+        - echo "Build artifacts:"
+        - find dist -type f -name "*.js" -o -name "*.css" -o -name "*.html" | head -10
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Cross-Origin-Opener-Policy'
+          value: 'same-origin'
+        - key: 'Cross-Origin-Embedder-Policy'
+          value: 'require-corp'

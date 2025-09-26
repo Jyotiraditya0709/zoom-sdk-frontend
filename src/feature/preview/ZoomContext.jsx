@@ -29,6 +29,18 @@ export const ZoomProvider = ({ children }) => {
     return client.current;
   }, []);
 
+  // Update context values when they change
+  const updateContext = useCallback((updates) => {
+    Object.entries(updates).forEach(([key, value]) => {
+      if (key === 'selectedCamera') setSelectedCamera(value);
+      if (key === 'selectedMic') setSelectedMic(value);
+      if (key === 'selectedSpeaker') setSelectedSpeaker(value);
+      if (key === 'bgMode') setBgMode(value);
+      if (key === 'userName') setUserName(value);
+      if (key === 'sessionName') setSessionName(value);
+    });
+  }, []);
+
   // Clean up all tracks and client
   const cleanup = useCallback(async () => {
     if (localVideoTrack) {
@@ -69,6 +81,7 @@ export const ZoomProvider = ({ children }) => {
         bgMode,
         setBgMode,
         cleanup,
+        updateContext,
       }}
     >
       {children}

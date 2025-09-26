@@ -10,9 +10,12 @@ const config = {
     USER_LEFT: "/api/userLeft",
     MEETING_END: "/api/meetingEnd",
     GET_MEETING_INFO: "/api/getMeetingInfo",
+    CREATE_MEETING: "/api/createMeeting",
+    REMOVE_USER: "/api/removeUser",
   },
 
   // Get full URL for an endpoint
+  //mew comment added
   getApiUrl: (endpoint) => {
     return `${config.BACKEND_URL}${endpoint}`;
   },

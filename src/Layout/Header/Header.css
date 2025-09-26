@@ -1,0 +1,139 @@
+.headerMain {
+  width: 100% !important;
+  padding: 12px 20px !important;
+  background: #fff !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  z-index: 1000 !important;
+  position: relative !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-height: 60px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  clip: auto !important;
+  clip-path: none !important;
+
+  .headerContentOne {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 40px !important;
+    position: relative !important;
+    z-index: 1001 !important;
+
+    .logoOrg {
+      width: 100%;
+      max-width: 105px;
+    }
+  }
+
+  .headerLeftJoinerScreen .logoOrg {
+    width: 100%;
+    max-width: 120px;
+  }
+
+
+  .profileDetailHeader {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .profileDetailHeader .profileName {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .profileName .emailText {
+    color: #737373;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 120%;
+  }
+
+  .profileName .nameText {
+    color: #000;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 120%;
+    text-align: right;
+    text-transform: capitalize;
+  }
+
+  .profileImage {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+  }
+
+  /* second header content */
+
+  .headerContentTwo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .headerLeftJoinerScreen {
+    display: flex;
+    align-items: center;
+
+    img {
+      border-right: 1px solid #d4d4d4;
+      margin-right: 16px;
+      padding-right: 16px;
+    }
+
+    .headerDescription {
+      color: #171717;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 140%;
+    }
+  }
+
+  .headerRightJoinerScreen .timerCount {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 6px;
+    border: 1px solid #e5e5e5;
+    background: #f5f5f5;
+    padding: 11px 16px;
+    color: #404040;
+    font-size: 12px;
+    font-weight: 400;
+    margin-right: 30px;
+  }
+}
+
+.headerMain .headerRightJoinerScreen .timerCount {
+  margin-right: 0;
+  padding: 8px 12px;
+}
+
+@media (max-width: 768px) {
+  .mainMeetingContainer .headerContentOne .logoOrg {
+    max-width: 110px;
+  }
+}

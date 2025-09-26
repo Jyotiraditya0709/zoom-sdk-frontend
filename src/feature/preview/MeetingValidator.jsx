@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import config from "../../config/config.js";
+import "./MeetingValidator.css";
 
 const MeetingValidator = () => {
   const { meetingId, userId } = useParams();
@@ -66,49 +67,52 @@ const MeetingValidator = () => {
 
   if (isValidating) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          fontSize: "18px",
-        }}
-      >
-        🔍 Validating meeting...
+      <div className="meeting-validator-container">
+        <div className="meeting-validator-content">
+          <div className="meeting-validator-icon"><img src="/assest/greenTick.gif" alt="" style={{ width: "70px" }} /></div>
+          <h2 className="meeting-validator-title">Validating Meeting Access...</h2>
+          <p className="meeting-validator-message">Please wait while we validate your meeting access.</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          flexDirection: "column",
-          gap: "20px",
-        }}
-      >
-        <h2>
-          {errorType === "expired"
-            ? "⏰ Meeting Time Has Passed"
-            : errorType === "not_found"
-              ? "❌ Meeting Not Found"
-              : errorType === "unauthorized"
-                ? "🚫 Access Denied"
-                : "❌ Error"}
-        </h2>
-        <p>{error}</p>
-        {errorType === "expired" && (
-          <p style={{ color: "#666", fontSize: "14px" }}>
-            This meeting has ended. Please contact the meeting organizer for
-            more information.
-          </p>
-        )}
-        <button onClick={() => navigate("/")}>Go Back</button>
+      <div className="meeting-validator-container">
+        <div className={`meeting-validator-content meeting-validator-error`}>
+          <div className="meeting-validator-icon">
+            {errorType === "expired"
+              ? "⏰"
+              : errorType === "not_found"
+                ? <img src="/assest/svg/accessDenied.svg" alt="" />
+                : errorType === "unauthorized"
+                  ? <img src="/assest/svg/accessDenied.svg" alt="" />
+                  : <img src="/assest/svg/accessDenied.svg" alt="" />}
+          </div>
+          <h2 className="meeting-validator-title" style={{ color: "#101010" }}>
+            {errorType === "expired"
+              ? "Meeting Time Has Passed"
+              : errorType === "not_found"
+                ? "Meeting Not Found"
+                : errorType === "unauthorized"
+                  ? "Access Denied"
+                  : "Access Denied"}
+          </h2>
+          <p className="meeting-validator-message">{error}</p>
+          {errorType === "expired" && (
+            <p className="meeting-validator-info">
+              This meeting has ended. Please contact the meeting organizer for
+              more information.
+            </p>
+          )}
+          <button
+            className="meeting-validator-button"
+            onClick={() => navigate("/")}
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
@@ -117,82 +121,102 @@ const MeetingValidator = () => {
     // Check if meeting is already completed
     if (meetingData.meetingStatus === "completed" || meetingData.isCompleted) {
       return (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "100vh",
-            flexDirection: "column",
-            gap: "20px",
-          }}
-        >
-          <h2>🏁 Meeting is already completed</h2>
-          <div>
-            <p>
-              <strong>Meeting ID:</strong> {meetingData.meetingId}
+        <div className="meeting-validator-container">
+          <div className="meeting-validator-content meeting-validator-warning">
+            <div className="meeting-validator-icon"><img src="/assest/svg/accessDenied.svg" alt="" /></div>
+            <h2 className="meeting-validator-title warning">
+              Meeting is already completed
+            </h2>
+            <p className="meeting-validator-message">
+              This meeting has already been completed. Please contact the meeting organizer for more information.
             </p>
-            <p>
-              <strong>Agenda:</strong> {meetingData.agenda}
-            </p>
-            <p>
-              <strong>Status:</strong> {meetingData.meetingStatus}
-            </p>
+            <button
+              className="meeting-validator-button"
+              onClick={() => navigate("/")}
+            >
+              Go Back
+            </button>
           </div>
-          <button onClick={() => navigate("/")}>Go Back</button>
         </div>
       );
     }
 
+    // Determine if user is mentor or mentee
+    const isMentor = meetingData.mentorId === userId;
+    const userType = isMentor ? "mentor" : "mentee";
+    const role = isMentor ? "1" : "0"; // 1 = host, 0 = attendee
+
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          flexDirection: "column",
-          gap: "20px",
-        }}
-      >
-        <h2>✅ Meeting Validated!</h2>
-        <div>
-          <p>
-            <strong>Meeting ID:</strong> {meetingData.meetingId}
-          </p>
-          <p>
-            <strong>Agenda:</strong> {meetingData.agenda}
-          </p>
-          <p>
-            <strong>Status:</strong> {meetingData.meetingStatus}
-          </p>
+      <div className="meeting-validator-container">
+        <div className="meeting-validator-content meeting-validator-success">
+          <div className="meeting-validator-icon"><img src="/assest/tetr-logo.png" alt="" style={{ width: "150px" }} /></div>
+          
+          {isMentor ? (
+            <>
+              <h2 className="meeting-validator-title success">
+                Welcome <strong style={{textTransform: "capitalize"}}>{meetingData.mentorName || "Interviewer"}</strong>!
+              </h2>
+              <div className="meeting-validator-details">
+                <p className="meeting-validator-message">
+                  This is a personal interview round with <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "the candidate"}</strong>
+                </p>
+                <div className="evaluation-criteria">
+                  <h3 className="criteria-title">What We're Looking For:</h3>
+                  <ul className="criteria-list">
+                    <li>Strong communication skills</li>
+                    <li>Leadership potential</li>
+                    <li>Curiosity and resilience</li>
+                    <li>Global perspective</li>
+                    <li>Passion for entrepreneurship</li>
+                    <li>Genuine alignment with Tetr's vision and values</li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="meeting-validator-title success">
+                Welcome to Your Interview Round <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "Candidate"}</strong>!
+              </h2>
+              <div className="meeting-validator-details">
+                <p className="meeting-validator-message">
+                  This stage evaluates interpersonal skills, emotional intelligence, and cultural fit that cannot be fully captured through written applications or standardized assessments.
+                </p>
+                <div className="interview-preparation">
+                  <h3 className="preparation-title">Interview Preparation</h3>
+                  <ul className="preparation-list">
+                    <li>Reflect on how your experiences connect to your future goals</li>
+                    <li>Arrange a professional setting with appropriate technical setup</li>
+                    <li>Review your application materials to ensure consistency in how you present yourself</li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          )}
+          
+          <button
+            className="meeting-validator-button"
+            onClick={() => {
+              console.log("🔍 User type determined:", {
+                userId,
+                userType,
+                role,
+                mentorId: meetingData.mentorId,
+                menteeId: meetingData.menteeId,
+              });
+
+              navigate(
+                `/pre-join?meetingId=${meetingId}&userId=${userId}&agenda=${encodeURIComponent(
+                  meetingData.agenda || ""
+                )}&status=${encodeURIComponent(
+                  meetingData.meetingStatus || ""
+                )}&userType=${userType}&role=${role}`
+              );
+            }}
+          >
+            Continue to Pre-Join
+          </button>
         </div>
-        <button
-          onClick={() => {
-            // Determine if user is mentor or mentee
-            const isMentor = meetingData.mentorId === userId;
-            const userType = isMentor ? "mentor" : "mentee";
-            const role = isMentor ? "1" : "0"; // 1 = host, 0 = attendee
-
-            console.log("🔍 User type determined:", {
-              userId,
-              userType,
-              role,
-              mentorId: meetingData.mentorId,
-              menteeId: meetingData.menteeId,
-            });
-
-            navigate(
-              `/preview?meetingId=${meetingId}&userId=${userId}&agenda=${encodeURIComponent(
-                meetingData.agenda || ""
-              )}&status=${encodeURIComponent(
-                meetingData.meetingStatus || ""
-              )}&userType=${userType}&role=${role}`
-            );
-          }}
-        >
-          Continue to Preview
-        </button>
       </div>
     );
   }

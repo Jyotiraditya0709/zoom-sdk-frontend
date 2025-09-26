@@ -522,7 +522,7 @@ const Preview = () => {
             />
           </label>
 
-          {/* Shareable meeting link */}
+          {/* Shareable meeting link
           {sessionName && userName && (
             <div style={{ margin: "12px 0", wordBreak: "break-all" }}>
               <strong>Shareable Meeting Link:</strong>
@@ -534,7 +534,7 @@ const Preview = () => {
                 )}&user=${encodeURIComponent(userName)}&role=${role}`}
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="test-controls">
             <button onClick={handleMicTest}>
