@@ -588,6 +588,12 @@ function JoinerScreen() {
       // My connection id from SDK
       const myConnectionId = selfUserIdRef.current;
 
+      // Don't check for duplicates if we don't have our own connection ID yet
+      if (!myConnectionId) {
+        console.log("🔍 Skipping duplicate check - connection ID not set yet");
+        return 0;
+      }
+
       // Check if there is any OTHER connection with the same real userId
       const duplicateExists = allUsers.some(user =>
         user.displayName === myRealId && user.userId !== myConnectionId
@@ -4008,17 +4014,23 @@ function JoinerScreen() {
 
       setParticipants(transformedUsers);
 
-      // Check for duplicates immediately when a new user joins
-      setTimeout(async () => {
-        try {
-          const duplicateCount = await handleDuplicateParticipants();
-          if (duplicateCount > 0) {
-            console.log(`🔄 handleUserAdded: Duplicate detected, leaving meeting...`);
+      // Check for duplicates ONLY when OTHER users join (not when current user joins)
+      // This prevents false positive duplicate detection when the current user's join event fires
+      // Also ensure selfUserIdRef is set before checking duplicates
+      const hasOtherUserJoined = payload.some(item => item.userId !== selfUserIdRef.current);
+      
+      if (hasOtherUserJoined && selfUserIdRef.current) {
+        setTimeout(async () => {
+          try {
+            const duplicateCount = await handleDuplicateParticipants();
+            if (duplicateCount > 0) {
+              console.log(`🔄 handleUserAdded: Duplicate detected, leaving meeting...`);
+            }
+          } catch (err) {
+            console.error("❌ Error checking duplicates in handleUserAdded:", err);
           }
-        } catch (err) {
-          console.error("❌ Error checking duplicates in handleUserAdded:", err);
-        }
-      }, 1000); // Small delay to ensure the new user is fully added
+        }, 1000); // Small delay to ensure the new user is fully added
+      }
 
     };
 
