@@ -128,14 +128,10 @@
   max-width: 400px;
 }
 
-.meeting-validator-icon {
+/* .meeting-validator-icon {
   font-size: 48px;
-  /* margin-bottom: 16px; */
-
-  @media (max-height: 750px) {
-    margin-top: 75px;
-  }
-}
+  margin-bottom: 16px;
+} */
 
 /* Error state specific styles */
 .meeting-validator-error .meeting-validator-title {
@@ -252,4 +248,10 @@
 .preparation-list li:last-child,
 .criteria-list li:last-child {
   margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .meeting-validator-icon {
+    margin-top: 75px;
+  }
 }
