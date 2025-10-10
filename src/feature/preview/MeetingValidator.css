@@ -131,6 +131,10 @@
 .meeting-validator-icon {
   font-size: 48px;
   /* margin-bottom: 16px; */
+
+  @media (max-height: 750px) {
+    margin-top: 75px;
+  }
 }
 
 /* Error state specific styles */
@@ -214,6 +218,19 @@
   text-align: left;
 }
 
+.guideLine {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #555;
+  text-align: left;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 10px;
+
+  a {
+    padding-left: 3px;
+  }
+}
+
 .preparation-list li,
 .criteria-list li {
   color: #171717;
@@ -223,14 +240,14 @@
   position: relative;
 }
 
-.preparation-list li:before,
+/* .preparation-list li:before,
 .criteria-list li:before {
   content: "•";
   color: #00c853;
   font-weight: bold;
   position: absolute;
   left: -16px;
-}
+} */
 
 .preparation-list li:last-child,
 .criteria-list li:last-child {

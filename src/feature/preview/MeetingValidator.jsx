@@ -170,6 +170,11 @@ const MeetingValidator = () => {
                     <li>Passion for entrepreneurship</li>
                     <li>Genuine alignment with Tetr's vision and values</li>
                   </ul>
+                  <div className="guideLine">Please Read the 
+                    <a href="https://docs.google.com/document/d/18-e4SZmzbe10sJvfISiYEUiIrrJ5ASV34ygfQv0ic34/edit?tab=t.0#heading=h.d2c1t41r538t" target="_blank" rel="noopener noreferrer" className="guideline-link">
+                      Interviewer Guidelines
+                    </a>
+                  </div>
                 </div>
               </div>
             </>
