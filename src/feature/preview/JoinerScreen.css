@@ -670,7 +670,7 @@
   width: 100%;
 }
 
-.activeRotateButton svg{
+.activeRotateButton svg {
   transform: rotate(180deg);
 }
 
@@ -967,9 +967,15 @@
 
   .joinerScreen {
     &.sharingScreenActive .shareScreenContainer {
-        height: calc(100vh - 303px);
+      height: calc(100vh - 303px);
     }
+  }
 }
+
+@media (min-width: 1028px) and (max-width: 1475px) {
+  .joinerScreen.sharingScreenActive .shareScreenContainer {
+    height: calc(100vh - 320px);
+  }
 }
 
 @media (min-width: 290px) and (max-width: 375px) {
