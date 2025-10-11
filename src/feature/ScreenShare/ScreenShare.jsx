@@ -61,9 +61,8 @@ const ScreenShare = ({
     };
   }, []);
 
-  // Helper: Detect WebCodecs support (like MeetingPage.jsx)
-  const webCodecsEnabled =
-    typeof window.MediaStreamTrackProcessor === "function";
+  // Helper: Use Zoom SDK's built-in method to detect WebCodecs support
+  // Removed custom detection - using SDK's isStartShareScreenWithVideoElement() instead
 
   // START / STOP local screen sharing (like MeetingPage.jsx)
   const handleScreenShare = async () => {
@@ -86,21 +85,24 @@ const ScreenShare = ({
         remoteShareContainerRef.current
       );
       setError("Screen share elements not ready. Please try again.");
-          return;
-        }
+      return;
+    }
 
     try {
       if (!isScreenShare) {
         // start local screen share
         const mediaStream = clientRef.current.getMediaStream();
 
-        if (webCodecsEnabled) {
-          // Use video element for sharer if WebCodecs is enabled
+        // ✅ Use Zoom SDK's built-in method to determine element type
+        if (mediaStream.isStartShareScreenWithVideoElement()) {
+          // Use video element for screen sharing
+          console.log("[SCREEN SHARE] Using video element (SDK recommendation)");
           await mediaStream.startShareScreen(screenShareContainerRef.current);
           screenShareContainerRef.current.style.display = "block";
           remoteShareContainerRef.current.style.display = "none";
         } else {
-          // Use canvas for sharer if WebCodecs is not enabled
+          // Use canvas element for screen sharing
+          console.log("[SCREEN SHARE] Using canvas element (SDK recommendation)");
           await mediaStream.startShareScreen(remoteShareContainerRef.current);
           remoteShareContainerRef.current.style.display = "block";
           screenShareContainerRef.current.style.display = "none";
@@ -149,8 +151,8 @@ const ScreenShare = ({
       if (!mediaStreamRef.current) return;
       if (state === "Active") {
         if (remoteShareContainerRef.current) {
-            mediaStreamRef.current.startShareView(
-              remoteShareContainerRef.current,
+          mediaStreamRef.current.startShareView(
+            remoteShareContainerRef.current,
             userId
           );
         }
@@ -159,7 +161,7 @@ const ScreenShare = ({
       } else {
         mediaStreamRef.current.stopShareView();
         setIsRemoteSharing(false);
-          addNotification("Screen sharing stopped");
+        addNotification("Screen sharing stopped");
       }
     };
 
@@ -244,9 +246,9 @@ const ScreenShare = ({
 
             {/* Shared screen elements (for both sharer and viewer) - Like MeetingPage.jsx */}
             {(isScreenShare || isRemoteSharing) && (
-            <div className="screenViewHere">
-              <div
-                style={{
+              <div className="screenViewHere">
+                <div
+                  style={{
                     width: "100%",
                     display: "flex",
                     justifyContent: "center",
@@ -256,12 +258,12 @@ const ScreenShare = ({
                   }}
                 >
                   {/* Video element for screen sharing (when browser supports it) */}
-                <video
-                  ref={screenShareContainerRef}
+                  <video
+                    ref={screenShareContainerRef}
                     autoPlay
                     playsInline
-                  id="my-screen-share-content-video"
-                  style={{
+                    id="my-screen-share-content-video"
+                    style={{
                       display: "none",
                       maxWidth: "90vw",
                       maxHeight: "60vh",
@@ -270,30 +272,29 @@ const ScreenShare = ({
                     }}
                   />
                   {/* Canvas element for screen sharing (fallback) */}
-                <canvas
-                  ref={remoteShareContainerRef}
-                  id="users-screen-share-content-canvas"
+                  <canvas
+                    ref={remoteShareContainerRef}
+                    id="users-screen-share-content-canvas"
                     height={720}
                     width={1280}
-                  style={{
+                    style={{
                       display: "none",
                       maxWidth: "90vw",
                       maxHeight: "60vh",
                       borderRadius: 12,
                       boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
-                  }}
-                />
+                    }}
+                  />
+                </div>
+                <div className="nameJoinerHere">Screen / Presenter</div>
               </div>
-              <div className="nameJoinerHere">Screen / Presenter</div>
-            </div>
             )}
           </div>
 
           <div className="joinerSettingBottom">
             <button
-              className={`commonJoinderBtn muteBoxSetting ${
-                isMute ? "active" : ""
-              }`}
+              className={`commonJoinderBtn muteBoxSetting ${isMute ? "active" : ""
+                }`}
               onClick={() => setIsMute(!isMute)}
             >
               {isMute ? <UnMicroPhone /> : <MicroPhone />}
@@ -301,9 +302,8 @@ const ScreenShare = ({
             </button>
 
             <button
-              className={`commonJoinderBtn videoBoxSetting ${
-                isVideoOff ? "active" : ""
-              }`}
+              className={`commonJoinderBtn videoBoxSetting ${isVideoOff ? "active" : ""
+                }`}
               onClick={() => setIsVideoOff(!isVideoOff)}
             >
               {isVideoOff ? <OffVideoCamera /> : <VideoCamera />}
@@ -311,9 +311,8 @@ const ScreenShare = ({
             </button>
 
             <button
-              className={`commonJoinderBtn chatSetting ${
-                isChatOpen ? "active" : ""
-              }`}
+              className={`commonJoinderBtn chatSetting ${isChatOpen ? "active" : ""
+                }`}
               onClick={() => setIsChatOpen(!isChatOpen)}
             >
               <span className="messageRound">
@@ -324,9 +323,8 @@ const ScreenShare = ({
             </button>
 
             <button
-              className={`commonJoinderBtn screenShareSetting ${
-                isScreenShare ? "active" : ""
-              }`}
+              className={`commonJoinderBtn screenShareSetting ${isScreenShare ? "active" : ""
+                }`}
               onClick={handleScreenShare}
             >
               <ShareScreenIcon />
@@ -334,9 +332,8 @@ const ScreenShare = ({
             </button>
 
             <button
-              className={`commonJoinderBtn recordingSetting ${
-                isRecording ? "active" : ""
-              }`}
+              className={`commonJoinderBtn recordingSetting ${isRecording ? "active" : ""
+                }`}
               onClick={() => setIsRecording(!isRecording)}
             >
               <RecordingIcon />

@@ -143,7 +143,7 @@ async function safeStartVideoTrack(track, videoEl, retries = 3, delay = 300) {
 
     if (videoEl.load) videoEl.load();
 
-  } catch {}
+  } catch { }
 
   for (let attempt = 1; attempt <= retries; attempt++) {
 
@@ -208,7 +208,7 @@ function JoinerScreen() {
   const [isAudioOn, setIsAudioOn] = useState(true);
 
   const [meetingData, setMeetingData] = useState(null);
-  
+
   // Store names from URL parameters for immediate display on video tiles
   const [urlParamNames, setUrlParamNames] = useState({
     mentorName: "",
@@ -345,7 +345,7 @@ function JoinerScreen() {
 
   // Environment info removed for cleaner console
 
-  
+
 
   // Check SharedArrayBuffer support (critical for Zoom SDK remote video)
 
@@ -355,7 +355,7 @@ function JoinerScreen() {
 
   // SharedArrayBuffer info removed for cleaner console
 
-  
+
 
   if (isProduction && !hasSharedArrayBuffer) {
 
@@ -367,9 +367,9 @@ function JoinerScreen() {
 
     console.error(`❌ Server needs Cross-Origin-Embedder-Policy: require-corp`);
 
-    
 
-   
+
+
 
     setError("⚠️ Remote video may not display properly. Please refresh the page or contact support if the issue persists.");
 
@@ -394,7 +394,7 @@ function JoinerScreen() {
   const [notifications, setNotifications] = useState([]);
 
   const [permissionError, setPermissionError] = useState("");
-  
+
   // Permission error modal state
   const [showPermissionErrorModal, setShowPermissionErrorModal] = useState(false);
 
@@ -558,7 +558,7 @@ function JoinerScreen() {
 
   };
 
-  
+
   // Function to handle self-duplicate (when someone else joins with same ID)
   const handleSelfDuplicate = async () => {
     try {
@@ -587,6 +587,12 @@ function JoinerScreen() {
 
       // My connection id from SDK
       const myConnectionId = selfUserIdRef.current;
+
+      // Don't check for duplicates if we don't have our own connection ID yet
+      if (!myConnectionId) {
+        console.log("🔍 Skipping duplicate check - connection ID not set yet");
+        return 0;
+      }
 
       // Check if there is any OTHER connection with the same real userId
       const duplicateExists = allUsers.some(user =>
@@ -824,15 +830,15 @@ function JoinerScreen() {
 
       const recentTime = Date.now() - 2000; // 2 seconds ago
 
-      const isDuplicate = prev.some(n => 
+      const isDuplicate = prev.some(n =>
 
-        n.msg === msg && 
+        n.msg === msg &&
 
         (Date.now() - n.timestamp) < 2000 // Same message within 2 seconds
 
       );
 
-      
+
 
       if (isDuplicate) {
 
@@ -842,7 +848,7 @@ function JoinerScreen() {
 
       }
 
-      
+
 
       // Special handling for connection notifications - longer cooldown
 
@@ -850,7 +856,7 @@ function JoinerScreen() {
 
       if (isConnectionMsg) {
 
-        const hasRecentConnection = prev.some(n => 
+        const hasRecentConnection = prev.some(n =>
 
           (n.msg.includes("Connected to") || n.msg.includes("reconnected") || n.msg.includes("Page refreshed")) &&
 
@@ -858,7 +864,7 @@ function JoinerScreen() {
 
         );
 
-        
+
 
         if (hasRecentConnection) {
 
@@ -870,21 +876,21 @@ function JoinerScreen() {
 
       }
 
-      
+
 
       const id = Date.now() + Math.random();
 
-    
+
 
       // Auto-remove notification after 2 seconds
 
-    setTimeout(() => {
+      setTimeout(() => {
 
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
 
       }, 2000); // Set to 2 seconds as requested
 
-      
+
 
       const next = [...prev, { id, msg, timestamp: Date.now() }];
 
@@ -977,7 +983,7 @@ function JoinerScreen() {
 
       if (!meetingId || !userId) return;
 
-      
+
 
       try {
 
@@ -991,7 +997,7 @@ function JoinerScreen() {
 
         );
 
-        
+
 
         if (response.ok) {
 
@@ -1127,11 +1133,11 @@ function JoinerScreen() {
   // Update local user displayName when meetingData becomes available
   useEffect(() => {
     if (meetingData) {
-      const properName = meetingData.mentorId === userId 
-        ? meetingData.mentorName 
-        : meetingData.menteeId === userId 
-        ? meetingData.menteeName 
-        : displayName;
+      const properName = meetingData.mentorId === userId
+        ? meetingData.mentorName
+        : meetingData.menteeId === userId
+          ? meetingData.menteeName
+          : displayName;
     }
   }, [meetingData, userId, displayName]);
 
@@ -1143,7 +1149,7 @@ function JoinerScreen() {
 
     // Initial state setting info removed for cleaner console
 
-    
+
 
     setIsVideoOn(!initialVideoOff);
 
@@ -1165,7 +1171,7 @@ function JoinerScreen() {
 
           // Video attachment info removed for cleaner console
 
-          
+
 
           // Environment info removed for cleaner console
 
@@ -1230,7 +1236,7 @@ function JoinerScreen() {
 
                   (videoElement.videoWidth === 0 ||
 
-                  videoElement.videoHeight === 0)
+                    videoElement.videoHeight === 0)
 
                 ) {
 
@@ -1698,9 +1704,7 @@ function JoinerScreen() {
 
           console.log(
 
-            `🔄 Page unloading - handling based on role: ${
-
-              isHost ? "host" : "participant"
+            `🔄 Page unloading - handling based on role: ${isHost ? "host" : "participant"
 
             }`
 
@@ -1788,9 +1792,7 @@ function JoinerScreen() {
 
         console.log(
 
-          `🔄 User leaving page - notifying backend (role: ${
-
-            isHost ? "host" : "participant"
+          `🔄 User leaving page - notifying backend (role: ${isHost ? "host" : "participant"
 
           })`
 
@@ -1908,13 +1910,13 @@ function JoinerScreen() {
 
             );
 
-            
+
 
             // Set flag to prevent automatic rejoin
 
             sessionStorage.setItem("preventAutoRejoin", "true");
 
-            
+
 
             // Navigate to meeting-exit modal for both hosts and participants
 
@@ -2141,7 +2143,7 @@ function JoinerScreen() {
             "We can't detect your microphone/camera because it's blocked in your browser or system settings.\n\nTo fix this:\n\nClick \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see it, click the 🔒 lock icon next to the address bar.\n\nGo to Site settings → Permissions.\n\nSet Microphone/Camera to Allow.\n\nAfter updating, refresh the page and try again."
 
           );
-          
+
           setShowPermissionErrorModal(true);
 
         } else if (
@@ -2249,7 +2251,7 @@ function JoinerScreen() {
         "We can't detect your microphone/camera because it's blocked in your browser or system settings.\n\nTo fix this:\n\nClick \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see it, click the 🔒 lock icon next to the address bar.\n\nGo to Site settings → Permissions.\n\nSet Microphone/Camera to Allow.\n\nAfter updating, refresh the page and try again."
 
       );
-      
+
       setShowPermissionErrorModal(true);
 
     });
@@ -2298,15 +2300,15 @@ function JoinerScreen() {
           const devices = await ZoomVideo.getDevices();
           const mics = devices.filter((d) => d.kind === "audioinput");
           const speakers = devices.filter((d) => d.kind === "audiooutput");
-          
+
           // Try to switch to a working device
           if (mics.length > 0 && mediaStreamRef.current) {
             // Find a non-communication device
-            const nonCommMic = mics.find(mic => 
-              !mic.label.toLowerCase().includes('communication') && 
+            const nonCommMic = mics.find(mic =>
+              !mic.label.toLowerCase().includes('communication') &&
               !mic.label.toLowerCase().includes('comm')
             ) || mics[0];
-            
+
             try {
               await mediaStreamRef.current.switchMicrophone(nonCommMic.deviceId);
               setSelectedMic(nonCommMic.deviceId);
@@ -2315,14 +2317,14 @@ function JoinerScreen() {
               console.error("Failed to auto-recover microphone:", micErr);
             }
           }
-          
+
           if (speakers.length > 0 && mediaStreamRef.current) {
             // Find a non-communication device
-            const nonCommSpeaker = speakers.find(speaker => 
-              !speaker.label.toLowerCase().includes('communication') && 
+            const nonCommSpeaker = speakers.find(speaker =>
+              !speaker.label.toLowerCase().includes('communication') &&
               !speaker.label.toLowerCase().includes('comm')
             ) || speakers[0];
-            
+
             try {
               await mediaStreamRef.current.switchSpeaker(nonCommSpeaker.deviceId);
               setSelectedSpeaker(nonCommSpeaker.deviceId);
@@ -2335,7 +2337,7 @@ function JoinerScreen() {
           console.error("Media recovery failed:", recoveryErr);
         }
       };
-      
+
       // Attempt recovery after a short delay
       setTimeout(handleMediaRecovery, 1000);
 
@@ -2407,7 +2409,7 @@ function JoinerScreen() {
         if (typeof level === 'number') {
           return level;
         }
-        
+
         switch (level) {
           case 'Excellent':
           case 'Good':
@@ -2437,13 +2439,13 @@ function JoinerScreen() {
 
       }));
 
-      
+
 
       // Log network quality changes for debugging
 
       // Network quality info removed for cleaner console
 
-      
+
 
       // If network quality is poor, log it for debugging
 
@@ -2463,7 +2465,7 @@ function JoinerScreen() {
 
       // Connection state info removed for cleaner console
 
-      
+
 
       if (payload.state === 'Reconnecting') {
 
@@ -2791,7 +2793,7 @@ function JoinerScreen() {
 
               : user
 
-        );
+          );
 
           return transformParticipantsWithNames(updated);
 
@@ -2837,7 +2839,7 @@ function JoinerScreen() {
 
               { urls: 'stun:stun1.zoom.us:3478' },
 
-              { 
+              {
 
                 urls: 'turn:turn.zoom.us:3478',
 
@@ -2847,7 +2849,7 @@ function JoinerScreen() {
 
               },
 
-              { 
+              {
 
                 urls: 'turn:turn1.zoom.us:3478',
 
@@ -2883,7 +2885,7 @@ function JoinerScreen() {
 
         setMeetingStartTime(new Date().toISOString());
 
-        
+
 
         // If camera should be off from preview, try to stop video immediately after join
 
@@ -2923,16 +2925,16 @@ function JoinerScreen() {
 
         client.leaveOnPageUnload = true;
 
-        
+
 
         // Handle duplicate participants after joining
         setTimeout(async () => {
           const currentUserInfo = client.getCurrentUserInfo();
-          
+
           // Only proceed if we successfully joined and have user info
           if (currentUserInfo && currentUserInfo.userId) {
             const duplicateCount = await handleDuplicateParticipants();
-            
+
             if (duplicateCount > 0) {
               // Duplicate participant detection info removed for cleaner console
             }
@@ -3033,11 +3035,11 @@ function JoinerScreen() {
 
         setParticipants(transformParticipantsWithNames(client.getAllUser()));
 
-        
+
 
         // MediaStream obtained info removed for cleaner console
 
-        
+
 
         // If camera should be off from preview, immediately stop any camera that might have been initialized
 
@@ -3055,7 +3057,7 @@ function JoinerScreen() {
 
             // Camera stopped info removed for cleaner console
 
-            
+
 
             // Also try to stop any tracks that might be running
 
@@ -3161,7 +3163,7 @@ function JoinerScreen() {
 
               }
 
-              
+
 
               await mediaStreamRef.current.startVideo(vbOptions);
 
@@ -3253,39 +3255,39 @@ function JoinerScreen() {
 
           recordingClientRef.current = client.getRecordingClient();
 
-          
 
-            // 🆕 Set up automatic recording when BOTH mentor AND mentee join
 
-  const checkMentorMenteeJoined = () => {
+          // 🆕 Set up automatic recording when BOTH mentor AND mentee join
 
-    // Check if we have both mentor and mentee in the meeting
+          const checkMentorMenteeJoined = () => {
 
-    const hasMentor = participants.some(p => p.role === 'host' || p.isHost);
+            // Check if we have both mentor and mentee in the meeting
 
-    const hasMentee = participants.some(p => p.role === 'attendee' || !p.isHost);
+            const hasMentor = participants.some(p => p.role === 'host' || p.isHost);
 
-    
+            const hasMentee = participants.some(p => p.role === 'attendee' || !p.isHost);
 
-    if (hasMentor && hasMentee && !showRecordingNotice) {
 
-      console.log("✅ Both mentor and mentee joined - starting automatic recording");
 
-      startAutomaticRecording();
+            if (hasMentor && hasMentee && !showRecordingNotice) {
 
-    }
+              console.log("✅ Both mentor and mentee joined - starting automatic recording");
 
-  };
+              startAutomaticRecording();
 
-  
+            }
 
-  // Check when participants change
+          };
 
-  if (participants.length > 0) {
 
-    checkMentorMenteeJoined();
 
-  }
+          // Check when participants change
+
+          if (participants.length > 0) {
+
+            checkMentorMenteeJoined();
+
+          }
 
         }, 500); // Small delay to allow React to render containers
 
@@ -3783,7 +3785,7 @@ function JoinerScreen() {
 
           // Use URL parameters directly for notifications (simpler and more reliable)
           let displayName = item.displayName; // Default to SDK displayName
-          
+
           // If we have URL parameters, use them to map the displayName to actual names
           if (urlParamNames.mentorName && urlParamNames.menteeName) {
             // Check if this is the mentor or mentee based on the displayName (which contains the mentor/mentee ID)
@@ -3802,7 +3804,7 @@ function JoinerScreen() {
 
           addNotification(`${displayName} joined the session.`);
 
-          
+
 
           // Check if recording is already active and inform new participant
 
@@ -3998,7 +4000,7 @@ function JoinerScreen() {
 
       });
 
-      
+
 
       console.log(`🔄 handleUserAdded: Updating participants with transformParticipantsWithNames`);
 
@@ -4012,17 +4014,23 @@ function JoinerScreen() {
 
       setParticipants(transformedUsers);
 
-      // Check for duplicates immediately when a new user joins
-      setTimeout(async () => {
-        try {
-          const duplicateCount = await handleDuplicateParticipants();
-          if (duplicateCount > 0) {
-            console.log(`🔄 handleUserAdded: Duplicate detected, leaving meeting...`);
+      // Check for duplicates ONLY when OTHER users join (not when current user joins)
+      // This prevents false positive duplicate detection when the current user's join event fires
+      // Also ensure selfUserIdRef is set before checking duplicates
+      const hasOtherUserJoined = payload.some(item => item.userId !== selfUserIdRef.current);
+      
+      if (hasOtherUserJoined && selfUserIdRef.current) {
+        setTimeout(async () => {
+          try {
+            const duplicateCount = await handleDuplicateParticipants();
+            if (duplicateCount > 0) {
+              console.log(`🔄 handleUserAdded: Duplicate detected, leaving meeting...`);
+            }
+          } catch (err) {
+            console.error("❌ Error checking duplicates in handleUserAdded:", err);
           }
-        } catch (err) {
-          console.error("❌ Error checking duplicates in handleUserAdded:", err);
-        }
-      }, 1000); // Small delay to ensure the new user is fully added
+        }, 1000); // Small delay to ensure the new user is fully added
+      }
 
     };
 
@@ -4212,9 +4220,7 @@ function JoinerScreen() {
 
                     info.meetingId
 
-                  )}&userId=${encodeURIComponent(info.userId)}&role=${
-
-                    info.role
+                  )}&userId=${encodeURIComponent(info.userId)}&role=${info.role
 
                   }`
 
@@ -4312,7 +4318,7 @@ function JoinerScreen() {
 
         // Use URL parameters directly for notifications (simpler and more reliable)
         let displayName = item.displayName; // Default to SDK displayName
-        
+
         // If we have URL parameters, use them to map the displayName to actual names
         if (urlParamNames.mentorName && urlParamNames.menteeName) {
           // Check if this is the mentor or mentee based on the displayName (which contains the mentor/mentee ID)
@@ -4377,7 +4383,7 @@ function JoinerScreen() {
 
         );
 
-        
+
 
         // Redirect based on reason
 
@@ -4475,15 +4481,15 @@ function JoinerScreen() {
           const devices = await ZoomVideo.getDevices();
           const mics = devices.filter((d) => d.kind === "audioinput");
           const speakers = devices.filter((d) => d.kind === "audiooutput");
-          
+
           // Try to switch to a working device
           if (mics.length > 0 && mediaStreamRef.current) {
             // Find a non-communication device
-            const nonCommMic = mics.find(mic => 
-              !mic.label.toLowerCase().includes('communication') && 
+            const nonCommMic = mics.find(mic =>
+              !mic.label.toLowerCase().includes('communication') &&
               !mic.label.toLowerCase().includes('comm')
             ) || mics[0];
-            
+
             try {
               await mediaStreamRef.current.switchMicrophone(nonCommMic.deviceId);
               setSelectedMic(nonCommMic.deviceId);
@@ -4492,14 +4498,14 @@ function JoinerScreen() {
               console.error("Failed to auto-recover microphone:", micErr);
             }
           }
-          
+
           if (speakers.length > 0 && mediaStreamRef.current) {
             // Find a non-communication device
-            const nonCommSpeaker = speakers.find(speaker => 
-              !speaker.label.toLowerCase().includes('communication') && 
+            const nonCommSpeaker = speakers.find(speaker =>
+              !speaker.label.toLowerCase().includes('communication') &&
               !speaker.label.toLowerCase().includes('comm')
             ) || speakers[0];
-            
+
             try {
               await mediaStreamRef.current.switchSpeaker(nonCommSpeaker.deviceId);
               setSelectedSpeaker(nonCommSpeaker.deviceId);
@@ -4512,7 +4518,7 @@ function JoinerScreen() {
           console.error("Media recovery failed:", recoveryErr);
         }
       };
-      
+
       // Attempt recovery after a short delay
       setTimeout(handleMediaRecovery, 1000);
 
@@ -4584,7 +4590,7 @@ function JoinerScreen() {
         if (typeof level === 'number') {
           return level;
         }
-        
+
         switch (level) {
           case 'Excellent':
           case 'Good':
@@ -4614,13 +4620,13 @@ function JoinerScreen() {
 
       }));
 
-      
+
 
       // Log network quality changes for debugging
 
       // Network quality info removed for cleaner console
 
-      
+
 
       // If network quality is poor, log it for debugging
 
@@ -4640,7 +4646,7 @@ function JoinerScreen() {
 
       // Connection state info removed for cleaner console
 
-      
+
 
       if (payload.state === 'Reconnecting') {
 
@@ -4954,7 +4960,7 @@ function JoinerScreen() {
 
           }
 
-          
+
 
           await mediaStreamRef.current.startVideo(vbOptions);
 
@@ -4962,7 +4968,7 @@ function JoinerScreen() {
 
           setIsVideoOn(true);
 
-          
+
 
           console.log("📹 Video started with background:", bgMode);
 
@@ -4984,7 +4990,7 @@ function JoinerScreen() {
 
             }
 
-            
+
 
             // Fallback to normal video without virtual background
 
@@ -4996,7 +5002,7 @@ function JoinerScreen() {
 
             setBgMode("none"); // Reset to none since VB failed
 
-            
+
 
             console.log("📹 Video started without virtual background (fallback)");
 
@@ -5152,7 +5158,7 @@ function JoinerScreen() {
 
       }
 
-      
+
 
       await mediaStreamRef.current.startVideo(vbOptions);
 
@@ -5176,7 +5182,7 @@ function JoinerScreen() {
 
       console.error("Error updating VB:", err);
 
-      
+
 
       if (err.message?.includes("virtual background")) {
 
@@ -5196,7 +5202,7 @@ function JoinerScreen() {
 
         }
 
-        
+
 
         // Fallback to normal video without virtual background
 
@@ -5236,7 +5242,7 @@ function JoinerScreen() {
 
           }
 
-          
+
 
           await mediaStreamRef.current.startVideo();
 
@@ -5252,11 +5258,8 @@ function JoinerScreen() {
 
   };
 
-  // Helper: Detect WebCodecs support (like MeetingPage.jsx)
-
-  const webCodecsEnabled =
-
-    typeof window.MediaStreamTrackProcessor === "function";
+  // Helper: Use Zoom SDK's built-in method to detect WebCodecs support
+  // Removed custom detection - using SDK's isStartShareScreenWithVideoElement() instead
 
 
 
@@ -5266,7 +5269,7 @@ function JoinerScreen() {
 
     console.log("🧹 Cleaning up screen share...");
 
-    
+
 
     // Stop the screen sharing in the Zoom SDK
 
@@ -5612,8 +5615,6 @@ function JoinerScreen() {
 
       shareCanvasRef: !!shareCanvasRef.current,
 
-      webCodecsEnabled: webCodecsEnabled,
-
     });
 
 
@@ -5670,11 +5671,12 @@ function JoinerScreen() {
 
         let stream = null;
 
-        if (webCodecsEnabled) {
+        // ✅ Use Zoom SDK's built-in method to determine element type
+        if (mediaStream.isStartShareScreenWithVideoElement()) {
 
-          // Use video element for sharer if WebCodecs is enabled
+          // Use video element for screen sharing
 
-          console.log("[SCREEN SHARE] Using video element for WebCodecs");
+          console.log("[SCREEN SHARE] Using video element (SDK recommendation)");
 
           // Ensure video element is properly set up
 
@@ -5710,9 +5712,9 @@ function JoinerScreen() {
 
         } else {
 
-          // Use canvas for sharer if WebCodecs is not enabled
+          // Use canvas element for screen sharing
 
-          console.log("[SCREEN SHARE] Using canvas element for non-WebCodecs");
+          console.log("[SCREEN SHARE] Using canvas element (SDK recommendation)");
 
           // Ensure canvas element is properly set up
 
@@ -5804,10 +5806,10 @@ function JoinerScreen() {
                 try {
                   const isActuallySharing = mediaStreamRef.current?.isSharingScreen;
                   const hasActiveTracks = stream?.getVideoTracks()?.some(track => track.readyState === 'live');
-                  
+
                   // Check if tracks are ended (browser stopped sharing)
                   const tracksEnded = stream?.getVideoTracks()?.some(track => track.readyState === 'ended');
-                  
+
                   if (!isActuallySharing || !hasActiveTracks || tracksEnded) {
                     console.log("[SCREEN SHARE] Browser stop detected via visibility/status check", {
                       isActuallySharing,
@@ -5960,59 +5962,59 @@ function JoinerScreen() {
 
     if (!recordingClientRef.current || !isHost) return;
 
-    
+
 
     try {
 
       const res = await recordingClientRef.current.startCloudRecording();
 
-              if (res === "") {
+      if (res === "") {
 
         setRecordingState("recording");
 
         setRecordingStatus("recording");
 
-          setShowRecordingNotice(true);
+        setShowRecordingNotice(true);
 
-          // Show professional recording notification to both host and participants
+        // Show professional recording notification to both host and participants
 
-          addNotification("🔴 LIVE - This meeting is being recorded");
+        addNotification("🔴 LIVE - This meeting is being recorded");
 
-          // Play recording beep sound for both host and participants
+        // Play recording beep sound for both host and participants
 
-          playRecordingBeep();
+        playRecordingBeep();
 
-          
 
-          // Broadcast recording status to all participants via chat
 
-          try {
+        // Broadcast recording status to all participants via chat
 
-            const client = clientRef.current;
+        try {
 
-            if (client) {
+          const client = clientRef.current;
 
-              const chatClient = client.getChatClient();
+          if (client) {
 
-              if (chatClient) {
+            const chatClient = client.getChatClient();
 
-                await chatClient.sendToAll("🔴 LIVE - This meeting is being recorded");
+            if (chatClient) {
 
-              }
+              await chatClient.sendToAll("🔴 LIVE - This meeting is being recorded");
 
             }
 
-          } catch (err) {
-
-            console.warn("Could not broadcast recording status:", err);
-
           }
 
-          
+        } catch (err) {
 
-          console.log("✅ Automatic recording started");
+          console.warn("Could not broadcast recording status:", err);
 
         }
+
+
+
+        console.log("✅ Automatic recording started");
+
+      }
 
     } catch (err) {
 
@@ -6042,7 +6044,7 @@ function JoinerScreen() {
 
         setShowRecordingNotice(false);
 
-        
+
 
         // Show professional recording pause notification
 
@@ -6050,7 +6052,7 @@ function JoinerScreen() {
 
         playRecordingBeep();
 
-        
+
 
         // Broadcast recording pause status to all participants via chat
 
@@ -6076,7 +6078,7 @@ function JoinerScreen() {
 
         }
 
-        
+
 
         console.log("⏸️ Automatic recording paused");
 
@@ -6108,7 +6110,7 @@ function JoinerScreen() {
 
         setShowRecordingNotice(true);
 
-        
+
 
         // Show professional recording resume notification
 
@@ -6116,7 +6118,7 @@ function JoinerScreen() {
 
         playRecordingBeep();
 
-        
+
 
         // Broadcast recording resume status to all participants via chat
 
@@ -6142,7 +6144,7 @@ function JoinerScreen() {
 
         }
 
-        
+
 
         console.log("🔴 Automatic recording resumed");
 
@@ -6166,53 +6168,53 @@ function JoinerScreen() {
 
       const res = await recordingClientRef.current.stopCloudRecording();
 
-              if (res === "") {
+      if (res === "") {
 
         setRecordingState("stopped");
 
         setRecordingStatus("stopped");
 
-          setShowRecordingNotice(false);
+        setShowRecordingNotice(false);
 
-          // Show professional recording stop notification to both host and participants
+        // Show professional recording stop notification to both host and participants
 
-          addNotification("⏹️ Recording has stopped");
+        addNotification("⏹️ Recording has stopped");
 
-          // Play recording stop beep sound for both host and participants
+        // Play recording stop beep sound for both host and participants
 
-          playRecordingBeep();
+        playRecordingBeep();
 
-          
 
-          // Broadcast recording stop status to all participants via chat
 
-          try {
+        // Broadcast recording stop status to all participants via chat
 
-            const client = clientRef.current;
+        try {
 
-            if (client) {
+          const client = clientRef.current;
 
-              const chatClient = client.getChatClient();
+          if (client) {
 
-              if (chatClient) {
+            const chatClient = client.getChatClient();
 
-                await chatClient.sendToAll("⏹️ Recording has stopped");
+            if (chatClient) {
 
-              }
+              await chatClient.sendToAll("⏹️ Recording has stopped");
 
             }
 
-          } catch (err) {
-
-            console.warn("Could not broadcast recording stop status:", err);
-
           }
 
-          
+        } catch (err) {
 
-          console.log("✅ Automatic recording stopped");
+          console.warn("Could not broadcast recording stop status:", err);
 
         }
+
+
+
+        console.log("✅ Automatic recording stopped");
+
+      }
 
     } catch (err) {
 
@@ -6236,11 +6238,11 @@ function JoinerScreen() {
 
       const participantCount = participants.length;
 
-      
+
 
       console.log(`👥 Participant monitoring: ${participantCount} participants, mentor: ${hasMentor}, mentee: ${hasMentee}, recordingState: ${recordingState}`);
 
-      
+
 
       if (hasMentor && hasMentee && recordingState === "idle") {
 
@@ -6346,13 +6348,13 @@ function JoinerScreen() {
 
       const gainNode = audioContext.createGain();
 
-      
+
 
       oscillator.connect(gainNode);
 
       gainNode.connect(audioContext.destination);
 
-      
+
 
       // Set beep properties (800Hz, short duration - similar to Zoom)
 
@@ -6360,7 +6362,7 @@ function JoinerScreen() {
 
       oscillator.type = 'sine';
 
-      
+
 
       // Fade in/out for smooth sound with reduced volume
 
@@ -6370,13 +6372,13 @@ function JoinerScreen() {
 
       gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
 
-      
+
 
       oscillator.start(audioContext.currentTime);
 
       oscillator.stop(audioContext.currentTime + 0.3);
 
-      
+
 
       // Clean up audio context after beep
 
@@ -6410,7 +6412,7 @@ function JoinerScreen() {
 
     console.log("🔗 Retrieved redirect link:", redirectLink);
 
-    
+
 
     const meetingData = {
 
@@ -6438,9 +6440,9 @@ function JoinerScreen() {
 
     // Navigate to MeetingRedirect with meeting data
 
-    navigate("/meeting-redirect", { 
+    navigate("/meeting-redirect", {
 
-      state: { meetingData } 
+      state: { meetingData }
 
     });
 
@@ -6454,7 +6456,7 @@ function JoinerScreen() {
 
     if (!meetingId) return null;
 
-    
+
 
     try {
 
@@ -6470,10 +6472,10 @@ function JoinerScreen() {
 
       );
 
-      
+
 
       console.log("🔗 Meeting redirect API response:", response.data);
-      
+
       if (response.data?.IsSuccess && response.data?.Data?.redirectLink) {
         console.log("✅ Found redirect link:", response.data.Data.redirectLink);
         return response.data.Data.redirectLink;
@@ -6645,7 +6647,7 @@ function JoinerScreen() {
 
     }
 
-    
+
 
     // Redirect to MeetingRedirect instead of meeting-exit
 
@@ -6769,7 +6771,7 @@ function JoinerScreen() {
 
       });
 
-      
+
 
       // Clear unread chat count when opening chat
 
@@ -6787,7 +6789,7 @@ function JoinerScreen() {
 
       setShowModals((prev) => ({ ...prev, [modal]: false }));
 
-      
+
 
       // Clear unread chat count when closing chat
 
@@ -6862,19 +6864,19 @@ function JoinerScreen() {
   // Helper function to validate if a device is problematic
   const isProblematicDevice = (deviceLabel) => {
     const label = deviceLabel.toLowerCase();
-    return label.includes('communication') || label.includes('comm') || 
-           label.includes('default -') || label.includes('communications -');
+    return label.includes('communication') || label.includes('comm') ||
+      label.includes('default -') || label.includes('communications -');
   };
 
   // Helper function to find a safe alternative device
   const findSafeDevice = (devices, currentDeviceId) => {
     // First try to find a non-communication device
-    const nonCommDevice = devices.find(device => 
+    const nonCommDevice = devices.find(device =>
       device.deviceId !== currentDeviceId && !isProblematicDevice(device.label)
     );
-    
+
     if (nonCommDevice) return nonCommDevice;
-    
+
     // If no non-comm device found, return the first available device
     return devices.find(device => device.deviceId !== currentDeviceId) || devices[0];
   };
@@ -6887,12 +6889,12 @@ function JoinerScreen() {
 
         // Store previous device for fallback
         const previousDevice = selectedMic;
-        
+
         // Check if the selected device is problematic
         const devices = await ZoomVideo.getDevices();
         const mics = devices.filter((d) => d.kind === "audioinput");
         const selectedDevice = mics.find(d => d.deviceId === deviceId);
-        
+
         if (selectedDevice && isProblematicDevice(selectedDevice.label)) {
           console.log("Detected problematic communication device, finding alternative");
           const safeDevice = findSafeDevice(mics, deviceId);
@@ -6901,13 +6903,13 @@ function JoinerScreen() {
             console.log("Switching to safe device:", safeDevice.label);
           }
         }
-        
+
         // Attempt to switch microphone with timeout
         const switchPromise = mediaStreamRef.current.switchMicrophone(deviceId);
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Device switch timeout')), 5000)
         );
-        
+
         await Promise.race([switchPromise, timeoutPromise]);
 
         setSelectedMic(deviceId);
@@ -6920,7 +6922,7 @@ function JoinerScreen() {
 
         // Don't show error to user, silently fallback to previous device
         console.log("Silently falling back to previous microphone device");
-        
+
         // Try to revert to previous device if available
         if (selectedMic && mediaStreamRef.current) {
           try {
@@ -6959,12 +6961,12 @@ function JoinerScreen() {
 
         // Store previous device for fallback
         const previousDevice = selectedSpeaker;
-        
+
         // Check if the selected device is problematic
         const devices = await ZoomVideo.getDevices();
         const speakers = devices.filter((d) => d.kind === "audiooutput");
         const selectedDevice = speakers.find(d => d.deviceId === deviceId);
-        
+
         if (selectedDevice && isProblematicDevice(selectedDevice.label)) {
           console.log("Detected problematic communication device, finding alternative");
           const safeDevice = findSafeDevice(speakers, deviceId);
@@ -6973,13 +6975,13 @@ function JoinerScreen() {
             console.log("Switching to safe device:", safeDevice.label);
           }
         }
-        
+
         // Attempt to switch speaker with timeout
         const switchPromise = mediaStreamRef.current.switchSpeaker(deviceId);
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Device switch timeout')), 5000)
         );
-        
+
         await Promise.race([switchPromise, timeoutPromise]);
 
         setSelectedSpeaker(deviceId);
@@ -6992,7 +6994,7 @@ function JoinerScreen() {
 
         // Don't show error to user, silently fallback to previous device
         console.log("Silently falling back to previous speaker device");
-        
+
         // Try to revert to previous device if available
         if (selectedSpeaker && mediaStreamRef.current) {
           try {
@@ -7233,9 +7235,8 @@ function JoinerScreen() {
 
     <div
 
-      className={`joinerScreen ${
-              isSharingScreen || isRemoteSharing ? "sharingScreenActive" : ""
-            }`}
+      className={`joinerScreen ${isSharingScreen || isRemoteSharing ? "sharingScreenActive" : ""
+        }`}
 
       style={{ overflow: "hidden", height: "100vh" }}
 
@@ -7257,85 +7258,83 @@ function JoinerScreen() {
 
 
 
-              <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
+      <div className="joinerScreenContainer" style={{ overflow: "hidden" }}>
 
-          {/* Clean Recording Indicator */}
+        {/* Clean Recording Indicator */}
 
-          {(showRecordingNotice || recordingState === "paused") && (
+        {(showRecordingNotice || recordingState === "paused") && (
+
+          <div
+
+            style={{
+
+              position: "absolute",
+
+              top: "10px",
+
+              right: "20px",
+
+              background: recordingState === "paused" ? "#f59e0b" : "#dc3545",
+
+              color: "#fff",
+
+              padding: "6px 12px",
+
+              borderRadius: "20px",
+
+              fontSize: "12px",
+
+              fontWeight: "600",
+
+              zIndex: 100,
+
+              display: "flex",
+
+              alignItems: "center",
+
+              gap: "6px",
+
+              boxShadow: recordingState === "paused" ? "0 2px 8px rgba(245, 158, 11, 0.3)" : "0 2px 8px rgba(220, 53, 69, 0.3)",
+
+              animation: recordingState === "paused" ? "none" : "pulse 2s infinite",
+
+            }}
+
+          >
 
             <div
 
               style={{
 
-                position: "absolute",
+                width: "6px",
 
-                top: "10px",
+                height: "6px",
 
-                right: "20px",
+                background: "#fff",
 
-                background: recordingState === "paused" ? "#f59e0b" : "#dc3545",
+                borderRadius: "50%",
 
-                color: "#fff",
-
-                padding: "6px 12px",
-
-                borderRadius: "20px",
-
-                fontSize: "12px",
-
-                fontWeight: "600",
-
-                zIndex: 100,
-
-                display: "flex",
-
-                alignItems: "center",
-
-                gap: "6px",
-
-                boxShadow: recordingState === "paused" ? "0 2px 8px rgba(245, 158, 11, 0.3)" : "0 2px 8px rgba(220, 53, 69, 0.3)",
-
-                animation: recordingState === "paused" ? "none" : "pulse 2s infinite",
+                animation: recordingState === "paused" ? "none" : "pulse 1s infinite",
 
               }}
 
-            >
+            />
 
-              <div
+            {recordingState === "paused" ? "PAUSED" : "REC"}
 
-                style={{
+          </div>
 
-                  width: "6px",
+        )}
 
-                  height: "6px",
 
-                  background: "#fff",
 
-                  borderRadius: "50%",
-
-                  animation: recordingState === "paused" ? "none" : "pulse 1s infinite",
-
-                }}
-
-              />
-
-              {recordingState === "paused" ? "PAUSED" : "REC"}
-
-            </div>
-
-          )}
-
-          
-
-          <div className="joinerScreenBlock">
+        <div className="joinerScreenBlock">
 
           <div
 
-            className={`joinerVideoScreen ${gridClass} ${
+            className={`joinerVideoScreen ${gridClass} ${isSharingScreen || isRemoteSharing ? "sharing-on" : ""
 
-              isSharingScreen || isRemoteSharing ? "sharing-on" : ""
-
-            }`}
+              }`}
 
             style={{
 
@@ -7343,7 +7342,7 @@ function JoinerScreen() {
 
                 participants.length >= 3 &&
 
-                participants.length <= participants.length
+                  participants.length <= participants.length
                   ? "0px 0px"
                   : "0px 0 0 0",
             }}
@@ -7354,375 +7353,369 @@ function JoinerScreen() {
 
               return (
 
-              <div
+                <div
 
-                className={`joinerVideoBox ${
+                  className={`joinerVideoBox ${user.userId === selfUserIdRef.current ? "active" : ""
 
-                  user.userId === selfUserIdRef.current ? "active" : ""
+                    } ${activeSpeakerId && user.userId === activeSpeakerId
 
-                } ${
+                      ? "active-speaker"
 
-                  activeSpeakerId && user.userId === activeSpeakerId
+                      : ""
 
-                    ? "active-speaker"
+                    }`}
 
-                    : ""
-
-                }`}
-
-                key={user.userId}
-
-              >
-
-                {/* Video container for Zoom SDK to attach video - like MeetingPage.jsx */}
-
-                <video-player-container
-
-                  id={`video-${user.userId}`}
-
-                  ref={(el) => {
-
-                    videoContainerRefs.current[user.userId] = el;
-
-
-
-                    // Check for duplicate user when container is created
-
-                    if (el) {
-
-                      // Check if there are multiple containers with the same user ID
-
-                      const existingContainers = document.querySelectorAll(
-
-                        `[id="video-${user.userId}"]`
-
-                      );
-
-                      if (existingContainers.length > 1) {
-
-                        console.log(
-
-                          `🚫 DUPLICATE CONTAINER DETECTED for user: ${user.userId}`
-
-                        );
-
-                        console.log(
-
-                          `🚫 Found ${existingContainers.length} containers for the same user`
-
-                        );
-
-
-
-                        // Keep only the latest container, remove the old ones
-
-                        for (
-
-                          let i = 0;
-
-                          i < existingContainers.length - 1;
-
-                          i++
-
-                        ) {
-
-                          const oldContainer = existingContainers[i];
-
-                          console.log(
-
-                            `⚡ INSTANTLY REMOVING OLD CONTAINER for user: ${user.userId}`
-
-                          );
-
-                          oldContainer.remove();
-
-                        }
-
-
-
-                        // Also remove from participants list
-
-                        setParticipants((prev) => {
-
-                          const filtered = prev.filter(
-
-                            (p) => p.userId !== user.userId
-
-                          );
-
-                          console.log(
-
-                            `⚡ INSTANTLY removed duplicate user ${user.userId} from participants: ${prev.length} → ${filtered.length}`
-
-                          );
-
-                          return transformParticipantsWithNames(filtered);
-
-                        });
-
-
-
-                        // Complete cleanup
-
-                        completeUserRemoval(user.userId);
-
-                        detachVideo(user.userId);
-
-
-
-                        console.log(
-
-                          `⚡ INSTANT REMOVAL COMPLETE for duplicate user: ${user.userId}`
-
-                        );
-
-                      }
-
-                    }
-
-
-
-                    // Set aspect ratio if available (like MeetingPage.jsx)
-
-                    if (el && aspectRatioRefs.current[user.userId]) {
-
-                      el.style.aspectRatio =
-
-                        aspectRatioRefs.current[user.userId];
-
-                    }
-
-                    // Ensure container is properly styled
-
-                    if (el) {
-
-                      el.style.width = "100%";
-
-                      el.style.height = "100%";
-
-                      el.style.background = "black";
-
-                      el.style.display = "flex";
-
-                      el.style.alignItems = "center";
-
-                      el.style.justifyContent = "center";
-
-                      
-
-                      // Hide container if this is the local user and video is currently off
-
-                      if (user.userId === selfUserIdRef.current && !isVideoOn) {
-
-                        el.style.display = "none";
-
-                        console.log("📹 Hiding local video container (camera currently off)");
-
-                      }
-
-                    }
-
-                  }}
+                  key={user.userId}
 
                 >
 
-                  {/* Add video-player element for virtual backgrounds */}
+                  {/* Video container for Zoom SDK to attach video - like MeetingPage.jsx */}
 
-                  <video-player 
+                  <video-player-container
 
-                    id={`video-player-${user.userId}`}
+                    id={`video-${user.userId}`}
 
-                    style={{ width: "100%", height: "100%" }}
+                    ref={(el) => {
 
-                  />
+                      videoContainerRefs.current[user.userId] = el;
 
-                </video-player-container>
 
-                {/* Show error if local video fails */}
 
-                {user.userId === localUserIdRef.current &&
+                      // Check for duplicate user when container is created
 
-                  error &&
+                      if (el) {
 
-                  !isVideoOn && (
+                        // Check if there are multiple containers with the same user ID
 
-                    <div
+                        const existingContainers = document.querySelectorAll(
 
-                      style={{
+                          `[id="video-${user.userId}"]`
 
-                        position: "absolute",
+                        );
 
-                        top: 0,
+                        if (existingContainers.length > 1) {
 
-                        left: 0,
+                          console.log(
 
-                        right: 0,
+                            `🚫 DUPLICATE CONTAINER DETECTED for user: ${user.userId}`
 
-                        bottom: 0,
+                          );
 
-                        color: "#fff",
+                          console.log(
 
-                        background: "rgba(0,0,0,0.7)",
+                            `🚫 Found ${existingContainers.length} containers for the same user`
 
-                        display: "flex",
+                          );
 
-                        alignItems: "center",
 
-                        justifyContent: "center",
 
-                        fontSize: 18,
+                          // Keep only the latest container, remove the old ones
 
-                        zIndex: 2,
+                          for (
 
-                        textAlign: "center",
+                            let i = 0;
 
-                        padding: 16,
+                            i < existingContainers.length - 1;
 
-                        objectFit: "cover",
+                            i++
 
-                      }}
+                          ) {
 
-                    >
+                            const oldContainer = existingContainers[i];
 
-                      {error}
+                            console.log(
 
-                    </div>
+                              `⚡ INSTANTLY REMOVING OLD CONTAINER for user: ${user.userId}`
 
-                  )}
+                            );
 
-                <div className="joinerName">
+                            oldContainer.remove();
 
-                  <div
+                          }
 
-                    style={{
 
-                      display: "flex",
 
-                      alignItems: "center",
+                          // Also remove from participants list
 
-                      gap: "8px",
+                          setParticipants((prev) => {
+
+                            const filtered = prev.filter(
+
+                              (p) => p.userId !== user.userId
+
+                            );
+
+                            console.log(
+
+                              `⚡ INSTANTLY removed duplicate user ${user.userId} from participants: ${prev.length} → ${filtered.length}`
+
+                            );
+
+                            return transformParticipantsWithNames(filtered);
+
+                          });
+
+
+
+                          // Complete cleanup
+
+                          completeUserRemoval(user.userId);
+
+                          detachVideo(user.userId);
+
+
+
+                          console.log(
+
+                            `⚡ INSTANT REMOVAL COMPLETE for duplicate user: ${user.userId}`
+
+                          );
+
+                        }
+
+                      }
+
+
+
+                      // Set aspect ratio if available (like MeetingPage.jsx)
+
+                      if (el && aspectRatioRefs.current[user.userId]) {
+
+                        el.style.aspectRatio =
+
+                          aspectRatioRefs.current[user.userId];
+
+                      }
+
+                      // Ensure container is properly styled
+
+                      if (el) {
+
+                        el.style.width = "100%";
+
+                        el.style.height = "100%";
+
+                        el.style.background = "black";
+
+                        el.style.display = "flex";
+
+                        el.style.alignItems = "center";
+
+                        el.style.justifyContent = "center";
+
+
+
+                        // Hide container if this is the local user and video is currently off
+
+                        if (user.userId === selfUserIdRef.current && !isVideoOn) {
+
+                          el.style.display = "none";
+
+                          console.log("📹 Hiding local video container (camera currently off)");
+
+                        }
+
+                      }
 
                     }}
 
                   >
 
-                    <span style={{textTransform: "capitalize"}}>
+                    {/* Add video-player element for virtual backgrounds */}
 
-                      {getProperDisplayName(user.userId, user.displayName)}
+                    <video-player
 
-                    </span>
+                      id={`video-player-${user.userId}`}
 
-                    {/* Network quality indicator */}
+                      style={{ width: "100%", height: "100%" }}
 
-                    {networkQuality[user.userId] !== undefined && (
+                    />
 
-                      <FaSignal
+                  </video-player-container>
+
+                  {/* Show error if local video fails */}
+
+                  {user.userId === localUserIdRef.current &&
+
+                    error &&
+
+                    !isVideoOn && (
+
+                      <div
 
                         style={{
 
-                          marginLeft: 6,
+                          position: "absolute",
 
-                          color:
+                          top: 0,
 
-                            networkQuality[user.userId] >= 3
+                          left: 0,
 
-                              ? "#22c55e"
+                          right: 0,
 
-                              : networkQuality[user.userId] === 2
+                          bottom: 0,
 
-                                ? "#f59e0b"
+                          color: "#fff",
 
-                                : "#ef4444",
+                          background: "rgba(0,0,0,0.7)",
+
+                          display: "flex",
+
+                          alignItems: "center",
+
+                          justifyContent: "center",
+
+                          fontSize: 18,
+
+                          zIndex: 2,
+
+                          textAlign: "center",
+
+                          padding: 16,
+
+                          objectFit: "cover",
 
                         }}
 
-                        title={`Network: ${
+                      >
 
-                          networkQuality[user.userId] >= 3
+                        {error}
 
-                            ? "Good"
-
-                            : networkQuality[user.userId] === 2
-
-                              ? "Fair"
-
-                              : "Poor"
-
-                        }`}
-
-                      />
+                      </div>
 
                     )}
 
-                    {/* Audio status icon */}
+                  <div className="joinerName">
 
-                    {(
+                    <div
 
-                      user.userId === selfUserIdRef.current
+                      style={{
 
-                        ? isAudioOn
+                        display: "flex",
 
-                        : !user.muted
+                        alignItems: "center",
 
-                    ) ? (
+                        gap: "8px",
 
-                      <FaMicrophone
+                      }}
 
-                        style={{ marginLeft: 6, color: "#22c55e" }}
+                    >
 
-                        title="Mic On"
+                      <span style={{ textTransform: "capitalize" }}>
 
-                      />
+                        {getProperDisplayName(user.userId, user.displayName)}
 
-                    ) : (
+                      </span>
 
-                      <FaMicrophoneSlash
+                      {/* Network quality indicator */}
 
-                        style={{ marginLeft: 6, color: "#ef4444" }}
+                      {networkQuality[user.userId] !== undefined && (
 
-                        title="Mic Off"
+                        <FaSignal
 
-                      />
+                          style={{
 
-                    )}
+                            marginLeft: 6,
 
-                    {/* Video status icon */}
+                            color:
 
-                    {(
+                              networkQuality[user.userId] >= 3
 
-                      user.userId === selfUserIdRef.current
+                                ? "#22c55e"
 
-                        ? isVideoOn
+                                : networkQuality[user.userId] === 2
 
-                        : user.bVideoOn
+                                  ? "#f59e0b"
 
-                    ) ? (
+                                  : "#ef4444",
 
-                      <FaVideo
+                          }}
 
-                        style={{ marginLeft: 6, color: "#22c55e" }}
+                          title={`Network: ${networkQuality[user.userId] >= 3
 
-                        title="Camera On"
+                              ? "Good"
 
-                      />
+                              : networkQuality[user.userId] === 2
 
-                    ) : (
+                                ? "Fair"
 
-                      <FaVideoSlash
+                                : "Poor"
 
-                        style={{ marginLeft: 6, color: "#ef4444" }}
+                            }`}
 
-                        title="Camera Off"
+                        />
 
-                      />
+                      )}
 
-                    )}
+                      {/* Audio status icon */}
+
+                      {(
+
+                        user.userId === selfUserIdRef.current
+
+                          ? isAudioOn
+
+                          : !user.muted
+
+                      ) ? (
+
+                        <FaMicrophone
+
+                          style={{ marginLeft: 6, color: "#22c55e" }}
+
+                          title="Mic On"
+
+                        />
+
+                      ) : (
+
+                        <FaMicrophoneSlash
+
+                          style={{ marginLeft: 6, color: "#ef4444" }}
+
+                          title="Mic Off"
+
+                        />
+
+                      )}
+
+                      {/* Video status icon */}
+
+                      {(
+
+                        user.userId === selfUserIdRef.current
+
+                          ? isVideoOn
+
+                          : user.bVideoOn
+
+                      ) ? (
+
+                        <FaVideo
+
+                          style={{ marginLeft: 6, color: "#22c55e" }}
+
+                          title="Camera On"
+
+                        />
+
+                      ) : (
+
+                        <FaVideoSlash
+
+                          style={{ marginLeft: 6, color: "#ef4444" }}
+
+                          title="Camera Off"
+
+                        />
+
+                      )}
+
+                    </div>
 
                   </div>
 
                 </div>
-
-              </div>
 
               );
 
@@ -7824,11 +7817,9 @@ function JoinerScreen() {
 
               <button
 
-                className={`commonJoinderBtn muteBoxSetting ${
+                className={`commonJoinderBtn muteBoxSetting ${!isAudioOn ? "active" : ""
 
-                  !isAudioOn ? "active" : ""
-
-                }`}
+                  }`}
 
                 onClick={toggleAudio}
 
@@ -7844,7 +7835,7 @@ function JoinerScreen() {
 
               <button
 
-              className="video-options-toggle optionToggleBlock mobHide"
+                className="video-options-toggle optionToggleBlock mobHide"
 
                 onClick={() =>
 
@@ -7934,7 +7925,7 @@ function JoinerScreen() {
 
                   <label
 
-                   className="dropdownPopupArea"
+                    className="dropdownPopupArea"
 
                     style={{
 
@@ -8016,11 +8007,9 @@ function JoinerScreen() {
 
               <button
 
-                className={`commonJoinderBtn videoBoxSetting ${
+                className={`commonJoinderBtn videoBoxSetting ${!isVideoOn ? "active" : ""
 
-                  !isVideoOn ? "active" : ""
-
-                }`}
+                  }`}
 
                 onClick={toggleVideo}
 
@@ -8062,7 +8051,7 @@ function JoinerScreen() {
 
               >
 
-               {showVideoOptions === "video" && isAudioOn ? <FaChevronUp /> : <FaChevronDown />}
+                {showVideoOptions === "video" && isAudioOn ? <FaChevronUp /> : <FaChevronDown />}
 
               </button>
 
@@ -8074,7 +8063,7 @@ function JoinerScreen() {
 
                   <label
 
-                  className="dropdownPopupArea"
+                    className="dropdownPopupArea"
 
                     style={{
 
@@ -8142,7 +8131,7 @@ function JoinerScreen() {
 
                   <label
 
-                  className="dropdownPopupArea"
+                    className="dropdownPopupArea"
 
                     style={{
 
@@ -8229,11 +8218,9 @@ function JoinerScreen() {
 
             <button
 
-              className={`commonJoinderBtn chatSetting ${
+              className={`commonJoinderBtn chatSetting ${showModals.chat ? "active" : ""
 
-                showModals.chat ? "active" : ""
-
-              }`}
+                }`}
 
               onClick={() => handleModal("chat", !showModals.chat)}
 
@@ -8243,61 +8230,61 @@ function JoinerScreen() {
 
             >
 
-                <ChatIcon size="24" />
+              <ChatIcon size="24" />
 
-                {showModals.chat && <span></span>}
+              {showModals.chat && <span></span>}
 
-                {/* Unread message indicator */}
+              {/* Unread message indicator */}
 
-                {unreadChatCount > 0 && !showModals.chat && (
+              {unreadChatCount > 0 && !showModals.chat && (
 
-                  <div
+                <div
 
-                    style={{
+                  style={{
 
-                      position: "absolute",
+                    position: "absolute",
 
-                      top: "-2px",
+                    top: "-2px",
 
-                      right: "-2px",
+                    right: "-2px",
 
-                      background: "#ff4444",
+                    background: "#ff4444",
 
-                      color: "#fff",
+                    color: "#fff",
 
-                      borderRadius: "50%",
+                    borderRadius: "50%",
 
-                      minWidth: "18px",
+                    minWidth: "18px",
 
-                      height: "18px",
+                    height: "18px",
 
-                      display: "flex",
+                    display: "flex",
 
-                      alignItems: "center",
+                    alignItems: "center",
 
-                      justifyContent: "center",
+                    justifyContent: "center",
 
-                      fontSize: "10px",
+                    fontSize: "10px",
 
-                      fontWeight: "bold",
+                    fontWeight: "bold",
 
-                      border: "2px solid #fff",
+                    border: "2px solid #fff",
 
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
 
-                      zIndex: 1,
+                    zIndex: 1,
 
-                      animation: "pulse 2s infinite",
+                    animation: "pulse 2s infinite",
 
-                    }}
+                  }}
 
-                  >
+                >
 
-                    {unreadChatCount > 9 ? "9+" : unreadChatCount}
+                  {unreadChatCount > 9 ? "9+" : unreadChatCount}
 
-                  </div>
+                </div>
 
-                )}
+              )}
 
               <span>{showModals.chat ? "Chat" : "Chat"}</span>
 
@@ -8307,11 +8294,9 @@ function JoinerScreen() {
 
             <button
 
-              className={`commonJoinderBtn participantsSetting mobHide ${
+              className={`commonJoinderBtn participantsSetting mobHide ${showModals.participants ? "active" : ""
 
-                showModals.participants ? "active" : ""
-
-              }`}
+                }`}
 
               onClick={() =>
 
@@ -8402,11 +8387,9 @@ function JoinerScreen() {
 
             <button
 
-              className={`commonJoinderBtn screenShareSetting mobHide ${
+              className={`commonJoinderBtn screenShareSetting mobHide ${isSharingScreen ? "active" : ""
 
-                isSharingScreen ? "active" : ""
-
-              } ${isRemoteSharing && !isSharingScreen ? "disabled" : ""}`}
+                } ${isRemoteSharing && !isSharingScreen ? "disabled" : ""}`}
 
               onClick={startScreenShare}
 
@@ -8420,9 +8403,9 @@ function JoinerScreen() {
 
                   : isSharingScreen
 
-                  ? "Stop sharing your screen"
+                    ? "Stop sharing your screen"
 
-                  : "Share your screen"
+                    : "Share your screen"
 
               }
 
@@ -8438,9 +8421,9 @@ function JoinerScreen() {
 
                   : isRemoteSharing && !isSharingScreen
 
-                  ? "Screen sharing in progress"
+                    ? "Screen sharing in progress"
 
-                  : "Share Screen"}
+                    : "Share Screen"}
 
               </span>
 
@@ -8514,11 +8497,9 @@ function JoinerScreen() {
 
             <button
 
-              className={`commonJoinderBtn recordingSetting mobHide ${
+              className={`commonJoinderBtn recordingSetting mobHide ${showRecordingNotice ? "active" : ""
 
-                showRecordingNotice ? "active" : ""
-
-              }`}
+                }`}
 
               disabled={true}
 
@@ -8554,13 +8535,13 @@ function JoinerScreen() {
 
               >
 
-              {!isMobile ?  'End Meeting' :
+                {!isMobile ? 'End Meeting' :
 
-                <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-                  <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round" />
 
-                </svg>}
+                  </svg>}
 
 
 
@@ -8576,17 +8557,17 @@ function JoinerScreen() {
 
                 disabled={localUserRemoved}
 
-                // style={{ background: "#e53935",minHeight: "50px" }}
+              // style={{ background: "#e53935",minHeight: "50px" }}
 
               >
 
-               {!isMobile ? 'Leave Meeting' :
+                {!isMobile ? 'Leave Meeting' :
 
-                <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="15" height="14" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-                  <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8.33333 3.83335V2.50002C8.33333 2.1464 8.19286 1.80726 7.94281 1.55721C7.69276 1.30716 7.35362 1.16669 7 1.16669H2.33333C1.97971 1.16669 1.64057 1.30716 1.39052 1.55721C1.14048 1.80726 1 2.1464 1 2.50002V10.5C1 10.8536 1.14048 11.1928 1.39052 11.4428C1.64057 11.6929 1.97971 11.8334 2.33333 11.8334H7C7.35362 11.8334 7.69276 11.6929 7.94281 11.4428C8.19286 11.1928 8.33333 10.8536 8.33333 10.5V9.16669M5 6.50002H13M13 6.50002L11 4.50002M13 6.50002L11 8.50002" stroke="#A3A3A3" stroke-linecap="round" stroke-linejoin="round" />
 
-                </svg>}
+                  </svg>}
 
 
 
@@ -8660,7 +8641,7 @@ function JoinerScreen() {
 
                     "Failed to send message: " +
 
-                      (err.message || "Unknown error")
+                    (err.message || "Unknown error")
 
                   );
 
@@ -9318,9 +9299,7 @@ function JoinerScreen() {
 
                         }}
 
-                        title={`Network: ${
-
-                          networkQuality[p.userId] >= 3
+                        title={`Network: ${networkQuality[p.userId] >= 3
 
                             ? "Good"
 
@@ -9330,7 +9309,7 @@ function JoinerScreen() {
 
                               : "Poor"
 
-                        }`}
+                          }`}
 
                       />
 
@@ -10364,10 +10343,10 @@ function JoinerScreen() {
                 onClick={() => {
                   setShowPermissionErrorModal(false);
                   // Request permissions again
-                  const mediaConstraints = initialVideoOff 
-                    ? { audio: true } 
+                  const mediaConstraints = initialVideoOff
+                    ? { audio: true }
                     : { video: true, audio: true };
-                  
+
                   navigator.mediaDevices
                     .getUserMedia(mediaConstraints)
                     .then(() => {
@@ -10379,11 +10358,11 @@ function JoinerScreen() {
                           const cams = devices.filter((d) => d.kind === "videoinput");
                           const mics = devices.filter((d) => d.kind === "audioinput");
                           const speakers = devices.filter((d) => d.kind === "audiooutput");
-                          
+
                           setVideoDevices(cams);
                           setAudioDevices(mics);
                           setSpeakerDevices(speakers);
-                          
+
                           if (cams.length > 0) setSelectedCamera(cams[0].deviceId);
                           if (mics.length > 0) setSelectedMic(mics[0].deviceId);
                           if (speakers.length > 0) setSelectedSpeaker(speakers[0].deviceId);
@@ -10609,13 +10588,13 @@ function JoinerScreen() {
 
                 // Only request camera permissions if video is not off from preview
 
-                const mediaConstraints = initialVideoOff 
+                const mediaConstraints = initialVideoOff
 
-                  ? { audio: true } 
+                  ? { audio: true }
 
                   : { video: true, audio: true };
 
-                
+
 
                 navigator.mediaDevices
 
