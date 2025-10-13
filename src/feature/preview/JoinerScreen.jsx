@@ -7207,19 +7207,19 @@ function JoinerScreen() {
 
   if (isJoining) return <ZoomDotsLoader />;
 
-  if (error)
+  // // if (error)
 
-    return (
+  //   return (
 
-      <div className="error-page">
+  //     // <div className="error-page">
 
-        Error: {error}{" "}
+  //     //   Error: {error}{" "}
 
-        <button onClick={async () => await redirectToMeetingEnd("user_left")}>Go Back</button>
+  //     //   <button onClick={async () => await redirectToMeetingEnd("user_left")}>Go Back</button>
 
-      </div>
+  //     // </div>
 
-    );
+  //   );
 
   if (localUserRemoved) return <div>Redirecting...</div>;
 

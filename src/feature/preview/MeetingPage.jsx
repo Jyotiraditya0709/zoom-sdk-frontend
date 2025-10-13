@@ -1550,13 +1550,13 @@ const MeetingPage = () => {
   };
 
   if (isJoining) return <div>Joining meeting...</div>;
-  if (error)
-    return (
-      <div className="error-page">
-        Error: {error}{" "}
-        <button onClick={() => navigate("/meeting-left")}>Go Back</button>
-      </div>
-    );
+  // if (error)
+  //   return (
+  //     // <div className="error-page">
+  //     //   Error: {error}{" "}
+  //     //   <button onClick={() => navigate("/meeting-left")}>Go Back</button>
+  //     // </div>
+  //   );
 
   return (
     <div className="meeting-container">

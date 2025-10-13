@@ -106,12 +106,12 @@ const MeetingValidator = () => {
               more information.
             </p>
           )}
-          <button
+          {/* <button
             className="meeting-validator-button"
             onClick={() => navigate("/")}
           >
             Go Back
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -130,12 +130,12 @@ const MeetingValidator = () => {
             <p className="meeting-validator-message">
               This meeting has already been completed. Please contact the meeting organizer for more information.
             </p>
-            <button
+            {/* <button
               className="meeting-validator-button"
               onClick={() => navigate("/")}
             >
               Go Back
-            </button>
+            </button> */}
           </div>
         </div>
       );
