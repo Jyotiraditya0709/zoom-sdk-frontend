@@ -330,9 +330,16 @@ const PreJoin = () => {
 
   // Set default background based on user type
   useEffect(() => {
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    
     if (userType === "mentor") {
-      // Set Tetr background as default for mentors
-      setBgMode("image");
+      if (isMobile) {
+        console.warn("Virtual background disabled on mobile for mentors");
+        setBgMode("none");
+      } else {
+        // Set Tetr background as default for mentors on desktop
+        setBgMode("image");
+      }
     } else if (userType === "mentee") {
       // Set None as default for mentees
       setBgMode("none");
