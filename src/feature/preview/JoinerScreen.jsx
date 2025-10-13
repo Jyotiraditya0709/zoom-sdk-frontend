@@ -922,21 +922,25 @@ function JoinerScreen() {
 
 
 
+      const userTypeParam = params.get("userType") || (parseInt(params.get("role") || "1", 10) === 1 ? "mentor" : "mentee");
+      const mentorNameParam = params.get("mentorName") || "";
+      const menteeNameParam = params.get("menteeName") || "";
+      
+      // Determine the actual name to use for recording based on user type
+      const actualUserName = userTypeParam === "mentor" ? mentorNameParam : menteeNameParam;
+      const displayUserName = actualUserName || userId || "Guest";
+
       return {
 
         sessionName: meetingId || "default-session",
 
-        userName: userId || "Guest", // Use full userId for backend
+        userName: displayUserName, // Use actual name for recording, fallback to userId
 
-        displayName: userId || "Guest", // Will be updated when meetingData is available
+        displayName: userId || "Guest", // Keep original for backend identification
 
         role: parseInt(params.get("role") || "1", 10),
 
-        userType:
-
-          params.get("userType") ||
-
-          (parseInt(params.get("role") || "1", 10) === 1 ? "mentor" : "mentee"),
+        userType: userTypeParam,
 
         initialVideoOff: params.get("videoOff") === "true",
 
@@ -944,9 +948,9 @@ function JoinerScreen() {
 
         // Get names from URL parameters to show immediately on video tiles
 
-        mentorName: params.get("mentorName") || "",
+        mentorName: mentorNameParam,
 
-        menteeName: params.get("menteeName") || "",
+        menteeName: menteeNameParam,
 
       };
 
