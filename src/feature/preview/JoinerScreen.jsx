@@ -4927,21 +4927,26 @@ function JoinerScreen() {
 
 
         // Apply virtual background if set (like MeetingPage.jsx)
-
+        // Skip virtual backgrounds on mobile devices
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         let vbOptions = {};
 
-        if (bgMode === "blur") {
+        if (!isMobile) {
+          if (bgMode === "blur") {
 
-          vbOptions = { virtualBackground: { imageUrl: "blur" } };
+            vbOptions = { virtualBackground: { imageUrl: "blur" } };
 
-        } else if (bgMode === "image") {
+          } else if (bgMode === "image") {
 
-          vbOptions = {
+            vbOptions = {
 
-            virtualBackground: { imageUrl: "/lib/vb-resource/background.jpg" },
+              virtualBackground: { imageUrl: "/lib/vb-resource/background.jpg" },
 
-          };
+            };
 
+          }
+        } else {
+          console.log("📱 Mobile device detected - skipping virtual background");
         }
 
 
@@ -5042,7 +5047,17 @@ function JoinerScreen() {
 
       console.error("Toggle video error", e);
 
-      setError("Failed to toggle video: " + (e.reason || e.message));
+      // Check if it's a virtual background error on mobile
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+      const isVirtualBgError = e.message?.includes("virtual background") || 
+                               e.message?.includes("SharedArrayBuffer") ||
+                               e.reason?.includes("virtual background");
+
+      if (isMobile && isVirtualBgError) {
+        setError("Video features are limited on mobile devices. Please try again without virtual background.");
+      } else {
+        setError("Failed to toggle video: " + (e.reason || e.message));
+      }
 
     }
 
