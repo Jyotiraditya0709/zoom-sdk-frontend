@@ -922,21 +922,25 @@ function JoinerScreen() {
 
 
 
+      const userTypeParam = params.get("userType") || (parseInt(params.get("role") || "1", 10) === 1 ? "mentor" : "mentee");
+      const mentorNameParam = params.get("mentorName") || "";
+      const menteeNameParam = params.get("menteeName") || "";
+      
+      // Determine the actual name to use for recording based on user type
+      const actualUserName = userTypeParam === "mentor" ? mentorNameParam : menteeNameParam;
+      const displayUserName = actualUserName || userId || "Guest";
+
       return {
 
         sessionName: meetingId || "default-session",
 
-        userName: userId || "Guest", // Use full userId for backend
+        userName: displayUserName, // Use actual name for recording, fallback to userId
 
-        displayName: userId || "Guest", // Will be updated when meetingData is available
+        displayName: userId || "Guest", // Keep original for backend identification
 
         role: parseInt(params.get("role") || "1", 10),
 
-        userType:
-
-          params.get("userType") ||
-
-          (parseInt(params.get("role") || "1", 10) === 1 ? "mentor" : "mentee"),
+        userType: userTypeParam,
 
         initialVideoOff: params.get("videoOff") === "true",
 
@@ -944,9 +948,9 @@ function JoinerScreen() {
 
         // Get names from URL parameters to show immediately on video tiles
 
-        mentorName: params.get("mentorName") || "",
+        mentorName: mentorNameParam,
 
-        menteeName: params.get("menteeName") || "",
+        menteeName: menteeNameParam,
 
       };
 
@@ -4927,21 +4931,26 @@ function JoinerScreen() {
 
 
         // Apply virtual background if set (like MeetingPage.jsx)
-
+        // Skip virtual backgrounds on mobile devices
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         let vbOptions = {};
 
-        if (bgMode === "blur") {
+        if (!isMobile) {
+          if (bgMode === "blur") {
 
-          vbOptions = { virtualBackground: { imageUrl: "blur" } };
+            vbOptions = { virtualBackground: { imageUrl: "blur" } };
 
-        } else if (bgMode === "image") {
+          } else if (bgMode === "image") {
 
-          vbOptions = {
+            vbOptions = {
 
-            virtualBackground: { imageUrl: "/lib/vb-resource/background.jpg" },
+              virtualBackground: { imageUrl: "/lib/vb-resource/background.jpg" },
 
-          };
+            };
 
+          }
+        } else {
+          console.log("📱 Mobile device detected - skipping virtual background");
         }
 
 
@@ -5042,7 +5051,17 @@ function JoinerScreen() {
 
       console.error("Toggle video error", e);
 
-      setError("Failed to toggle video: " + (e.reason || e.message));
+      // Check if it's a virtual background error on mobile
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+      const isVirtualBgError = e.message?.includes("virtual background") || 
+                               e.message?.includes("SharedArrayBuffer") ||
+                               e.reason?.includes("virtual background");
+
+      if (isMobile && isVirtualBgError) {
+        setError("Video features are limited on mobile devices. Please try again without virtual background.");
+      } else {
+        setError("Failed to toggle video: " + (e.reason || e.message));
+      }
 
     }
 
@@ -7207,19 +7226,19 @@ function JoinerScreen() {
 
   if (isJoining) return <ZoomDotsLoader />;
 
-  if (error)
+  // // if (error)
 
-    return (
+  //   return (
 
-      <div className="error-page">
+  //     // <div className="error-page">
 
-        Error: {error}{" "}
+  //     //   Error: {error}{" "}
 
-        <button onClick={async () => await redirectToMeetingEnd("user_left")}>Go Back</button>
+  //     //   <button onClick={async () => await redirectToMeetingEnd("user_left")}>Go Back</button>
 
-      </div>
+  //     // </div>
 
-    );
+  //   );
 
   if (localUserRemoved) return <div>Redirecting...</div>;
 
