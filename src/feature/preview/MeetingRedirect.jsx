@@ -21,11 +21,19 @@ const MeetingRedirect = () => {
     const isHost = userRole === 1 || userRole === "1";
     const isMentor = userType === "mentor";
     
-    // If user is host/mentor but no redirectLink yet, wait for it
+    // If user is host/mentor but no redirectLink yet, wait for it with a timeout
     if ((isHost || isMentor) && !redirectLink) {
       console.log("⏳ Waiting for redirect link to be available...");
       setIsLoadingRedirect(true);
-      return;
+      
+      // Set a timeout to stop waiting after 10 seconds
+      const timeout = setTimeout(() => {
+        console.log("⏰ Timeout waiting for redirect link, showing feedback instead");
+        setIsLoadingRedirect(false);
+        setShowFeedback(true);
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
     }
     
     // If we have a redirectLink or user is not host/mentor, stop loading
@@ -58,8 +66,8 @@ const MeetingRedirect = () => {
       console.log("🔄 Redirecting to external link:", redirectLink);
       window.location.href = redirectLink;
     } else {
-      // Show feedback component for non-hosts/non-mentors
-      console.log("🔄 Showing feedback component instead of redirect");
+      // Show feedback component for non-hosts/non-mentors or when no redirect link is available
+      console.log("🔄 Showing feedback component instead of redirect (no valid redirect link available)");
       setShowFeedback(true);
     }
   };
@@ -156,7 +164,17 @@ const MeetingRedirect = () => {
             </>
           ) : (
             <>
-              Redirecting to {getRedirectDestination()} in{" "}
+              {(() => {
+                const isHost = userRole === 1 || userRole === "1";
+                const isMentor = userType === "mentor";
+                const hasRedirectLink = redirectLink && redirectLink.trim() !== "";
+                
+                if ((isHost || isMentor) && !hasRedirectLink) {
+                  return "Redirect link not available, showing feedback form in ";
+                } else {
+                  return `Redirecting to ${getRedirectDestination()} in `;
+                }
+              })()}
               <span
                 style={{
                   color: "#0E77D3",

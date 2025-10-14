@@ -27,13 +27,13 @@
 
     .logoOrg {
       width: 100%;
-      max-width: 105px;
+      max-width: 90px;
     }
   }
 
   .headerLeftJoinerScreen .logoOrg {
     width: 100%;
-    max-width: 120px;
+    max-width: 90px;
   }
 
 
@@ -92,6 +92,10 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
+
+    @media (max-width: 786px) {
+      padding-top: 8px;
+    }
   }
 
   .headerLeftJoinerScreen {
@@ -134,6 +138,6 @@
 
 @media (max-width: 768px) {
   .mainMeetingContainer .headerContentOne .logoOrg {
-    max-width: 110px;
+    max-width: 90px;
   }
 }
