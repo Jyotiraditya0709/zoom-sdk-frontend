@@ -155,7 +155,7 @@ const Header = ({
         <div className="headerContentTwo">
           <div className="headerLeftJoinerScreen">
             {!isLoading && <DynamicLogo orgId={orgId} alt="Logo" className="logoOrg" />}
-            <span className="headerDescription mobHide">{meetingTitle}</span>
+            <span className="headerDescription">{meetingTitle}</span>
           </div>
 
           {/* <div className="headerRightJoinerScreen">
