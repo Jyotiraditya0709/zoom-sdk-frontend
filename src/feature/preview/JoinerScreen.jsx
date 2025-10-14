@@ -744,11 +744,14 @@ function JoinerScreen() {
 
 
 
+      // Use the actual user ID from URL params, not the display name
+      const actualUserId = userId || userName?.trim();
+      
       const requestBody = {
 
         meetingId: sessionName,
 
-        userId: userName,
+        userId: actualUserId,
 
         userType: userType,
 
@@ -758,9 +761,9 @@ function JoinerScreen() {
 
         isHost: role === 1,
 
-        ...(userType === "mentor" && { mentorId: userName }),
+        ...(userType === "mentor" && { mentorId: actualUserId }),
 
-        ...(userType === "mentee" && { menteeId: userName }),
+        ...(userType === "mentee" && { menteeId: actualUserId }),
 
       };
 
@@ -6512,17 +6515,16 @@ function JoinerScreen() {
 
 
     try {
+      // Use the actual user ID from URL params, not the display name
+      const actualUserId = userId || userName?.trim();
+      
+      console.log("🔗 Fetching redirect link for meeting:", meetingId, "user:", actualUserId);
 
       // Fetch meeting info from backend to get redirectLink
-
       const response = await axios.get(
-
         config.getApiUrl(
-
-          `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${userName}`
-
+          `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${actualUserId}`
         )
-
       );
 
 
@@ -6539,11 +6541,14 @@ function JoinerScreen() {
       return null;
 
     } catch (err) {
-
       console.error("Failed to fetch meeting redirect link:", err);
-
+      
+      // If it's a 403 error, the user might not have permission or the meeting might be ended
+      if (err.response?.status === 403) {
+        console.warn("⚠️ 403 Forbidden - User may not have permission to access this meeting or meeting has ended");
+      }
+      
       return null;
-
     }
 
   };

@@ -19,7 +19,7 @@ let localVideoTrack = null;
 let localAudioTrack = null;
 
 // Utility to safely start a video track with retries and error suppression
-async function safeStartVideoTrack(track, videoEl, retries = 3, delay = 300) {
+async function safeStartVideoTrack(track, videoEl, vbOptions = {}, retries = 3, delay = 300) {
   if (!track || !videoEl) return;
 
   try {
@@ -30,7 +30,12 @@ async function safeStartVideoTrack(track, videoEl, retries = 3, delay = 300) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await new Promise((res) => setTimeout(res, delay));
-      await track.start(videoEl);
+      // Pass vbOptions if provided
+      if (Object.keys(vbOptions).length > 0) {
+        await track.start(videoEl, vbOptions);
+      } else {
+        await track.start(videoEl);
+      }
       return;
     } catch (err) {
       const msg = err?.message || "";
@@ -426,14 +431,16 @@ const PreJoin = () => {
     
     if (userType === "mentor") {
       if (isMobile) {
-        console.warn("Virtual background disabled on mobile for mentors");
+        console.warn("🚫 Virtual background disabled on mobile for mentors");
         setBgMode("none");
       } else {
         // Set Tetr background as default for mentors on desktop
+        console.log("✅ Setting Tetr background for mentor (userType:", userType, ", bgMode: image)");
         setBgMode("image");
       }
     } else if (userType === "mentee") {
       // Set None as default for mentees
+      console.log("✅ Setting no background for mentee (userType:", userType, ", bgMode: none)");
       setBgMode("none");
     }
   }, [userType, setBgMode]);
@@ -483,15 +490,19 @@ const PreJoin = () => {
         let vbOptions = {};
         if (bgMode === "blur") {
           vbOptions = { imageUrl: "blur" };
+          console.log("🎨 Applying blur background");
         } else if (bgMode === "image") {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
+          console.log("🎨 Applying Tetr background image:", vbOptions.imageUrl);
+        } else {
+          console.log("🎨 No virtual background applied (bgMode:", bgMode, ")");
         }
 
         // Use safeStartVideoTrack to handle timeout errors
-        if (Object.keys(vbOptions).length > 0) {
-          await safeStartVideoTrack(localVideoTrack, videoElement);
-        } else {
-          await safeStartVideoTrack(localVideoTrack, videoElement);
+        await safeStartVideoTrack(localVideoTrack, videoElement, vbOptions);
+        
+        // If no virtual background, explicitly clear it
+        if (Object.keys(vbOptions).length === 0) {
           await localVideoTrack.updateVirtualBackground(undefined);
         }
       }
@@ -589,8 +600,12 @@ const PreJoin = () => {
         let vbOptions = {};
         if (bgMode === "blur") {
           vbOptions = { imageUrl: "blur" };
+          console.log("🔄 Updating to blur background");
         } else if (bgMode === "image") {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
+          console.log("🔄 Updating to Tetr background image:", vbOptions.imageUrl);
+        } else {
+          console.log("🔄 Clearing virtual background (bgMode:", bgMode, ")");
         }
 
         if (Object.keys(vbOptions).length > 0) {
