@@ -18,6 +18,37 @@ import config from "../../config/config";
 let localVideoTrack = null;
 let localAudioTrack = null;
 
+// Utility to safely start a video track with retries and error suppression
+async function safeStartVideoTrack(track, videoEl, retries = 3, delay = 300) {
+  if (!track || !videoEl) return;
+
+  try {
+    videoEl.srcObject = null;
+    if (videoEl.load) videoEl.load();
+  } catch { }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await new Promise((res) => setTimeout(res, delay));
+      await track.start(videoEl);
+      return;
+    } catch (err) {
+      const msg = err?.message || "";
+      
+      if (
+        msg.includes("play() request was interrupted") ||
+        msg.includes("Timeout starting video source")
+      ) {
+        console.warn(`Attempt ${attempt} to start video failed:`, msg);
+        if (attempt === retries) throw err;
+        continue;
+      }
+      
+      throw err;
+    }
+  }
+}
+
 const PreJoin = () => {
   const location = useLocation();
   useEffect(() => {
@@ -49,6 +80,26 @@ const PreJoin = () => {
         userType: userTypeParam,
         role: roleParam,
       });
+    }
+  }, [location.search]);
+
+  // Separate useEffect to handle agenda initialization from URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const agenda = params.get("agenda");
+    const meetingId = params.get("meetingId");
+    const status = params.get("status");
+
+    // Set agenda data from URL parameters immediately for better UX
+    if (agenda && meetingId) {
+      setAgendaData({
+        agenda: decodeURIComponent(agenda),
+        meetingId: meetingId,
+        startTime: null,
+        endTime: null,
+        meetingStatus: status || "pending",
+      });
+      console.log("✅ Agenda set from URL parameters:", decodeURIComponent(agenda));
     }
   }, [location.search]);
 
@@ -196,6 +247,10 @@ const PreJoin = () => {
     setAgendaLoading(true);
     setAgendaError("");
 
+    // Check if agenda is available in URL parameters as fallback
+    const urlParams = new URLSearchParams(location.search);
+    const urlAgenda = urlParams.get("agenda");
+
     try {
       // Add timeout and better error handling
       const controller = new AbortController();
@@ -218,9 +273,10 @@ const PreJoin = () => {
 
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn("⚠️ Meeting not found, using default agenda");
+          console.warn("⚠️ Meeting not found, using URL agenda or default");
+          const agendaToUse = urlAgenda || "Meeting Session - General discussion and collaboration";
           setAgendaData({
-            agenda: "Meeting Session - General discussion and collaboration",
+            agenda: agendaToUse,
             meetingId: meetingId,
             startTime: null,
             endTime: null,
@@ -228,6 +284,21 @@ const PreJoin = () => {
           });
           return;
         }
+        
+        // For 403 errors, don't throw - just use fallback data
+        if (response.status === 403) {
+          console.warn("⚠️ User not authorized, using URL agenda or default");
+          const agendaToUse = urlAgenda || "Meeting Session - General discussion and collaboration";
+          setAgendaData({
+            agenda: agendaToUse,
+            meetingId: meetingId,
+            startTime: null,
+            endTime: null,
+            meetingStatus: "pending",
+          });
+          return;
+        }
+        
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -261,9 +332,17 @@ const PreJoin = () => {
         setAgendaError("Failed to load agenda data");
       }
 
-      // Set default agenda if API fails
+      // Use URL agenda parameter if available, otherwise use default
+      const agendaToUse = urlAgenda || "Meeting Session - General discussion and collaboration";
+      
+      // If we have URL agenda, don't show error since we have fallback data
+      if (urlAgenda) {
+        setAgendaError("");
+        console.log("✅ Using agenda from URL parameters:", urlAgenda);
+      }
+
       setAgendaData({
-        agenda: "Meeting Session - General discussion and collaboration",
+        agenda: agendaToUse,
         meetingId: meetingId,
         startTime: null,
         endTime: null,
@@ -278,11 +357,16 @@ const PreJoin = () => {
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        // Request permissions first
+        // Request permissions first with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
         });
+
+        clearTimeout(timeoutId);
 
         // Stop the test stream immediately
         stream.getTracks().forEach(track => track.stop());
@@ -310,8 +394,16 @@ const PreJoin = () => {
 
       } catch (err) {
         console.error("Error fetching devices:", err);
-        if (err.name === 'NotAllowedError') {
+        
+        // Handle specific error types
+        if (err.name === 'AbortError') {
+          setError("Device initialization timed out. Please check your camera/microphone permissions and try refreshing the page.");
+        } else if (err.name === 'NotAllowedError') {
           showPermissionError("⚠️ Either Camera or Microphone Access Needed\n\nTo join the meeting, please click \"Allow\" in the permission popup at the top of your browser.\n\nIf you don't see the popup:\n\nClick the 🔒 lock icon next to the address bar\nGo to Site settings → Permissions\nSet Camera and Microphone to Allow\n\nTo apply the settings reload the page.");
+        } else if (err.name === 'NotFoundError') {
+          setError("No camera or microphone found. Please connect your devices and try again.");
+        } else if (err.name === 'NotReadableError') {
+          setError("Camera or microphone is already in use by another application. Please close other apps and try again.");
         } else {
           setError("Failed to fetch devices. Please check your camera/microphone.");
         }
@@ -395,10 +487,11 @@ const PreJoin = () => {
           vbOptions = { imageUrl: "/lib/vb-resource/background.jpg" };
         }
 
+        // Use safeStartVideoTrack to handle timeout errors
         if (Object.keys(vbOptions).length > 0) {
-          await localVideoTrack.start(videoElement, vbOptions);
+          await safeStartVideoTrack(localVideoTrack, videoElement);
         } else {
-          await localVideoTrack.start(videoElement);
+          await safeStartVideoTrack(localVideoTrack, videoElement);
           await localVideoTrack.updateVirtualBackground(undefined);
         }
       }
@@ -441,6 +534,13 @@ const PreJoin = () => {
 
       if (err.message?.includes("AudioAlreadyStartedError")) {
         console.warn("Audio already started, continuing...");
+        return;
+      }
+
+      // Handle timeout errors specifically
+      if (err.message?.includes("Timeout starting video source")) {
+        console.warn("Video source timeout, but continuing with preview...");
+        setError("Camera is taking longer than expected to start. Please wait or try refreshing the page.");
         return;
       }
 

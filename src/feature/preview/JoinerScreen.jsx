@@ -1669,6 +1669,10 @@ function JoinerScreen() {
     const handleBeforeUnload = () => {
 
       // Store meeting info in sessionStorage for after refresh
+      // Use actual UUID instead of display name for proper API calls
+      const actualUserId = meetingData ? 
+        (userType === "mentor" ? meetingData.mentorId : meetingData.menteeId) : 
+        userName; // fallback to userName if meetingData not available
 
       sessionStorage.setItem(
 
@@ -1678,7 +1682,9 @@ function JoinerScreen() {
 
           meetingId: sessionName,
 
-          userId: userName,
+          userId: actualUserId, // Store actual UUID instead of display name
+
+          displayName: userName, // Keep display name for UI purposes
 
           role: role,
 
