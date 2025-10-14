@@ -274,7 +274,7 @@ const PreJoin = () => {
       if (!response.ok) {
         if (response.status === 404) {
           console.warn("⚠️ Meeting not found, using URL agenda or default");
-          const agendaToUse = urlAgenda || "Meeting Session - General discussion and collaboration";
+          const agendaToUse = urlAgenda;
           setAgendaData({
             agenda: agendaToUse,
             meetingId: meetingId,
@@ -288,7 +288,7 @@ const PreJoin = () => {
         // For 403 errors, don't throw - just use fallback data
         if (response.status === 403) {
           console.warn("⚠️ User not authorized, using URL agenda or default");
-          const agendaToUse = urlAgenda || "Meeting Session - General discussion and collaboration";
+          const agendaToUse = urlAgenda;
           setAgendaData({
             agenda: agendaToUse,
             meetingId: meetingId,
@@ -333,7 +333,7 @@ const PreJoin = () => {
       }
 
       // Use URL agenda parameter if available, otherwise use default
-      const agendaToUse = urlAgenda || "Meeting Session - General discussion and collaboration";
+      const agendaToUse = urlAgenda || "";
       
       // If we have URL agenda, don't show error since we have fallback data
       if (urlAgenda) {
@@ -1088,7 +1088,7 @@ const PreJoin = () => {
         }
         meetingTitle={
           agendaData?.agenda ||
-          "Meeting Session - General discussion and collaboration"
+          "Personal Interview Round"
         }
         showTimer={false}
       />

@@ -1670,9 +1670,35 @@ function JoinerScreen() {
 
       // Store meeting info in sessionStorage for after refresh
       // Use actual UUID instead of display name for proper API calls
-      const actualUserId = meetingData ? 
-        (userType === "mentor" ? meetingData.mentorId : meetingData.menteeId) : 
-        userName; // fallback to userName if meetingData not available
+      // Try multiple sources for the UUID
+      let actualUserId = userName; // default fallback
+      
+      // Helper function to check if a string looks like a UUID
+      const isUUID = (str) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(str);
+      };
+      
+      if (meetingData) {
+        // Use meetingData if available
+        actualUserId = userType === "mentor" ? meetingData.mentorId : meetingData.menteeId;
+      } else if (displayName && isUUID(displayName)) {
+        // Use displayName if it looks like a UUID
+        actualUserId = displayName;
+      } else if (isUUID(userName)) {
+        // Use userName if it looks like a UUID
+        actualUserId = userName;
+      }
+
+      console.log("🔍 JoinerScreen - storing meetingExitInfo:", {
+        meetingData: meetingData,
+        userType: userType,
+        userName: userName,
+        displayName: displayName,
+        actualUserId: actualUserId,
+        mentorId: meetingData?.mentorId,
+        menteeId: meetingData?.menteeId
+      });
 
       sessionStorage.setItem(
 
@@ -1908,7 +1934,9 @@ function JoinerScreen() {
 
           if (timeDiff < 5000) {
 
-            sessionStorage.removeItem("meetingExitInfo");
+            // Don't remove sessionStorage here - let MeetingExit component use it for rejoin
+
+            // sessionStorage.removeItem("meetingExitInfo");
 
 
 
