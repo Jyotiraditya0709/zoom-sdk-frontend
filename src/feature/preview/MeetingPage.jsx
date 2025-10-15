@@ -472,11 +472,13 @@ const MeetingPage = () => {
 
     const handleBeforeUnload = () => {
       // Store meeting info in sessionStorage for after refresh
+      // Use userId from URL params (which should be UUID) instead of userName
       sessionStorage.setItem(
         "meetingExitInfo",
         JSON.stringify({
           meetingId: sessionName,
-          userId: userName,
+          userId: userId, // Use userId from URL params (UUID) instead of userName
+          displayName: userName, // Keep display name for UI purposes
           role: role,
           timestamp: Date.now(),
         })

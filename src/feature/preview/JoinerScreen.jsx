@@ -744,11 +744,14 @@ function JoinerScreen() {
 
 
 
+      // Use the actual user ID from URL params, not the display name
+      const actualUserId = userId || userName?.trim();
+      
       const requestBody = {
 
         meetingId: sessionName,
 
-        userId: userName,
+        userId: actualUserId,
 
         userType: userType,
 
@@ -758,9 +761,9 @@ function JoinerScreen() {
 
         isHost: role === 1,
 
-        ...(userType === "mentor" && { mentorId: userName }),
+        ...(userType === "mentor" && { mentorId: actualUserId }),
 
-        ...(userType === "mentee" && { menteeId: userName }),
+        ...(userType === "mentee" && { menteeId: actualUserId }),
 
       };
 
@@ -1669,6 +1672,36 @@ function JoinerScreen() {
     const handleBeforeUnload = () => {
 
       // Store meeting info in sessionStorage for after refresh
+      // Use actual UUID instead of display name for proper API calls
+      // Try multiple sources for the UUID
+      let actualUserId = userName; // default fallback
+      
+      // Helper function to check if a string looks like a UUID
+      const isUUID = (str) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(str);
+      };
+      
+      if (meetingData) {
+        // Use meetingData if available
+        actualUserId = userType === "mentor" ? meetingData.mentorId : meetingData.menteeId;
+      } else if (displayName && isUUID(displayName)) {
+        // Use displayName if it looks like a UUID
+        actualUserId = displayName;
+      } else if (isUUID(userName)) {
+        // Use userName if it looks like a UUID
+        actualUserId = userName;
+      }
+
+      console.log("🔍 JoinerScreen - storing meetingExitInfo:", {
+        meetingData: meetingData,
+        userType: userType,
+        userName: userName,
+        displayName: displayName,
+        actualUserId: actualUserId,
+        mentorId: meetingData?.mentorId,
+        menteeId: meetingData?.menteeId
+      });
 
       sessionStorage.setItem(
 
@@ -1678,7 +1711,9 @@ function JoinerScreen() {
 
           meetingId: sessionName,
 
-          userId: userName,
+          userId: actualUserId, // Store actual UUID instead of display name
+
+          displayName: userName, // Keep display name for UI purposes
 
           role: role,
 
@@ -1902,7 +1937,9 @@ function JoinerScreen() {
 
           if (timeDiff < 5000) {
 
-            sessionStorage.removeItem("meetingExitInfo");
+            // Don't remove sessionStorage here - let MeetingExit component use it for rejoin
+
+            // sessionStorage.removeItem("meetingExitInfo");
 
 
 
@@ -6478,17 +6515,16 @@ function JoinerScreen() {
 
 
     try {
+      // Use the actual user ID from URL params, not the display name
+      const actualUserId = userId || userName?.trim();
+      
+      console.log("🔗 Fetching redirect link for meeting:", meetingId, "user:", actualUserId);
 
       // Fetch meeting info from backend to get redirectLink
-
       const response = await axios.get(
-
         config.getApiUrl(
-
-          `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${userName}`
-
+          `${config.API_ENDPOINTS.GET_MEETING_INFO}/${meetingId}/${actualUserId}`
         )
-
       );
 
 
@@ -6505,11 +6541,14 @@ function JoinerScreen() {
       return null;
 
     } catch (err) {
-
       console.error("Failed to fetch meeting redirect link:", err);
-
+      
+      // If it's a 403 error, the user might not have permission or the meeting might be ended
+      if (err.response?.status === 403) {
+        console.warn("⚠️ 403 Forbidden - User may not have permission to access this meeting or meeting has ended");
+      }
+      
       return null;
-
     }
 
   };

@@ -84,11 +84,33 @@ const MeetingExit = () => {
     // Clear any preventAutoRejoin flag since user is intentionally rejoining
     sessionStorage.removeItem("preventAutoRejoin");
 
-    // Go to pre-join page with info
+    // Prefer the UUID saved by meeting pages during unload
+    let effectiveUserId = userId;
+    try {
+      const stored = sessionStorage.getItem("meetingExitInfo");
+      console.log("🔍 MeetingExit - sessionStorage.meetingExitInfo:", stored);
+      if (stored) {
+        const info = JSON.parse(stored);
+        console.log("🔍 MeetingExit - parsed info:", info);
+        if (info && info.userId) {
+          effectiveUserId = info.userId; // this should be the actual UUID
+          console.log("🔍 MeetingExit - using UUID from sessionStorage:", effectiveUserId);
+        }
+        // Remove sessionStorage after using it
+        sessionStorage.removeItem("meetingExitInfo");
+      }
+    } catch (err) {
+      console.error("🔍 MeetingExit - error parsing sessionStorage:", err);
+    }
+
+    console.log("🔍 MeetingExit - final userId for rejoin:", effectiveUserId);
+    console.log("🔍 MeetingExit - original userId from props:", userId);
+
+    // Go to pre-join page with UUID
     navigate(
       `/pre-join?meetingId=${encodeURIComponent(
         meetingId
-      )}&userId=${encodeURIComponent(userId)}&role=${role}`
+      )}&userId=${encodeURIComponent(effectiveUserId)}&role=${role}`
     );
   };
 
