@@ -128,7 +128,7 @@ const MeetingExit = () => {
           <button
             onClick={handleEndOrLeave}
             style={{
-              background: isHost ? "#e53935" : "#1976f6",
+              background: isHost ? "#e53935" : "#e53935",
               color: "#fff",
               border: "none",
               borderRadius: 8,

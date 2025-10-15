@@ -181,7 +181,7 @@ const MeetingValidator = () => {
           ) : (
             <>
               <h2 className="meeting-validator-title success">
-                Welcome to Your Interview Round <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "Candidate"}</strong>!
+                Welcome to Your Interview Round <br /> <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "Candidate"}</strong>!
               </h2>
               <div className="meeting-validator-details">
                 <p className="meeting-validator-message">

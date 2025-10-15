@@ -7620,7 +7620,7 @@ function JoinerScreen() {
 
                     >
 
-                      <span style={{ textTransform: "capitalize" }}>
+                      <span className="lineClamp2" title={getProperDisplayName(user.userId, user.displayName)} style={{ textTransform: "capitalize" }}>
 
                         {getProperDisplayName(user.userId, user.displayName)}
 

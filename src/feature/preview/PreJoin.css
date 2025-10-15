@@ -412,6 +412,16 @@
   word-break: break-word;
 }
 
+.lineClamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  width: 80px;
+}
+
 /* Enhanced Microphone Test Button Styles */
 .testMicrophone {
   position: relative;
