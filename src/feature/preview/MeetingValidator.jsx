@@ -149,7 +149,7 @@ const MeetingValidator = () => {
     return (
       <div className="meeting-validator-container">
         <div className="meeting-validator-content meeting-validator-success">
-          <div className="meeting-validator-icon"><img src="/assest/tetr-logo.png" alt="" style={{ width: "150px" }} /></div>
+          <div className="meeting-validator-icon"><img src="/assest/tetr-logo.svg" alt="" style={{ width: "100px" }} /></div>
           
           {isMentor ? (
             <>
@@ -181,7 +181,7 @@ const MeetingValidator = () => {
           ) : (
             <>
               <h2 className="meeting-validator-title success">
-                Welcome to Your Interview Round <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "Candidate"}</strong>!
+                Welcome to Your Interview Round <br /> <strong style={{textTransform: "capitalize"}}>{meetingData.menteeName || "Candidate"}</strong>!
               </h2>
               <div className="meeting-validator-details">
                 <p className="meeting-validator-message">

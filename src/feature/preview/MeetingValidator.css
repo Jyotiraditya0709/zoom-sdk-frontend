@@ -251,7 +251,20 @@
 }
 
 @media (max-width: 768px) {
-  .meeting-validator-icon {
-    margin-top: 75px;
+  .meeting-validator-content {
+    padding: 15px;
+  }
+
+  .meeting-validator-details{
+    padding: 15px;
+  }
+
+  .meeting-validator-title{
+    font-size: 18px;
+  }
+
+  .meeting-validator-button{
+    padding: 10px 16px;
+    font-size: 14px;
   }
 }
