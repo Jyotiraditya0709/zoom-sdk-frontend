@@ -13,14 +13,15 @@ import JoinerScreen from "./feature/preview/JoinerScreen";
 import MeetingCreator from "./components/MeetingCreator/MeetingCreator";
 
 import "./App.css";
+import DefaultPage from "./components/DefaultPage";
 
 const App = () => {
   return (
     <MeetingProvider>
       <ZoomProvider>
         <Routes>
-          <Route path="/" element={<MeetingCreator />} />
-          <Route path="/create-meeting" element={<MeetingCreator />} />
+          <Route path="/" element={<DefaultPage />} />
+          <Route path="/create-meeting-12j" element={<MeetingCreator />} />
           <Route path="/joiner-screen" element={<JoinerScreen />} />
           <Route path="/pre-join" element={<PreJoin />} />
           <Route
