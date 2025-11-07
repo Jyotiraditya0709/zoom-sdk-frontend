@@ -14,7 +14,7 @@ import MeetingCreator from "./components/MeetingCreator/MeetingCreator";
 
 import "./App.css";
 import DefaultPage from "./components/DefaultPage";
-
+// new 22 oct version
 const App = () => {
   return (
     <MeetingProvider>
