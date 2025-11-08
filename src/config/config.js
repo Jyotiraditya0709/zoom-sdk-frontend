@@ -1,7 +1,7 @@
 // Backend configuration
 const config = {
   // Backend URL - change this for production
-  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || "https://zoom-sdk-be-1-spk1.onrender.com/",
+  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || "https://zoom-sdk-be-1-spk1.onrender.com",
 
   // API endpoints
   API_ENDPOINTS: {
@@ -15,9 +15,10 @@ const config = {
   },
 
   // Get full URL for an endpoint
-  //mew comment added
   getApiUrl: (endpoint) => {
-    return `${config.BACKEND_URL}${endpoint}`;
+    const baseUrl = config.BACKEND_URL.replace(/\/+$/, ''); // Remove trailing slashes
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`; // Ensure leading slash
+    return `${baseUrl}${path}`;
   },
 };
 
