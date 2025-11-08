@@ -9,8 +9,23 @@ const __dirname = dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Set Cross-Origin Isolation headers (REQUIRED for Zoom SDK SharedArrayBuffer support)
+// Note: 'require-corp' is required for SharedArrayBuffer, but it blocks external resources
+// Google Fonts and other external resources have been removed to comply with this policy
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
+
 // Serve static files from the dist directory
-app.use(express.static(join(__dirname, 'dist')));
+app.use(express.static(join(__dirname, 'dist'), {
+  setHeaders: (res, path) => {
+    // Ensure all static files also have the required headers
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  }
+}));
 
 // Handle all routes by serving index.html (for React Router client-side routing)
 app.get('*', (req, res) => {
