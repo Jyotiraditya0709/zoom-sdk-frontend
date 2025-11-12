@@ -8743,11 +8743,32 @@ function JoinerScreen() {
 
             <h3 style={{ marginTop: 0, marginBottom: 16 }}>End Meeting</h3>
 
-            <p className="textMeeting" style={{ textAlign: "center", marginBottom: 24 }}>
+            <p className="textMeeting" style={{ textAlign: "center", marginBottom: 16 }}>
 
               Are you sure you want to end this meeting?
 
             </p>
+
+            <div
+              style={{
+                background: "#fff3cd",
+                border: "1px solid #fcd34d",
+                color: "#92400e",
+                borderRadius: 12,
+                padding: "12px 16px",
+                marginBottom: 24,
+                textAlign: "left",
+                display: "flex",
+                gap: 12,
+              }}
+            >
+              <span role="img" aria-label="warning" style={{ fontSize: 20 }}>
+                ⚠️
+              </span>
+              <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                <strong>Warning:</strong> If you end this meeting, it will be marked as completed in the system. You and all participants will no longer be able to rejoin using this link.
+              </div>
+            </div>
 
             <div style={{ display: "flex", gap: 12 }}>
 
