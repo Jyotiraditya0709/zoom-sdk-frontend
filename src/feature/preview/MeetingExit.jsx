@@ -139,12 +139,35 @@ const MeetingExit = () => {
             ? "Do you want to end this meeting for everyone?"
             : "Do you want to leave this meeting?"}
         </h2>
+        {isHost && (
+          <div
+            style={{
+              background: "#fff3cd",
+              border: "1px solid #fcd34d",
+              color: "#92400e",
+              borderRadius: 12,
+              padding: "12px 16px",
+              marginTop: 16,
+              textAlign: "left",
+              display: "flex",
+              gap: 12,
+            }}
+          >
+            <span role="img" aria-label="warning" style={{ fontSize: 20 }}>
+              ⚠️
+            </span>
+            <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+              <strong>Warning:</strong> If you end this meeting, it will be marked as completed in the
+              system. You and all participants will no longer be able to rejoin using this link.
+            </div>
+          </div>
+        )}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 16,
-            marginTop: 24,
+            marginTop: isHost ? 24 : 24,
           }}
         >
           <button
@@ -177,7 +200,7 @@ const MeetingExit = () => {
               cursor: "pointer",
             }}
           >
-            Rejoin
+            No, I want to Rejoin
           </button>
         </div>
       </div>

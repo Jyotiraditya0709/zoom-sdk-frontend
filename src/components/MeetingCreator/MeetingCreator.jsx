@@ -98,20 +98,15 @@ const MeetingCreator = () => {
         const meeting = response.data.Data;
         
         // Generate meeting links that go through validation
-        const localBaseUrl = window.location.origin;
-        const liveBaseUrl = "https://master.d1i6jrqa49nh2k.amplifyapp.com";
+        const currentBaseUrl = window.location.origin;
         
-        const localMentorLink = `${localBaseUrl}/pre-join/${meeting.meetingId}/${mentorId}`;
-        const localMenteeLink = `${localBaseUrl}/pre-join/${meeting.meetingId}/${menteeId}`;
-        const liveMentorLink = `${liveBaseUrl}/pre-join/${meeting.meetingId}/${mentorId}`;
-        const liveMenteeLink = `${liveBaseUrl}/pre-join/${meeting.meetingId}/${menteeId}`;
+        const mentorLink = `${currentBaseUrl}/pre-join/${meeting.meetingId}/${mentorId}`;
+        const menteeLink = `${currentBaseUrl}/pre-join/${meeting.meetingId}/${menteeId}`;
         
         setCreatedMeeting({
           ...meeting,
-          localMentorLink,
-          localMenteeLink,
-          liveMentorLink,
-          liveMenteeLink,
+          mentorLink,
+          menteeLink,
           meetingData
         });
       } else {
@@ -206,102 +201,61 @@ const MeetingCreator = () => {
           <div className="meeting-links">
             <h4>🔗 Meeting Links</h4>
             <div className="link-section">
-              <div className="link-category">
-                <h5>🏠 Local Links (Development)</h5>
-                <div className="link-item">
-                  <label>👨‍🏫 Local Mentor Link:</label>
-                  <div className="link-container">
-                    <input 
-                      type="text" 
-                      value={createdMeeting.localMentorLink} 
-                      readOnly 
-                      className="link-input"
-                    />
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(createdMeeting.localMentorLink)}
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
-                </div>
-                <div className="link-item">
-                  <label>👨‍🎓 Local Mentee Link:</label>
-                  <div className="link-container">
-                    <input 
-                      type="text" 
-                      value={createdMeeting.localMenteeLink} 
-                      readOnly 
-                      className="link-input"
-                    />
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(createdMeeting.localMenteeLink)}
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
+              <div className="link-item">
+                <label>👨‍🏫 Mentor Link:</label>
+                <div className="link-container">
+                  <input 
+                    type="text" 
+                    value={createdMeeting.mentorLink} 
+                    readOnly 
+                    className="link-input"
+                  />
+                  <button 
+                    className="copy-btn"
+                    onClick={() => copyToClipboard(createdMeeting.mentorLink)}
+                  >
+                    📋 Copy
+                  </button>
                 </div>
               </div>
-              
-              <div className="link-category">
-                <h5>🌐 Live Links (Production)</h5>
-                <div className="link-item">
-                  <label>👨‍🏫 Live Mentor Link:</label>
-                  <div className="link-container">
-                    <input 
-                      type="text" 
-                      value={createdMeeting.liveMentorLink} 
-                      readOnly 
-                      className="link-input"
-                    />
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(createdMeeting.liveMentorLink)}
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
-                </div>
-                <div className="link-item">
-                  <label>👨‍🎓 Live Mentee Link:</label>
-                  <div className="link-container">
-                    <input 
-                      type="text" 
-                      value={createdMeeting.liveMenteeLink} 
-                      readOnly 
-                      className="link-input"
-                    />
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(createdMeeting.liveMenteeLink)}
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
+              <div className="link-item">
+                <label>👨‍🎓 Mentee Link:</label>
+                <div className="link-container">
+                  <input 
+                    type="text" 
+                    value={createdMeeting.menteeLink} 
+                    readOnly 
+                    className="link-input"
+                  />
+                  <button 
+                    className="copy-btn"
+                    onClick={() => copyToClipboard(createdMeeting.menteeLink)}
+                  >
+                    📋 Copy
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="quick-actions">
-            <h4>⚡ Quick Actions (Local)</h4>
+            <h4>⚡ Quick Actions</h4>
             <div className="action-buttons">
               <a 
-                href={createdMeeting.localMentorLink} 
+                href={createdMeeting.mentorLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="action-btn mentor-btn"
               >
-                🎯 Join as Mentor (Local)
+                🎯 Join as Mentor
               </a>
               <a 
-                href={createdMeeting.localMenteeLink} 
+                href={createdMeeting.menteeLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="action-btn mentee-btn"
               >
-                🎓 Join as Mentee (Local)
+                🎓 Join as Mentee
               </a>
             </div>
           </div>
