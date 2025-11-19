@@ -29,6 +29,10 @@ const App = () => {
             path="/pre-join/:meetingId/:userId"
             element={<MeetingValidator />}
           />
+          <Route
+            path="/room/:meetingId/:userId"
+            element={<MeetingValidator />}
+          />
 
           <Route path="/meeting/:meetingId/:userId" element={<JoinerScreen />} />
           <Route path="/meeting-left" element={<MeetingLeft />} />
